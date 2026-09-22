@@ -355,3 +355,34 @@ Reason:
 
 - Section D gives `job_scores` its own token columns, but scoring is not the only thing that calls a model; drafting, discovery and brief building all will, and none of their tables has anywhere to record a cost. ARB-320 has to answer "what did last month cost", which needs one place.
 - Prompts and replies are excluded because they carry client content and this table is kept for years; the retention job (ARB-015) redacts conversations, and it should not have to know about this table to do so.
+
+## D-022 — Queues: BullMQ 5, dead letters filed inside the processor, tests on a real Redis
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-030)
+
+Decision:
+
+- BullMQ is pinned to the 5.x line. 6.x had just been released and moves the Redis client
+  behind an abstraction whose API differs from the documentation most of this code will be
+  checked against.
+- Every queue defaults to five attempts with exponential backoff from 5 s. A job whose last
+  attempt fails, or that throws `UnrecoverableError`, is copied to a `dead-letter` queue
+  by the processor wrapper _before_ the error is rethrown, with a job id derived from the
+  original so a redelivery cannot file it twice.
+- The worker `/health` endpoint answers 200 while Redis answers and 503 when it does not,
+  within 2 s. Dead letters are reported as a count, not as ill health.
+- The queue tests run against a real Redis — a service container in CI, `redis-server` or
+  compose locally. There is no mock.
+
+Reason:
+
+- Filing the dead letter from the worker's `failed` event would run after BullMQ has
+  already recorded the failure, so a crash in between loses it silently. Inside the
+  processor, the job is not failed until its dead letter exists.
+- A health check that waits on a lost Redis never answers (ioredis keeps reconnecting), and
+  a host reads silence as "still starting", not "restart me". Found by the test.
+- Restarting a worker does not fix a dead letter; alerting on the count does.
+- BullMQ's behaviour lives in Lua scripts inside Redis. A fake would prove the fake.
+  Mutation-checked: stopping the unrecoverable branch from dead-lettering turns three
+  tests red.

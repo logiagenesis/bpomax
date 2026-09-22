@@ -9,5 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "bullmq": "^5.81.5"
   }
 }

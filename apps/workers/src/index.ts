@@ -1,5 +1,10 @@
 /**
  * Arbitron workers — BullMQ queues and processors.
- * Queue wiring at ARB-030; individual workers from ARB-022 onwards.
+ * Queue wiring, retries, the dead-letter queue and the health endpoint at ARB-030;
+ * individual workers from ARB-022 onwards.
  */
+export * from './queues.js';
+export * from './runtime.js';
+export * from './health.js';
+
 export const APP_NAME = 'arbitron-workers';

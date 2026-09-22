@@ -57,7 +57,9 @@ pnpm --filter @arbitron/web dev    # front end on http://localhost:5173
 The API is built and tested but has no listen entry point yet: signing a request needs
 the Supabase project (B-06), and hosting is ARB-070. It is importable today —
 `buildServer({ db, authenticate })` in `apps/api/src/server.ts` serves `/health` and
-`GET /v1/events`. The workers and the Telegram bot are still scaffolds.
+`GET /v1/events`. The workers have their queue wiring — one BullMQ queue per worker in
+docs/01 section E, exponential-backoff retries, a dead-letter queue and a `/health`
+server (`apps/workers/src/`) — but no processors yet. The Telegram bot is a scaffold.
 
 For the full local Supabase stack (Auth, Storage, Studio), use the Supabase CLI rather
 than compose — `supabase start`. See `DECISIONS.md` D-006.
@@ -68,7 +70,7 @@ than compose — `supabase start`. See `DECISIONS.md` D-006.
 pnpm lint           # ESLint
 pnpm format:check   # Prettier
 pnpm typecheck      # tsc across every workspace
-pnpm test           # Vitest
+pnpm test           # Vitest (the queue tests need Redis: `docker compose up -d redis`)
 pnpm test:e2e       # Playwright
 ```
 
