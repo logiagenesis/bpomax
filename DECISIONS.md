@@ -822,3 +822,31 @@ Reason:
 - core.telegram.org is blocked by this environment's egress proxy; the reference was read
   through a browser service instead, so 01 section B's rule (names confirmed against the
   official docs, cited in code) is met rather than worked around.
+
+## D-034 — A board claim with no push for an hour is stale and may be taken over
+
+Date: 22/09/2026
+Decided by: Claude Code (session …JmtXArNa)
+
+Context:
+
+- The IN PROGRESS claim on the board is the lock between scheduled sessions (run log,
+  22/09/2026). ARB-061 was claimed by session …V4PPWs at 19:51 UTC. That session had
+  closed every earlier ticket within fifteen minutes of claiming it; at 22:46 UTC, nearly
+  three hours later, nothing had been pushed to any branch, and the board had been still
+  since the claim. A lock that can never be broken stops the board for good when a session
+  is reclaimed mid-ticket.
+
+Decision:
+
+- A claim is stale when the claimant has pushed nothing for sixty minutes. A later session
+  may take it over by replacing the claim with its own, naming the claim it replaced and
+  the time, in the same commit, before starting work.
+- Anything the earlier session pushed is kept and built on; nothing is discarded.
+
+Reason:
+
+- Sixty minutes is four times the longest claim-to-close interval seen on this board, and
+  short enough that a dead session costs at most one run. A live session that has gone
+  quiet for an hour on one ticket has itself stopped pushing after each ticket, which D-004
+  asks for.
