@@ -248,3 +248,34 @@ Reason:
 
 - 0008 decides who may write the approval columns; it does not stop an operator writing the owner's name into one. Section H's rule is that an outbound action carries an approval, and an approval that can name someone who never gave it is not one.
 - A permissive policy would have ORed with the existing write policy and changed nothing. That failure mode is silent, so it is mutation-tested: switching these six policies to permissive turns exactly the two tests that cover them red.
+
+## D-015 — The API does not implement tenancy; it runs every read as the signed-in user
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-014)
+
+Decision:
+
+- `withUser(db, authUserId, work)` opens a transaction, sets `request.jwt.claims` and the `authenticated` role with `set local`, and runs the work inside it. Every tenant read goes through it.
+- `listEvents` takes no `org_id`. Neither does any reader added later.
+
+Reason:
+
+- An API that passes `org_id` by hand is one forgotten `where` clause away from serving another tenant's data, and that clause is invisible in review. With RLS doing the scoping, a forgotten filter returns less than asked for, never more.
+- `set local` is what makes this safe on a pooled connection: the claims and the role end with the transaction rather than waiting for the next request to notice them. There is a test that the session is back to the migration user after a request.
+- Mutation-checked: removing the role switch from `withUser` turns three tests red, including the API's cross-org one.
+
+## D-016 — Event types are a closed vocabulary
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-014)
+
+Decision:
+
+- `EVENT_TYPES` in `packages/core/src/events.ts` lists every event the system may write. `recordEvent` refuses anything else, and so does a filter on the viewer API, which answers 400 rather than an empty list.
+- A user event must name a user and a system event must not.
+
+Reason:
+
+- An audit log is only useful if it can be searched, and free-text types drift into near-duplicates that no filter catches. Refusing an unknown type at the point of writing costs one line in a list; discovering six spellings of `proposal.submitted` a year in costs a migration.
+- Answering 400 to a mistyped filter matters more than it looks: an empty result reads as "this never happened", which is exactly the wrong answer from an audit log.

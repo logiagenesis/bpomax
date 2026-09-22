@@ -9,5 +9,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@arbitron/core": "workspace:*",
+    "@arbitron/db": "workspace:*",
+    "fastify": "^5.12.5"
   }
 }

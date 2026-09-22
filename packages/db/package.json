@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Supabase migrations, seed data and generated types",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts",
+    "./fixtures": "./src/fixtures.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
