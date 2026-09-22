@@ -15,7 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm build:web && playwright test --config e2e/playwright.config.ts",
-    "build:web": "pnpm --filter @arbitron/web build"
+    "build:web": "pnpm --filter @arbitron/web build",
+    "db:reset": "pnpm --filter @arbitron/db db:reset",
+    "db:types": "pnpm --filter @arbitron/db db:types"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

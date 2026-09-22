@@ -19,7 +19,7 @@ Blocker references point to 02-BLOCKERS.md.
 
 | ID | Ticket | Depends | Blockers | Acceptance criteria | Status | SHA |
 |---|---|---|---|---|---|---|
-| ARB-010 | Supabase migrations: tenancy, marketplace, money, events, settings tables per 01-D | 004 | B-06, D-05 | `pnpm db:reset` applies cleanly; generated types committed | TODO | |
+| ARB-010 | Supabase migrations: tenancy, marketplace, money, events, settings tables per 01-D | 004 | B-06, D-05 | `pnpm db:reset` applies cleanly; generated types committed | BLOCKED (C-01: generated types need a Supabase project, B-06. Migrations themselves apply cleanly — verified against real Postgres via PGlite on every push) | 8c9c8fa |
 | ARB-011 | RLS policies on every table + tests proving cross-org read/write is denied | 010 | — | Test suite shows denial for other org on every table | TODO | |
 | ARB-012 | Auth (Supabase email login), roles owner/operator/viewer | 010 | D-13 | Viewer cannot approve; operator can; owner can change settings | TODO | |
 | ARB-013 | Seed service_categories and seed market_price_bands flagged source='seed' | 010 | — | Seed idempotent; seed bands visibly labelled "seed" in UI | TODO | |
