@@ -769,3 +769,56 @@ Reason:
 - The second clause of the acceptance, a sandbox submission, needs the Freelancer client,
   developer app and sandbox accounts (C-02). It is the one part of this ticket that is not
   mechanism, and it stays open there.
+
+## D-033 — The Telegram bot acts as a linked person, never as itself, and hands approved bids to the submit worker
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-050, session …V4PPWs)
+
+Decision:
+
+- A chat is linked to a person with a one-time code the web app issues under that
+  person's own session (`POST /v1/telegram/link-codes`, RLS decides who may), sent to the
+  bot as `/start <code>`. The code lives ten minutes and is used once; what it produces
+  is `users.telegram_chat_id`. A new code moves the chat to whoever made it.
+- Every write the bot makes names the linked user as actor, and every button is judged
+  by that user's role: a viewer sees cards and stats but cannot approve, edit, reject,
+  pause or resume (01 section H, `canApprove`). A bid from another org does not exist to
+  this chat.
+- Approve sets the proposal `approved` with `approved_via = 'telegram'`, records the
+  event, closes the card's buttons and enqueues the submit worker (D-032), which holds
+  the live gate, the allowance and the platform call. Telegram never touches a
+  marketplace.
+- Edit and Reject ask for the next message. An edit puts the proposal back to `queued`
+  with its approval cleared: the old approval covered the old words. A reject records
+  the reason on the proposal and in the event. A sent bid can be changed by neither.
+- `/pause` sets `settings.bidding_paused`; the submit worker then sends nothing, whoever
+  approved it, and keeps the approval. `/resume` clears it and re-enqueues every approved
+  bid. Both are events with the person named.
+- The card reads stored rows only: the job title, the latest score, the price and
+  timeline, the estimate's expected cost and method, and the margin from the evaluation,
+  in the deal currency and in ZAR at the rate the evaluation stored (05 section 3.4). The
+  money format is D-024's, ported to `packages/core` and held to the same outputs.
+- The Bot API adapter uses the method and field names read from the official reference
+  on 22/09/2026 (its latest changes dated 24/08/2026): sendMessage, InlineKeyboardMarkup
+  with callback_data of at most 64 bytes, answerCallbackQuery with at most 200
+  characters, editMessageReplyMarkup, setWebhook with `secret_token`, which Telegram
+  returns in the `X-Telegram-Bot-Api-Secret-Token` header. The webhook refuses an update
+  without that header and answers 200 to every accepted one, so Telegram never resends.
+  The token is in the request URL and nowhere else.
+- Telegram messages to the operator are not marketplace calls and are not gated by
+  LIVE_MODE: the gate is about clients and platforms (01 section H), and a bot that
+  could not speak to its operator in development could not be tested.
+
+Reason:
+
+- The acceptance's three clauses: Approve hands off to the submit worker, which is the
+  sandbox call's place and stays on C-02; Edit replaces the text; Reject records the
+  reason. Each has a test against real Postgres and a scripted Telegram. Ten mutants
+  (viewers approving, the org ignored, an edit keeping its approval, the reason dropped, a
+  used code linking again, the approval not enqueued, resume re-queuing nothing, cards
+  pushed to viewers, the ZAR margin at the wrong rate, the secret header unchecked) each
+  fail at least one test.
+- core.telegram.org is blocked by this environment's egress proxy; the reference was read
+  through a browser service instead, so 01 section B's rule (names confirmed against the
+  official docs, cited in code) is met rather than worked around.

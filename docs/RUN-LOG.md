@@ -68,6 +68,9 @@ Completed:
 - ARB-044 submit worker: approval, scanner cap, live gate on both switches with the
   would-send bid logged, allowance, pipeline item; platform call injected — `bfa74cb` (D-032).
   First clause proven; the sandbox clause stays on C-02.
+- ARB-050 Telegram bot: link codes, commands, approval cards, Approve/Edit/Reject as the
+  linked person, /pause held by the submit worker; Bot API names read from the official
+  reference — `9d1fe12` (D-033). The sandbox clause stays on C-02; the token is B-09.
 
 Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
 
