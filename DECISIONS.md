@@ -472,3 +472,31 @@ Reason:
 Outcome:
 
 - Run 24 went green another way, recorded in D-026: the copy was reworded so no line sits within 2% of a wrap point, with a test that fails if one does, and every font face is loaded before the shot. What D-025 still rules out is committing a baseline CI has never passed; the workflow is the fallback when a Chromium update moves more than a wrap point.
+
+## D-026 — Why the style-guide snapshots now hold across Chromium builds (addendum to D-025)
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-060 follow-up, session …iZW8GE)
+
+Context:
+
+- Two sessions were fixing CI run 19 at the same time. This one found the cause of the
+  380 px failure: one line of the warning paragraph was within half a percent of its wrap
+  point, and CI's Chromium wrapped it. The page came out one line (24 px) shorter, and
+  everything below that line moved.
+
+Decision:
+
+- The copy is reworded, and every font the page uses is bundled, including the monospace
+  one. A Playwright test now fails if any text on the style guide is within 2% of a line
+  break at 380 px or 1280 px.
+- The baselines committed in 9cad7b7 were rendered in the build container. CI run 24 on
+  that exact commit passed both snapshots, which shows they match what the runner draws.
+- D-025's `visual-baseline` workflow stays the way to regenerate them. Rendering them
+  on the runner and proving them on the runner are both valid; what D-025 rules out is
+  committing a baseline that CI has never passed.
+
+Reason:
+
+- The wrap-margin test turns the failure mode into a named, local test failure with the
+  offending sentence in the message, instead of a 10% pixel diff in CI.

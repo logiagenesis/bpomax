@@ -21,7 +21,16 @@ const COMPONENT_CLASSES = [
 
 async function open(page: Page) {
   await page.goto('/style-guide.html');
-  await page.evaluate(() => document.fonts.ready);
+  // Every face the page uses, loaded explicitly: `fonts.ready` alone can resolve before a
+  // face is first requested, and a late swap changes the layout mid-screenshot.
+  await page.evaluate(async () => {
+    await Promise.all([
+      document.fonts.load('400 1em Inter'),
+      document.fonts.load('600 1em Inter'),
+      document.fonts.load('400 1em "JetBrains Mono"'),
+    ]);
+    await document.fonts.ready;
+  });
 }
 
 test('every class in components.css is used on the style guide', async ({ page }) => {
@@ -185,6 +194,39 @@ test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBe(0);
+});
+
+/**
+ * The snapshots compare whole pages, so a line that wraps on one Chromium build and not
+ * on another moves everything below it. CI's Chromium and a developer's are rarely the
+ * same build, and they shape text a fraction differently. This fails when any text on the
+ * page is within 2% of a wrap point, which is what made the 380 px snapshot flaky once.
+ */
+test('no text sits so close to a line break that another Chromium would wrap it', async ({
+  page,
+}) => {
+  for (const width of [380, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page);
+    const fragile = await page.evaluate(() => {
+      const found: string[] = [];
+      const selector = 'p, h1, h2, h3, td, th, label, button, span, code, a, li';
+      for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+        if (!el.textContent?.trim()) continue;
+        const before = el.getBoundingClientRect().height;
+        for (const spacing of ['0.02em', '-0.02em']) {
+          el.style.letterSpacing = spacing;
+          const after = el.getBoundingClientRect().height;
+          el.style.letterSpacing = '';
+          if (Math.abs(after - before) > 1) {
+            found.push(`${spacing}: ${el.textContent.trim().slice(0, 60)}`);
+          }
+        }
+      }
+      return found;
+    });
+    expect(fragile, `at ${width} px`).toEqual([]);
+  }
 });
 
 test.describe('visual snapshot', () => {
