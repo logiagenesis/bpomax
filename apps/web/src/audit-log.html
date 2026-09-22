@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Audit log — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./audit-log.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./index.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./index.html">Home</a></li>
+            <li><a href="./audit-log.html" aria-current="page">Audit log</a></li>
+            <li><a href="./style-guide.html">Style guide</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container stack" style="padding-block: var(--space-8)">
+      <div>
+        <h1>Audit log</h1>
+        <p>
+          Every state change and every external call, newest first. Rows are written once and never
+          changed; what you see here is what happened.
+        </p>
+      </div>
+
+      <form id="filters" class="card stack" novalidate aria-labelledby="filters-heading">
+        <h2 id="filters-heading">Filter</h2>
+        <div class="grid">
+          <div class="field">
+            <label class="field__label" for="type">Type</label>
+            <select class="select" id="type" name="type">
+              <option value="">All types</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="from">From</label>
+            <input
+              class="input"
+              id="from"
+              name="from"
+              type="date"
+              aria-describedby="from-hint from-error"
+            />
+            <p class="field__hint" id="from-hint">Start of that day, South African time.</p>
+            <p class="field__error" id="from-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="to">To</label>
+            <input
+              class="input"
+              id="to"
+              name="to"
+              type="date"
+              aria-describedby="to-hint to-error"
+            />
+            <p class="field__hint" id="to-hint">End of that day, inclusive.</p>
+            <p class="field__error" id="to-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="actor">Actor</label>
+            <select class="select" id="actor" name="actor" aria-describedby="actor-hint">
+              <option value="">Everyone</option>
+            </select>
+            <p class="field__hint" id="actor-hint">
+              People who appear in this log. System actions have no actor.
+            </p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="outcome">Outcome</label>
+            <select class="select" id="outcome" name="outcome">
+              <option value="">Any outcome</option>
+              <option value="ok">OK</option>
+              <option value="error">Error</option>
+              <option value="blocked">Blocked</option>
+              <option value="skipped">Skipped</option>
+            </select>
+          </div>
+        </div>
+        <div class="cluster">
+          <button type="submit" class="btn btn--primary" id="apply">Apply filters</button>
+          <button type="button" class="btn btn--secondary" id="clear">Clear filters</button>
+          <button
+            type="button"
+            class="btn btn--secondary"
+            id="export"
+            disabled
+            aria-describedby="export-hint"
+          >
+            Export CSV
+          </button>
+          <span class="field__hint" id="export-hint"
+            >Exports every row that matches the filter.</span
+          >
+        </div>
+        <div role="status" aria-live="polite" id="status"></div>
+      </form>
+
+      <section aria-labelledby="results-heading" class="stack">
+        <div class="cluster">
+          <h2 id="results-heading">Events</h2>
+          <p id="count" class="field__hint"></p>
+        </div>
+        <div class="table-wrap" id="results" hidden>
+          <table class="table">
+            <caption class="visually-hidden">
+              Audit log events
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Type</th>
+                <th scope="col">Actor</th>
+                <th scope="col">Outcome</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Details</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="empty" hidden>
+          <p>No events match these filters.</p>
+        </div>
+        <div class="cluster">
+          <button type="button" class="btn btn--ghost" id="previous" disabled>Previous</button>
+          <button type="button" class="btn btn--ghost" id="next" disabled>Next</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

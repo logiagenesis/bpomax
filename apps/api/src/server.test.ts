@@ -14,6 +14,8 @@ const ORG_A = fixtureId('a', ENTITY.org);
 const ORG_B = fixtureId('b', ENTITY.org);
 const AUTH_A = fixtureId('a', ENTITY.authUser);
 const AUTH_B = fixtureId('b', ENTITY.authUser);
+/** APP_URL in .env: the one origin a browser may call the API from. */
+const WEB_ORIGIN = 'http://localhost:5173';
 
 /** Stands in for Supabase JWT verification, which needs B-06. */
 function authenticateFromHeader(request: { headers: Record<string, unknown> }): string | null {
@@ -36,6 +38,7 @@ beforeAll(async () => {
     db,
     authenticate: (request) =>
       authenticateFromHeader(request as unknown as { headers: Record<string, unknown> }),
+    webOrigin: WEB_ORIGIN,
   });
   await app.ready();
 }, 60_000);
@@ -139,5 +142,60 @@ describe('GET /v1/events', () => {
     });
     const { rows } = await db.query<{ current_user: string }>('select current_user');
     expect(rows[0]?.current_user).toBe('postgres');
+  });
+});
+
+describe('cross-origin calls from the web app', () => {
+  it('answers a preflight from the web app s own origin', async () => {
+    const response = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/events.csv',
+      headers: { origin: WEB_ORIGIN, 'access-control-request-method': 'GET' },
+    });
+    expect(response.statusCode).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe(WEB_ORIGIN);
+    expect(response.headers['access-control-allow-methods']).toContain('GET');
+    // Bearer tokens, not cookies: the browser must never be told to send credentials.
+    expect(response.headers['access-control-allow-credentials']).toBeUndefined();
+  });
+
+  it('lets the page read what the export says about its file', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/events.csv',
+      headers: { origin: WEB_ORIGIN, 'x-test-auth-user': AUTH_A },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe(WEB_ORIGIN);
+    const exposed = String(response.headers['access-control-expose-headers']);
+    for (const name of ['content-disposition', 'x-export-rows', 'x-export-truncated']) {
+      expect(exposed).toContain(name);
+    }
+  });
+
+  it('gives another origin nothing', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { origin: 'https://elsewhere.example' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('allows no origin at all when none is configured', async () => {
+    const closed = buildServer({ db, authenticate: () => null });
+    await closed.ready();
+    try {
+      const response = await closed.inject({
+        method: 'GET',
+        url: '/health',
+        headers: { origin: WEB_ORIGIN },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['access-control-allow-origin']).toBeUndefined();
+    } finally {
+      await closed.close();
+    }
   });
 });

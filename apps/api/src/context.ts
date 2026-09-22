@@ -10,6 +10,12 @@ export interface ServerOptions {
    */
   readonly authenticate: (request: FastifyRequest) => Promise<string | null> | string | null;
   readonly logger?: boolean;
+  /**
+   * The origin the web app is served from (APP_URL in .env), which is the only origin a
+   * browser may call this API from. Unset, no cross-origin request is allowed at all,
+   * which is the safe default for a server that is not fronting a web app.
+   */
+  readonly webOrigin?: string | readonly string[];
 }
 
 export interface FieldProblem {
