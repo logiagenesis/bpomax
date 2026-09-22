@@ -39,7 +39,7 @@ Blocker references point to 02-BLOCKERS.md.
 | ARB-050 | Telegram bot: link via one-time code, /queue /pause /resume /stats, Approve/Edit/Reject cards | 043 | B-09 | Approve from Telegram submits in sandbox; Edit replaces text; Reject records reason | TODO | |
 | ARB-060 | Web design system (tokens, components, 380 px responsive, UK English, DD/MM/YYYY) | 002 | D-11 | Style guide page renders every component; Playwright visual snapshot stored | DONE (`style-guide.html` shows every class in `components.css`, checked by Playwright; snapshots at 1280 px and 380 px are stored; each control is audited in `docs/audit/style-guide.md`. The primary colour is provisional and the secondary is still missing — D-11, SOFT; they are one-line token changes) | d8185f9 |
 | ARB-061 | Pages: login, dashboard, feed, approvals, settings (accounts, scanners, margin rules, fee table, FX, live-mode switch with confirm) | 060, 044 | — | Every button audited per 05; Playwright covers every button and form | TODO | |
-| ARB-062 | Audit log page | 014, 060 | — | Filter by type/date/actor; export CSV | TODO | |
+| ARB-062 | Audit log page | 014, 060 | — | Filter by type/date/actor; export CSV | IN PROGRESS (claimed 22/09/2026 18:10 SAST+0 by session …V4PPWs — two sessions now push to main, so a ticket is claimed here before work starts) | |
 | ARB-070 | Deploy web to chosen host with preview per push; deploy API/workers/bot | 061 | B-11, B-12 | Live preview URL and API health URL recorded in README; Telegram webhook reachable | TODO | |
 | ARB-099 | Phase 1 audit + tag `phase-1` + phase report with four links | all Phase 1 | — | Report contains repo URL, latest commit URL, tag URL, live preview URL | TODO | |
 
