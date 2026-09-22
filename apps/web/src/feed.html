@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Feed — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./feed.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Feed</h1>
+        <p>
+          Jobs the scanners found, newest first, with the stored score, cost estimate and margin
+          beside each. Queue bid asks for a bid to be drafted; nothing is sent until it is approved.
+        </p>
+      </div>
+
+      <form id="filters" class="card cluster" novalidate aria-labelledby="filters-heading">
+        <h2 id="filters-heading" class="visually-hidden">Filter</h2>
+        <div class="field">
+          <label class="field__label" for="verdict">Verdict</label>
+          <select class="select" id="verdict" name="verdict">
+            <option value="">All jobs</option>
+            <option value="go">Go</option>
+            <option value="caution">Caution</option>
+            <option value="skip">Skip</option>
+            <option value="unscored">Not scored yet</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn--primary" id="apply">Apply filter</button>
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+      </form>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <div class="table-wrap" id="results" hidden>
+        <table class="table">
+          <caption class="visually-hidden">
+            Jobs in the feed
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Job</th>
+              <th scope="col">Budget</th>
+              <th scope="col">Score</th>
+              <th scope="col">Estimate</th>
+              <th scope="col">Margin</th>
+              <th scope="col">Bid</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" hidden>
+        <p>No jobs match this filter.</p>
+      </div>
+      <div class="cluster">
+        <button type="button" class="btn btn--ghost" id="previous" disabled>Previous</button>
+        <button type="button" class="btn btn--ghost" id="next" disabled>Next</button>
+        <p id="count" class="field__hint"></p>
+      </div>
+    </main>
+  </body>
+</html>

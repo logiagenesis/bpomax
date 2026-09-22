@@ -10,8 +10,8 @@ signed-in organisation by row-level security.
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link | Arbitron | Go to the home page | Goes to index.html | — | — | — | Never | Yes | every link goes somewhere | ✅ |
-| Nav links ×3 | Home, Audit log, Style guide | Go to that page; current page marked | Go there; `aria-current="page"` on Audit log | — | — | — | Never | Yes | every link goes somewhere | ✅ |
+| Link | Arbitron | Go to the dashboard | Goes to dashboard.html | — | — | — | Never | Yes | every link goes somewhere | ✅ |
+| Nav links ×5 | Dashboard, Feed, Approvals, Settings, Audit log | Go to that page; current page marked | Go there; `aria-current="page"` on Audit log | — | — | — | Never | Yes | every link goes somewhere | ✅ |
 | Select | Type | Restrict to one event type | Sends `type=` to the API; address bar updated | — | — | — | Never | Yes | filters by type…; offers every event type… | ✅ |
 | Date input | From | Start of that South African day | Sends `from=` as 00:00 SAST in UTC | — | — | "Enter a date." | Never | Yes | filters by date as whole South African days | ✅ |
 | Date input | To | End of that day, inclusive | Sends `to=` as the next midnight SAST | — | — | "Enter a date." / "Must not be before the From date." | Never | Yes | filters by date…; refuses a bad filter… | ✅ |
@@ -31,6 +31,7 @@ a view can be linked to (test "a linked view restores its filters"). No horizont
 timestamp, and defuses cells beginning with `=`, `+`, `-`, `@`, tab or carriage return
 (`apps/api/src/routes/events-csv.ts`).
 
-Known limit, not a defect: until sign-in lands (ARB-061, blocked on B-06) no request
-carries a bearer token, so against a real API the page shows "Not signed in" rather than
-data. The page does not hide that.
+Sign-in (ARB-061): the page carries the session's bearer token like every other page,
+and its navigation is the app's (Dashboard, Feed, Approvals, Settings, Audit log). It
+does not redirect on its own: without a session the API answers 401 and the page shows
+"Not signed in. Sign in and try again." rather than hiding it.

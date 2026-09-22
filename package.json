@@ -14,10 +14,11 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "pnpm build:web && playwright test --config e2e/playwright.config.ts",
+    "test:e2e": "pnpm build:web:e2e && playwright test --config e2e/playwright.config.ts",
     "build:web": "pnpm --filter @arbitron/web build",
     "db:reset": "pnpm --filter @arbitron/db db:reset",
-    "db:types": "pnpm --filter @arbitron/db db:types"
+    "db:types": "pnpm --filter @arbitron/db db:types",
+    "build:web:e2e": "pnpm --filter @arbitron/web build:e2e"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

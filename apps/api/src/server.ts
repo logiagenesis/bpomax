@@ -1,8 +1,13 @@
 import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { ServerOptions } from './context.js';
+import { registerDashboardRoutes } from './routes/dashboard.js';
 import { registerEventRoutes } from './routes/events.js';
+import { registerJobRoutes } from './routes/jobs.js';
+import { registerMeRoutes } from './routes/me.js';
+import { registerProposalRoutes } from './routes/proposals.js';
 import { registerScannerRoutes } from './routes/scanners.js';
+import { registerSettingsRoutes } from './routes/settings.js';
 import { registerTelegramRoutes } from './routes/telegram.js';
 
 /**
@@ -29,6 +34,11 @@ export function buildServer(options: ServerOptions): FastifyInstance {
 
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-api' }));
 
+  registerMeRoutes(app, options);
+  registerDashboardRoutes(app, options);
+  registerJobRoutes(app, options);
+  registerProposalRoutes(app, options);
+  registerSettingsRoutes(app, options);
   registerEventRoutes(app, options);
   registerScannerRoutes(app, options);
   registerTelegramRoutes(app, options);

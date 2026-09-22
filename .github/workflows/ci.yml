@@ -77,8 +77,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Build the web app
-        run: pnpm build:web
+      - name: Build the web app in e2e mode (stand-in Supabase and API URLs the specs intercept)
+        run: pnpm build:web:e2e
 
       - name: Run Playwright tests
         run: pnpm exec playwright test --config e2e/playwright.config.ts

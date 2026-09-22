@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./login.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./index.html">Arbitron</a>
+      </div>
+    </header>
+
+    <main class="container page">
+      <form id="login" class="card stack login" novalidate aria-labelledby="login-heading">
+        <h1 id="login-heading">Sign in</h1>
+        <p id="login-intro">Use the email address and password an owner set up for you.</p>
+        <div class="field">
+          <label class="field__label" for="email">Email</label>
+          <input
+            class="input"
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            required
+            aria-describedby="email-error"
+          />
+          <p class="field__error" id="email-error" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="password">Password</label>
+          <input
+            class="input"
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            aria-describedby="password-error"
+          />
+          <p class="field__error" id="password-error" hidden></p>
+        </div>
+        <div class="cluster">
+          <button type="submit" class="btn btn--primary" id="submit">Sign in</button>
+        </div>
+        <div role="status" aria-live="polite" id="status"></div>
+      </form>
+    </main>
+  </body>
+</html>

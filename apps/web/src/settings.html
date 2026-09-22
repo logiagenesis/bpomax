@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./settings.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div class="page__title">
+        <h1>Settings</h1>
+        <button type="button" class="btn btn--secondary" id="reload">Reload</button>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <section class="card stack" aria-labelledby="live-heading">
+        <h2 id="live-heading">Live mode</h2>
+        <p>
+          Two switches must both be on before any bid, message or post reaches a marketplace. The
+          first is on the server; the second is this organisation's.
+        </p>
+        <p>Server switch: <span class="badge badge--neutral" id="env-live">Off</span></p>
+        <label class="switch">
+          <input type="checkbox" role="switch" id="live-switch" aria-describedby="live-state" />
+          Organisation live mode
+        </label>
+        <p id="live-state"><span class="badge badge--neutral" id="live-badge">Sandbox</span></p>
+        <div id="live-blockers" hidden>
+          <p class="section-note">Live mode cannot be switched on until these are set:</p>
+          <ul id="live-blockers-list"></ul>
+        </div>
+      </section>
+
+      <section class="card stack" aria-labelledby="rules-heading">
+        <h2 id="rules-heading">Margin rules</h2>
+        <p class="section-note">
+          Every rule is required before live mode. Nothing here has a default: a blank rule means no
+          job is judged until it is set (docs/02 D-02, D-03, T-06).
+        </p>
+        <form id="rules-form" class="stack" novalidate>
+          <div class="grid">
+            <div class="field">
+              <label class="field__label" for="minMarginPct">Minimum margin (%)</label>
+              <input
+                class="input"
+                id="minMarginPct"
+                name="minMarginPct"
+                inputmode="decimal"
+                aria-describedby="minMarginPct-error"
+              />
+              <p class="field__error" id="minMarginPct-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="minMarginZarMinor">Minimum margin (rand)</label>
+              <input
+                class="input"
+                id="minMarginZarMinor"
+                name="minMarginZarMinor"
+                inputmode="decimal"
+                placeholder="1 500,00"
+                aria-describedby="minMarginZarMinor-error"
+              />
+              <p class="field__error" id="minMarginZarMinor-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="fxBufferPct">FX buffer (%)</label>
+              <input
+                class="input"
+                id="fxBufferPct"
+                name="fxBufferPct"
+                inputmode="decimal"
+                aria-describedby="fxBufferPct-hint fxBufferPct-error"
+              />
+              <p class="field__hint" id="fxBufferPct-hint">Held back on deals not in rand.</p>
+              <p class="field__error" id="fxBufferPct-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="vatPct">VAT (%)</label>
+              <input
+                class="input"
+                id="vatPct"
+                name="vatPct"
+                inputmode="decimal"
+                aria-describedby="vatPct-hint vatPct-error"
+              />
+              <p class="field__hint" id="vatPct-hint">
+                Rand prices are shown VAT-inclusive at this rate where VAT applies.
+              </p>
+              <p class="field__error" id="vatPct-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="retentionDays">Retention (days)</label>
+              <input
+                class="input"
+                id="retentionDays"
+                name="retentionDays"
+                inputmode="numeric"
+                aria-describedby="retentionDays-hint retentionDays-error"
+              />
+              <p class="field__hint" id="retentionDays-hint">
+                How long a closed conversation keeps client content. From legal advice (T-06).
+              </p>
+              <p class="field__error" id="retentionDays-error" hidden></p>
+            </div>
+          </div>
+          <div class="cluster">
+            <button type="submit" class="btn btn--primary" id="rules-save">
+              Save margin rules
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card stack" aria-labelledby="fees-heading">
+        <h2 id="fees-heading">Fee table</h2>
+        <p class="section-note">
+          One rule per platform, project type and side, read from the platform's official fee page.
+          The page and the day it was read are required (docs/02 T-02).
+        </p>
+        <form id="fee-form" class="stack" novalidate>
+          <div id="fee-rows"></div>
+          <p class="field__error" id="fee-table-error" hidden></p>
+          <div class="cluster">
+            <button type="button" class="btn btn--secondary" id="fee-add">Add rule</button>
+            <button type="submit" class="btn btn--primary" id="fee-save">Save fee table</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card stack" aria-labelledby="accounts-heading">
+        <h2 id="accounts-heading">Platform accounts</h2>
+        <p class="section-note">
+          One account per verified identity. The plan and its monthly bid allowance are read from
+          the platform's membership page (docs/02 T-03); the day recorded is kept.
+        </p>
+        <div id="accounts" class="stack"></div>
+        <div class="cluster">
+          <button
+            type="button"
+            class="btn btn--secondary"
+            id="connect-freelancer"
+            disabled
+            aria-describedby="connect-hint"
+          >
+            Connect Freelancer.com
+          </button>
+          <span class="field__hint" id="connect-hint">
+            Connecting needs the Freelancer.com developer app and sandbox accounts (docs/02 B-03 and
+            B-04; ARB-020).
+          </span>
+        </div>
+      </section>
+
+      <section class="card stack" aria-labelledby="scanners-heading">
+        <h2 id="scanners-heading">Scanners</h2>
+        <p class="section-note">
+          A scanner is a saved search that runs on a timer. Auto-send is off unless switched on
+          here, and then only with a daily cap and a minimum score.
+        </p>
+        <div class="table-wrap" id="scanner-table" hidden>
+          <table class="table">
+            <caption class="visually-hidden">
+              Scanners
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Platform</th>
+                <th scope="col">Every</th>
+                <th scope="col">Active</th>
+                <th scope="col">Auto-send</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="scanner-rows"></tbody>
+          </table>
+        </div>
+        <p id="scanner-empty" class="section-note" hidden>No scanners yet.</p>
+        <form id="scanner-form" class="stack" novalidate aria-labelledby="scanner-form-heading">
+          <h3 id="scanner-form-heading">Add a scanner</h3>
+          <div class="grid">
+            <div class="field">
+              <label class="field__label" for="scanner-name">Name</label>
+              <input
+                class="input"
+                id="scanner-name"
+                name="name"
+                aria-describedby="scanner-name-error"
+              />
+              <p class="field__error" id="scanner-name-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="scanner-platform">Platform</label>
+              <select
+                class="select"
+                id="scanner-platform"
+                name="platform"
+                aria-describedby="scanner-platform-error"
+              >
+                <option value="freelancer">Freelancer.com</option>
+                <option value="upwork">Upwork</option>
+                <option value="fiverr">Fiverr</option>
+              </select>
+              <p class="field__error" id="scanner-platform-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="scanner-filters">Keywords</label>
+              <input
+                class="input"
+                id="scanner-filters"
+                name="keywords"
+                aria-describedby="scanner-filters-hint scanner-filters-error"
+              />
+              <p class="field__hint" id="scanner-filters-hint">Comma-separated.</p>
+              <p class="field__error" id="scanner-filters-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="scanner-pollIntervalSeconds"
+                >Check every (seconds)</label
+              >
+              <input
+                class="input"
+                id="scanner-pollIntervalSeconds"
+                name="pollIntervalSeconds"
+                inputmode="numeric"
+                value="120"
+                aria-describedby="scanner-pollIntervalSeconds-error"
+              />
+              <p class="field__error" id="scanner-pollIntervalSeconds-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="scanner-dailyCap">Daily cap</label>
+              <input
+                class="input"
+                id="scanner-dailyCap"
+                name="dailyCap"
+                inputmode="numeric"
+                value="0"
+                aria-describedby="scanner-dailyCap-error"
+              />
+              <p class="field__error" id="scanner-dailyCap-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="scanner-minScore">Minimum score</label>
+              <input
+                class="input"
+                id="scanner-minScore"
+                name="minScore"
+                inputmode="numeric"
+                aria-describedby="scanner-minScore-error"
+              />
+              <p class="field__error" id="scanner-minScore-error" hidden></p>
+            </div>
+          </div>
+          <div class="cluster">
+            <label class="check"
+              ><input type="checkbox" id="scanner-active" name="active" checked /> Active</label
+            >
+            <label class="switch"
+              ><input
+                type="checkbox"
+                role="switch"
+                id="scanner-autoSend"
+                name="autoSend"
+                aria-describedby="scanner-autoSend-error"
+              />
+              Auto-send</label
+            >
+          </div>
+          <p class="field__error" id="scanner-autoSend-error" hidden></p>
+          <div class="cluster">
+            <button type="submit" class="btn btn--primary" id="scanner-save">Add scanner</button>
+            <button type="button" class="btn btn--secondary" id="scanner-cancel" hidden>
+              Cancel edit
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card stack" aria-labelledby="telegram-heading">
+        <h2 id="telegram-heading">Telegram</h2>
+        <p id="telegram-state"></p>
+        <div class="cluster">
+          <button type="button" class="btn btn--secondary" id="link-code">Create link code</button>
+          <output id="link-code-out" for="link-code"></output>
+        </div>
+      </section>
+
+      <section class="card stack" aria-labelledby="auto-reply-heading">
+        <h2 id="auto-reply-heading">Auto-reply</h2>
+        <p class="section-note">
+          The once-per-thread auto-reply for when nobody is online arrives with the inbox (ARB-121).
+          There is nothing to set yet.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

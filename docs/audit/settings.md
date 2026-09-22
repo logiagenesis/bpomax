@@ -1,0 +1,45 @@
+# Control audit — settings.html (ARB-061)
+
+Per docs/05 section 1. Every control on the page, and the Playwright test (in
+`e2e/settings.spec.ts`) that exercises it. The API is an in-memory copy, at the network
+edge, of `apps/api/src/routes/settings.ts`, `routes/scanners.ts` and
+`routes/telegram.ts` (each tested against real Postgres). Every form is checked before it
+sends with the same `@arbitron/core` functions the API runs (`validateMarginRules`,
+`parseFeeTable`, `validatePlanRecord`, `validateScanner`, `checkAutoSendGuardrails`), so
+the client and server rules are one piece of code (docs/05 section 1.5).
+
+| Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Link, nav links ×5, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Settings | — | — | — | — | Yes | shows what is set and what still blocks live mode… | ✅ |
+| Button | Reload | Read everything again | `GET /v1/settings` and `GET /v1/scanners` | Spinner, aria-busy, disabled | "Settings loaded." | API message | While busy | Yes | reload asks again | ✅ |
+| Switch | Organisation live mode | Turn the org's live switch on or off, with confirmation | The switch only moves on the API's answer. Modal: "Switch live mode on?" (danger, "Go live") or "…off?"; cancel leaves it; `POST /v1/settings/live-mode {live}`; logged as `live_mode.changed` naming the person | aria-busy, disabled | "Live mode is on for this organisation." / "Live mode is off. Nothing leaves." | The API's list of what is still missing | Until every rule is set (title "Set every rule above first."; the missing rules are listed under it); unless the person is an owner (title says so); while busy | Yes | live mode asks for confirmation, cancelling leaves it off, confirming switches it…; an operator can manage scanners… | ✅ |
+| Inputs ×5 | Minimum margin (%), Minimum margin (rand), FX buffer (%), VAT (%), Retention (days) | The margin rules | Rand is typed as an amount (`1 500,00`) and sent as whole cents; percentages accept a decimal comma | — | — | Per field, e.g. "Must be zero or more.", "Must be a whole number.", attached with aria-describedby; first invalid focused | Unless the person is an owner (title says so) | Yes | margin rules are checked before they are sent, then saved as typed, and the blockers shrink | ✅ |
+| Button (submit) | Save margin rules | Save the rules | `PATCH /v1/settings` with only these fields; logged as `settings.changed` with before and after | Spinner, aria-busy, disabled | "Margin rules saved."; live-mode blockers re-listed | API message; 422 field errors attached | as above; while busy | Yes | margin rules are checked… | ✅ |
+| Button | Add rule | Add a fee rule row | A row with today's date (SAST) and focus on its first field | — | — | — | Unless owner | Yes | a fee rule needs its source page and date… | ✅ |
+| Inputs ×8 (per rule) | Platform, Project type, Side, Fee (%), Minimum fee (amount), Minimum fee currency, Official fee page (URL), Read on | One fee rule with its provenance (docs/02 T-02) | Checked with `parseFeeTable`; the amount is typed and sent as whole minor units | — | — | Per field, e.g. "Must be the URL of the official fee page." | Unless owner | Yes | a fee rule needs its source page and date… | ✅ |
+| Button (per rule) | Remove fee rule N | Drop that row | Row removed, the rest renumbered | — | — | — | Unless owner | Yes | a fee rule needs its source page and date… | ✅ |
+| Button (submit) | Save fee table | Save every row | `PATCH /v1/settings {feeTable}` | Spinner, aria-busy, disabled | "Fee table saved with N rules." | API message; field errors attached | Unless owner; while busy | Yes | a fee rule needs its source page and date… | ✅ |
+| Inputs ×2 (per account) | Plan name, Monthly bid allowance | Record the platform plan and its allowance (docs/02 T-03) | Checked with `validatePlanRecord` | — | — | "Must be a whole number." etc. | Unless the person may write (owner or operator) | Yes | the plan and allowance are checked, saved and dated | ✅ |
+| Button (submit, per account) | Save plan for <platform> | Save them | `PATCH /v1/platform-accounts/:id`; the day recorded is stored and shown | Spinner, aria-busy, disabled | "Plan saved for <platform>." | API message | as above; while busy | Yes | the plan and allowance are checked, saved and dated | ✅ |
+| Button | Connect Freelancer.com | Start the OAuth connect | Nothing yet: the control is disabled with the reason beside it (docs/02 B-03, B-04; ARB-020, blocker C-02). It is not a dead control: its disabled state and its reason are the behaviour, and the test asserts both | — | — | — | Always, until C-02 is cleared | Yes (focusable when enabled) | shows what is set and what still blocks live mode… | ✅ |
+| Inputs ×8 | Name, Platform, Keywords, Check every (seconds), Daily cap, Minimum score, Active, Auto-send | A scanner | Checked with `validateScanner` then `checkAutoSendGuardrails`, the API's own two checks in order (D-018) | — | — | "Must not be empty.", "Must be at least 1 before auto-send can be turned on.", "Must be set before auto-send can be turned on." | Unless the person may write | Yes | a scanner is checked before it is sent… | ✅ |
+| Button (submit) | Add scanner / Save scanner | Create, or save the one being edited | `POST /v1/scanners` with the org id, or `PATCH /v1/scanners/:id`; form cleared; table refreshed | Spinner, aria-busy, disabled | "Added “<name>”." / "Saved “<name>”." | API message, e.g. a duplicate name; 422 field errors attached | as above; while busy | Yes | a scanner can be added, edited and deleted…; the API’s own refusal of a scanner lands on the field | ✅ |
+| Button | Cancel edit | Stop editing | Form back to "Add a scanner", focus on Name | — | — | — | Hidden unless editing | Yes | a scanner can be added, edited and deleted… | ✅ |
+| Button (per scanner) | Edit <name> | Load it into the form | Form filled, heading "Edit “<name>”", Name focused | — | — | — | Unless the person may write (title says so) | Yes | a scanner can be added, edited and deleted… | ✅ |
+| Button (per scanner) | Delete <name> | Confirm, then delete | Modal (danger); cancel sends nothing; `DELETE /v1/scanners/:id`; logged as `scanner.deleted` | Spinner, aria-busy, disabled | "Deleted “<name>”." | API message | as Edit; while busy | Yes | a scanner can be added, edited and deleted… | ✅ |
+| Button | Create link code | Issue a one-time Telegram link code | `POST /v1/telegram/link-codes`; code and expiry shown in an `<output>` | Spinner, aria-busy, disabled | "Link code created. It works once and expires in ten minutes." | API message | Unless the person may write | Yes | a Telegram link code is created and shown with its expiry | ✅ |
+
+Roles (D-013): an operator can manage scanners, accounts and the Telegram link but not
+the rules, the fee table or live mode; a viewer can change nothing. Each disabled control
+carries its reason in its title. RLS is what actually refuses a write; the greying is a
+courtesy (tests "an operator can manage scanners…", "a viewer can read everything and
+change nothing").
+
+Auto-reply: there is nothing to set until the inbox lands (ARB-121); the section says so
+and offers no control.
+
+Destructive actions (docs/05 section 1.3): going live asks for confirmation and is
+logged; deleting a scanner asks and is logged. The server switch (`LIVE_MODE`) is shown,
+never changed here: it is the host's (D-032).
+
+Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.

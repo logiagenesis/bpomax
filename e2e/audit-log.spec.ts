@@ -361,11 +361,14 @@ test('every link goes somewhere', async ({ page }) => {
     'aria-current',
     'page',
   );
-  await page.getByRole('link', { name: 'Style guide' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Style guide' })).toBeVisible();
+  // The other pages need a session (ARB-061); without one they hand over to login,
+  // remembering where the link pointed. That is the link going somewhere.
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await page.waitForURL('**/login.html?next=settings.html');
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
   await page.goBack();
   await page.getByRole('link', { name: 'Arbitron' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Arbitron' })).toBeVisible();
+  await page.waitForURL('**/login.html?next=dashboard.html');
 });
 
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {

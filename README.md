@@ -17,9 +17,11 @@ is built and what is not.
 ## Status
 
 Phase 0 is complete. Phase 1 is in progress: the data model, its tenancy, the role
-split, the audit log and the retention job are built and tested. Nothing is deployed and
-no marketplace call is live. `LIVE_MODE` defaults to `false`, which blocks every
-outbound marketplace call and logs what would have been sent.
+split, the audit log, the retention job, the scoring, estimating, margin, drafting and
+submit workers, the Telegram bot and the web pages (login, dashboard, feed, approvals,
+settings, audit log) are built and tested. Nothing is deployed and no marketplace call is
+live. `LIVE_MODE` defaults to `false`, which blocks every outbound marketplace call and
+logs what would have been sent.
 
 `docs/04-PROJECT-BOARD.md` is the live board — status and closing SHA per ticket, and
 the reason for every one that is blocked.
@@ -54,14 +56,29 @@ docker compose up -d        # Redis on 6379, Postgres on 54322
 pnpm --filter @arbitron/web dev    # front end on http://localhost:5173
 ```
 
-The API is built and tested but has no listen entry point yet: signing a request needs
-the Supabase project (B-06), and hosting is ARB-070. It is importable today —
-`buildServer({ db, authenticate })` in `apps/api/src/server.ts` serves `/health` and
-`GET /v1/events`. The workers have their queue wiring — one BullMQ queue per worker in
-docs/01 section E, exponential-backoff retries, a dead-letter queue and a `/health`
-server (`apps/workers/src/`). The score worker (ARB-032) is the first processor; it has
-never called a real model (B-08). The Telegram bot is a scaffold. The web design system
-(ARB-060) is served at `/style-guide.html`.
+The API is built and tested but has no listen entry point yet: hosting is ARB-070. It
+is importable today — `buildServer({ db, authenticate, enqueue, liveMode })` in
+`apps/api/src/server.ts` serves `/health`, the audit log, scanners, the Telegram link
+code and, from ARB-061, `/v1/me`, `/v1/dashboard`, `/v1/jobs` (with `queue-bid`),
+`/v1/proposals` (approve, edit, reject, bulk) and `/v1/settings` (rules, fee table, live
+mode, platform-account plan). `supabaseAuthenticator({ url, anonKey })` in
+`apps/api/src/auth.ts` is the production `authenticate`: it verifies a browser's bearer
+token with the Supabase project (B-06). The workers have their queue wiring — one BullMQ
+queue per worker in docs/01 section E, exponential-backoff retries, a dead-letter queue
+and a `/health` server (`apps/workers/src/`) — and the score, estimate, margin,
+draft-bid and submit processors; no real model has been called (B-08) and no
+marketplace client exists (C-02). The Telegram bot (ARB-050) handles link codes, the
+four commands and approval cards.
+
+The web pages (ARB-061) are `login.html`, `dashboard.html`, `feed.html`,
+`approvals.html`, `settings.html` and `audit-log.html`, with the design system at
+`style-guide.html`. The login page signs in against the Supabase project directly and
+every other page calls the API with the session's bearer token; the build reads
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `API_URL` from `.env` (or the host's
+environment) at build time. Without them the login page says so and nothing else can
+be reached. Every control on every page is listed in `docs/audit/<page>.md` with the
+Playwright test that exercises it (docs/05 section 1); the end-to-end build
+(`pnpm build:web:e2e`) reads `/.env.e2e`, stand-in URLs the specs intercept.
 
 For the full local Supabase stack (Auth, Storage, Studio), use the Supabase CLI rather
 than compose — `supabase start`. See `DECISIONS.md` D-006.

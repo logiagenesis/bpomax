@@ -23,6 +23,7 @@ export const EVENT_TYPES = [
   'job.scored',
   'estimate.created',
   'margin.evaluated',
+  'proposal.draft_requested',
   'proposal.drafted',
   'proposal.edited',
   'proposal.approved',

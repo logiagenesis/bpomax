@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./dashboard.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div class="page__title">
+        <div>
+          <h1>Dashboard</h1>
+          <p id="period" class="section-note"></p>
+        </div>
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <div class="grid" id="tiles">
+        <div class="card">
+          <p class="stat__label">Revenue in, month to date</p>
+          <p class="stat__value" id="revenue-in">—</p>
+          <p class="stat__note">Payments received this month, in rand.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Paid out, month to date</p>
+          <p class="stat__value" id="revenue-out">—</p>
+          <p class="stat__note">Payments made this month, in rand.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Realised margin</p>
+          <p class="stat__value" id="margin">—</p>
+          <p class="stat__note">Received minus paid out.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Pipeline value</p>
+          <p class="stat__value" id="pipeline">—</p>
+          <p class="stat__note" id="pipeline-note">Open deals, applied through delivered.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Replies this month</p>
+          <p class="stat__value" id="replies">—</p>
+          <p class="stat__note">Messages received from clients.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Win rate</p>
+          <p class="stat__value" id="win-rate">—</p>
+          <p class="stat__note" id="win-rate-note">Won ÷ (won + lost), decided this month.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Retainers</p>
+          <p class="stat__value" id="retainers">—</p>
+          <p class="stat__note" id="retainers-note">Monthly total of active retainers.</p>
+        </div>
+        <div class="card">
+          <p class="stat__label">Bids</p>
+          <p class="stat__value" id="bids">—</p>
+          <p class="stat__note">
+            <a href="./approvals.html" id="bids-link">Waiting for approval</a>
+          </p>
+        </div>
+      </div>
+
+      <section class="card stack" id="unconverted" hidden aria-labelledby="unconverted-heading">
+        <h2 id="unconverted-heading">Not counted in rand</h2>
+        <p class="section-note">
+          These payments have no exchange rate stored, so they are listed here rather than guessed
+          into the totals above.
+        </p>
+        <ul id="unconverted-list"></ul>
+      </section>
+    </main>
+  </body>
+</html>

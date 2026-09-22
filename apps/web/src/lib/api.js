@@ -2,13 +2,15 @@
 /**
  * The browser's client for the Arbitron API (ARB-062 onwards).
  *
- * The base URL is build-time configuration (`VITE_API_URL`, from API_URL in .env). The
- * bearer token comes from the session the login page stores (ARB-061, which needs B-06);
- * until then every request goes out unsigned and the API answers 401, which the page
- * shows as it is rather than hiding.
+ * The base URL is build-time configuration (API_URL in .env, put into the build by
+ * apps/web/vite.config.js). The
+ * bearer token comes from the session the login page stores (ARB-061). Without one every
+ * request goes out unsigned and the API answers 401, which the page shows as it is rather
+ * than hiding.
  */
+import { readSession } from './session.js';
 
-export const SESSION_KEY = 'arbitron.session';
+export { SESSION_KEY } from './session.js';
 
 /** @returns {string} */
 export function apiBaseUrl() {
@@ -18,14 +20,7 @@ export function apiBaseUrl() {
 
 /** @returns {string | null} */
 export function accessToken() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const session = JSON.parse(raw);
-    return typeof session?.access_token === 'string' ? session.access_token : null;
-  } catch {
-    return null;
-  }
+  return readSession()?.access_token ?? null;
 }
 
 export class ApiError extends Error {
@@ -37,15 +32,19 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    /** Field-level problems from a 422, in the same shape the validators produce. */
+    /** @type {{ field: string, message: string }[]} */
+    this.errors = [];
   }
 }
 
 /**
  * @param {string} path  e.g. "/v1/events"
  * @param {Record<string, string | number | undefined>} [query]
+ * @param {{ method?: string, body?: unknown }} [options]
  * @returns {Promise<Response>}
  */
-async function request(path, query = {}) {
+async function request(path, query = {}, options = {}) {
   const url = new URL(`${apiBaseUrl()}${path}`);
   for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
@@ -54,31 +53,59 @@ async function request(path, query = {}) {
   /** @type {Record<string, string>} */
   const headers = {};
   if (token) headers.authorization = `Bearer ${token}`;
+  if (options.body !== undefined) headers['content-type'] = 'application/json';
 
   let response;
   try {
-    response = await fetch(url, { headers });
+    response = await fetch(url, {
+      method: options.method ?? 'GET',
+      headers,
+      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+    });
   } catch {
     throw new ApiError(0, 'Could not reach the API. Check that it is running and try again.');
   }
 
   if (!response.ok) {
     let detail = '';
+    /** @type {{ field: string, message: string }[]} */
+    let errors = [];
     try {
       const body = await response.json();
       detail = typeof body?.error === 'string' ? body.error : '';
+      if (Array.isArray(body?.errors)) errors = body.errors;
     } catch {
       /* not JSON */
     }
     if (response.status === 401) throw new ApiError(401, 'Not signed in. Sign in and try again.');
-    throw new ApiError(
+    const error = new ApiError(
       response.status,
-      detail
-        ? `The API refused the request: ${detail}.`
-        : `The API answered ${String(response.status)}.`,
+      errors.length > 0
+        ? 'Some fields need attention. The first one has been selected.'
+        : detail
+          ? /[.!?]$/.test(detail)
+            ? detail
+            : `The API refused the request: ${detail}.`
+          : `The API answered ${String(response.status)}.`,
     );
+    error.errors = errors;
+    throw error;
   }
   return response;
+}
+
+/**
+ * Sends JSON and reads JSON back. A 204 reads as `undefined`.
+ * @template T
+ * @param {'POST' | 'PATCH' | 'DELETE'} method
+ * @param {string} path
+ * @param {unknown} [body]
+ * @returns {Promise<T>}
+ */
+export async function apiSend(method, path, body) {
+  const response = await request(path, {}, { method, body });
+  if (response.status === 204) return /** @type {T} */ (undefined);
+  return /** @type {Promise<T>} */ (response.json());
 }
 
 /**
