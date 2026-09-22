@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Empty means this page's own origin; ARB-070 sets it per deployment. -->
+    <meta name="arbitron-api" content="" />
+    <title>Audit log — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./audit-log.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./index.html">Arbitron</a>
+        <nav aria-label="Main">
+          <ul class="nav">
+            <li><a href="./audit-log.html" aria-current="page">Audit log</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container stack" style="padding-block: var(--space-8)">
+      <h1>Audit log</h1>
+      <p>
+        Every change of state and every call to an outside service, newest first. Entries cannot be
+        edited or deleted. Times are SAST.
+      </p>
+
+      <form id="filters" class="card stack" novalidate aria-label="Filters">
+        <div class="grid">
+          <div class="field">
+            <label class="field__label" for="filter-type">Type</label>
+            <select class="select" id="filter-type" name="type">
+              <option value="">All types</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="filter-actor">Actor</label>
+            <select class="select" id="filter-actor" name="actor">
+              <option value="">Everyone</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="filter-from">From</label>
+            <input
+              class="input"
+              id="filter-from"
+              name="from"
+              placeholder="DD/MM/YYYY"
+              inputmode="numeric"
+              autocomplete="off"
+              aria-describedby="filter-from-error"
+            />
+            <p class="field__error" id="filter-from-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="filter-to">To</label>
+            <input
+              class="input"
+              id="filter-to"
+              name="to"
+              placeholder="DD/MM/YYYY"
+              inputmode="numeric"
+              autocomplete="off"
+              aria-describedby="filter-to-error"
+            />
+            <p class="field__error" id="filter-to-error" hidden></p>
+          </div>
+        </div>
+        <div class="cluster">
+          <button type="submit" class="btn btn--primary" id="apply">Apply filters</button>
+          <button type="button" class="btn btn--secondary" id="clear">Clear filters</button>
+          <button type="button" class="btn btn--ghost" id="export">Export CSV</button>
+        </div>
+      </form>
+
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <div class="table-wrap">
+        <table class="table" id="events" aria-busy="false">
+          <caption class="visually-hidden">
+            Audit log entries
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Type</th>
+              <th scope="col">Outcome</th>
+              <th scope="col">Actor</th>
+              <th scope="col">Subject</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" hidden>
+        <p>No entries match these filters. Widen the dates or clear the filters.</p>
+      </div>
+
+      <div class="cluster" style="justify-content: space-between">
+        <button type="button" class="btn btn--secondary" id="newer" disabled>Newer</button>
+        <p id="page-label" style="margin: 0"></p>
+        <button type="button" class="btn btn--secondary" id="older" disabled>Older</button>
+      </div>
+    </main>
+  </body>
+</html>

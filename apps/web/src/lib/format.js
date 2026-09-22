@@ -111,3 +111,33 @@ export function formatMoney(minor, currency) {
 export function formatPercent(ratio, decimals = 1) {
   return `${(ratio * 100).toFixed(decimals).replace('.', ',')}%`;
 }
+
+/**
+ * Reads a date typed as DD/MM/YYYY and returns the instant that SAST day starts, as an
+ * ISO string in UTC — or null when the text is not a real date. `endOfDay` returns the
+ * start of the next day instead, for an exclusive upper bound that includes the whole day.
+ *
+ * Native date pickers are not used for this: Chromium lays them out in the browser's
+ * own locale, which shows MM/DD/YYYY to anyone with a US-English browser.
+ *
+ * @param {string} text
+ * @param {{ endOfDay?: boolean }} [options]
+ * @returns {string | null}
+ */
+export function parseDateSast(text, options = {}) {
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text.trim());
+  if (!match) return null;
+  const [day, month, year] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const utcMidnight = Date.UTC(year, month - 1, day);
+  const check = new Date(utcMidnight);
+  // Date.UTC rolls 31/02 over into March; a date that does not round-trip did not exist.
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  const dayMs = 24 * 60 * 60 * 1000;
+  return new Date(utcMidnight - SAST_OFFSET_MS + (options.endOfDay ? dayMs : 0)).toISOString();
+}

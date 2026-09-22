@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         index: 'src/index.html',
         'style-guide': 'src/style-guide.html',
+        'audit-log': 'src/audit-log.html',
       },
     },
   },

@@ -128,3 +128,24 @@ export async function listEventsForRequest(db: Queryable, requestId: string): Pr
   );
   return rows;
 }
+
+export interface EventActor {
+  readonly id: string;
+  /** Null when the caller cannot see that user's row; the page then shows the id. */
+  readonly name: string | null;
+  readonly email: string | null;
+}
+
+/**
+ * Everyone who appears as an actor in the caller's audit log, for the actor filter
+ * (ARB-062). Scoped by RLS like `listEvents`: only events the caller can read count.
+ */
+export async function listEventActors(db: Queryable): Promise<EventActor[]> {
+  const { rows } = await db.query<EventActor>(
+    `select a.actor_user_id as id, u.full_name as name, u.email
+     from (select distinct actor_user_id from events where actor_user_id is not null) a
+     left join users u on u.id = a.actor_user_id
+     order by coalesce(u.full_name, u.email, a.actor_user_id::text)`,
+  );
+  return rows;
+}
