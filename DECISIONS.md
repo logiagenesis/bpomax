@@ -296,3 +296,32 @@ Reason:
 - Deleting a thread cascades into messages, discovery sessions, briefs, sourcing and the pipeline, and leaves the audit log pointing at rows that no longer exist. Redaction removes the personal information — which is what POPIA is about — while the figures in ARB-320 still reconcile.
 - "Closed and quiet" rather than "old": an open conversation is still necessary for the purpose it was collected for, whatever its age.
 - A retention job with a guessed period is worse than none: it deletes real data on an invented schedule and makes the compliance claim look satisfied. Standing down loudly is the honest failure.
+
+## D-018 — The auto-send guardrail is checked against the scanner as it will be, not against the request
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-021)
+
+Decision:
+
+- `PATCH /v1/scanners/:id` reads the current row, applies the requested changes in memory, and runs `checkAutoSendGuardrails` on the result. An edit is refused if the *resulting* scanner would auto-send without a daily cap and a score floor.
+- The same rule is a check constraint in the database (migration 0002).
+
+Reason:
+
+- Validating only the fields in the request lets the rule be walked around in two steps: turn auto-send on with a cap in one call, clear the cap in the next. Each request looks fine on its own; the scanner ends up bidding with no ceiling.
+- Keeping the constraint as well is not belt-and-braces for its own sake. Mutation-checked: disabling the application guardrail turns two tests red, and a third still passes because the database refuses the write on its own. That is what the second lock is for.
+
+## D-019 — A scanner in another org answers 404, not 403
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-021)
+
+Decision:
+
+- `GET /v1/scanners/:id` for a scanner the caller cannot see returns 404. A write into an org the caller does not belong to returns 403, because they have already named the org themselves.
+
+Reason:
+
+- RLS makes "no such row" and "someone else's row" indistinguishable to the query, and that is the right answer to give back: 403 on a read would confirm the id exists, which is itself information about another tenant.
+- On a write the caller supplied the `orgId`, so refusing it plainly tells them nothing they did not already assert.
