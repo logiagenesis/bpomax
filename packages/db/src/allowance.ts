@@ -1,6 +1,8 @@
 import {
+  autoSendMetric,
   bidMetric,
   bidPeriod,
+  capDay,
   checkBidAllowance,
   type AllowanceVerdict,
   type Platform,
@@ -99,6 +101,80 @@ export async function releaseBid(db: Queryable, input: BidAccountInput): Promise
      where org_id = $1 and metric = $2 and period_start = $3
      returning used`,
     [input.orgId, bidMetric(input.platform), period.start],
+  );
+  return rows[0]?.used ?? 0;
+}
+
+export interface ScannerSlotInput {
+  readonly orgId: string;
+  readonly scannerId: string;
+  /** The scanner's `daily_cap`. Zero admits nothing. */
+  readonly dailyCap: number;
+  readonly now?: Date;
+}
+
+export type ScannerSlot =
+  | { readonly ok: true; readonly used: number; readonly cap: number; readonly day: string }
+  | {
+      readonly ok: false;
+      readonly used: number;
+      readonly cap: number;
+      readonly day: string;
+      readonly message: string;
+    };
+
+/**
+ * Takes one of a scanner's auto-send slots for today (ARB-044: "hard daily cap"), with
+ * the same conditional upsert as `reserveBid`, so the cap holds under concurrency.
+ */
+export async function reserveScannerSlot(
+  db: Queryable,
+  input: ScannerSlotInput,
+): Promise<ScannerSlot> {
+  const day = capDay(input.now ?? new Date());
+  const metric = autoSendMetric(input.scannerId);
+  const read = async () => {
+    const { rows } = await db.query<{ used: number }>(
+      'select used from usage_counters where org_id = $1 and metric = $2 and period_start = $3',
+      [input.orgId, metric, day],
+    );
+    return rows[0]?.used ?? 0;
+  };
+  const refused = async (): Promise<ScannerSlot> => {
+    const used = await read();
+    return {
+      ok: false,
+      used,
+      cap: input.dailyCap,
+      day,
+      message: `The scanner's daily auto-send cap is reached: ${String(used)} of ${String(input.dailyCap)} today. It resets at midnight, South African time.`,
+    };
+  };
+  if (input.dailyCap <= 0) return refused();
+  const { rows } = await db.query<{ used: number }>(
+    `insert into usage_counters (org_id, metric, period_start, used, limit_value)
+     values ($1, $2, $3, 1, $4)
+     on conflict (org_id, metric, period_start) do update
+       set used = usage_counters.used + 1, limit_value = excluded.limit_value
+       where usage_counters.used < excluded.limit_value
+     returning used`,
+    [input.orgId, metric, day, input.dailyCap],
+  );
+  const taken = rows[0];
+  if (!taken) return refused();
+  return { ok: true, used: taken.used, cap: input.dailyCap, day };
+}
+
+/** Gives back a slot that was reserved but not used. Never goes below zero. */
+export async function releaseScannerSlot(
+  db: Queryable,
+  input: Omit<ScannerSlotInput, 'dailyCap'>,
+): Promise<number> {
+  const day = capDay(input.now ?? new Date());
+  const { rows } = await db.query<{ used: number }>(
+    `update usage_counters set used = greatest(used - 1, 0)
+     where org_id = $1 and metric = $2 and period_start = $3 returning used`,
+    [input.orgId, autoSendMetric(input.scannerId), day],
   );
   return rows[0]?.used ?? 0;
 }

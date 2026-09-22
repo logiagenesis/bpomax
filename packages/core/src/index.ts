@@ -11,6 +11,7 @@
  *   ARB-041  margin engine                          (margin.ts)
  *   ARB-042  bid allowance                          (allowance.ts)
  *   ARB-043  draft rules: price, timeline, milestones, citations (drafting.ts)
+ *   ARB-044  submission rules: approval, live gate, payload (submitting.ts)
  *   ARB-131  brief schema
  */
 export * from './allowance.js';
@@ -21,4 +22,5 @@ export * from './events.js';
 export * from './margin.js';
 export * from './scanners.js';
 export * from './scoring.js';
+export * from './submitting.js';
 export const PACKAGE_NAME = '@arbitron/core';
