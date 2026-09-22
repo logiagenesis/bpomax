@@ -1,0 +1,13 @@
+{
+  "name": "@arbitron/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain logic: margin maths, scoring schemas, taxonomy, brief schema",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

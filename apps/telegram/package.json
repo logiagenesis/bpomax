@@ -1,0 +1,13 @@
+{
+  "name": "@arbitron/telegram",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram webhook bot",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

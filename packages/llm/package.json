@@ -1,0 +1,13 @@
+{
+  "name": "@arbitron/llm",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-agnostic LLM client, prompt templates and JSON schema validation",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

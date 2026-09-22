@@ -1,0 +1,13 @@
+{
+  "name": "@arbitron/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Supabase migrations, seed data and generated types",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

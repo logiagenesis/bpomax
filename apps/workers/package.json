@@ -1,0 +1,13 @@
+{
+  "name": "@arbitron/workers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BullMQ workers",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
