@@ -63,8 +63,11 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Build the web app
+        run: pnpm build:web
+
       - name: Run Playwright tests
-        run: pnpm test:e2e
+        run: pnpm exec playwright test --config e2e/playwright.config.ts
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

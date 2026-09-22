@@ -144,3 +144,39 @@ Decision:
 Reason:
 
 - Rule 2 treats each ticket's commit as a delivery in its own right, and 05 section 6 requires tests green before a ticket is done. A cancelled run proves nothing. Feature branches have no such requirement, so cancelling there still saves minutes.
+
+## D-009 — Migrations are verified with PGlite, not only reviewed
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-010)
+
+Context:
+
+- ARB-010's acceptance is "applies cleanly". The compose Postgres cannot start in the build container (V-01) and there is no Supabase project yet (B-06), so the obvious reading was "cannot be verified here".
+
+Decision:
+
+- `packages/db/src/migrations.test.ts` applies every migration, in order, to PGlite — real Postgres compiled to WebAssembly, running in the test process — and then asserts the schema: every expected table, a uuid primary key on each, `updated_at` everywhere except the append-only `events`, and the behaviour of the safety constraints.
+
+Reason:
+
+- A migration that has only been read is not known to apply. This runs the actual DDL on every push, so a broken migration fails CI rather than surfacing the first time someone runs it against Supabase.
+- It is not a replacement for applying them to Supabase before go-live: PGlite has no pgsodium and no `auth` schema, which is recorded as V-02.
+
+## D-010 — Safety rules are enforced by database constraints, not only by application code
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-010)
+
+Decision:
+
+- Four rules from 01 section H are check constraints or unique indexes rather than application checks alone:
+  - an outbound message cannot be marked sent without `approved_by` and `approved_via`;
+  - a proposal cannot be `submitted`, and a sourcing post cannot be `posted`, without the same;
+  - a scanner cannot have `auto_send` on without a daily cap and a minimum score;
+  - a thread can have at most one auto-reply, ever (unique index on `thread_id`).
+- `settings.live_mode` cannot be set true while any margin rule is missing.
+
+Reason:
+
+- These are the rules that decide whether a real message reaches a real client, and whether money is committed on numbers nobody supplied. Application code is where bugs live; a constraint holds regardless of which worker, migration or console session is writing. Each one has a test that proves the database refuses the unsafe write.

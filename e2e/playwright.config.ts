@@ -27,10 +27,16 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm --filter @arbitron/web build && pnpm --filter @arbitron/web preview --port ${PORT} --strictPort`,
+    // Serve only. The build is a separate step (pnpm test:e2e, and its own CI step) so a
+    // build failure surfaces as a build failure instead of a silent 120s server timeout.
+    command: `pnpm --filter @arbitron/web preview --port ${PORT} --strictPort --host 127.0.0.1`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 60_000,
     cwd: '..',
+    // Without these the server's own output never reaches the log, which is what made
+    // the first CI failure undiagnosable.
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });

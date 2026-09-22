@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.5
@@ -49,6 +52,9 @@ importers:
   packages/llm: {}
 
 packages:
+
+  '@electric-sql/pglite@0.5.8':
+    resolution: {integrity: sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q==}
 
   '@esbuild/aix-ppc64@0.28.2':
     resolution: {integrity: sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==}
@@ -1052,6 +1058,8 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@electric-sql/pglite@0.5.8': {}
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true
