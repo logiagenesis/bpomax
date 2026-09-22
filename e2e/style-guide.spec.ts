@@ -21,7 +21,16 @@ const COMPONENT_CLASSES = [
 
 async function open(page: Page) {
   await page.goto('/style-guide.html');
-  await page.evaluate(() => document.fonts.ready);
+  // Every face the page uses, loaded explicitly: `fonts.ready` alone can resolve before a
+  // face is first requested, and a late swap changes the layout mid-screenshot.
+  await page.evaluate(async () => {
+    await Promise.all([
+      document.fonts.load('400 1em Inter'),
+      document.fonts.load('600 1em Inter'),
+      document.fonts.load('400 1em "JetBrains Mono"'),
+    ]);
+    await document.fonts.ready;
+  });
 }
 
 test('every class in components.css is used on the style guide', async ({ page }) => {
