@@ -1,0 +1,5 @@
+{
+  "note": "Deliberately empty. Every row added here is written with source='seed' and is shown in the interface as an estimate, never an observation. Figures must come from the owner (docs/BLOCKERS.md D-14) or from the price-refresh worker; none are invented here, because ARB-040 prices real bids off the p50.",
+  "currency": "ZAR",
+  "bands": []
+}

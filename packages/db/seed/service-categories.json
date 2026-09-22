@@ -1,0 +1,27 @@
+{
+  "note": "The slugs are fixed by docs/01 section D and are checked against it by packages/db/src/seed.test.ts. Display names are UK English. in_house is the owner's call (docs/02 D-04) and stays false until they tick it.",
+  "categories": [
+    { "slug": "website-build", "name": "Website build" },
+    { "slug": "wordpress", "name": "WordPress" },
+    { "slug": "elementor", "name": "Elementor" },
+    { "slug": "shopify", "name": "Shopify" },
+    { "slug": "landing-page", "name": "Landing page" },
+    { "slug": "web-app", "name": "Web app" },
+    { "slug": "mobile-app", "name": "Mobile app" },
+    { "slug": "api-integration", "name": "API integration" },
+    { "slug": "automation", "name": "Automation" },
+    { "slug": "ai-chatbot", "name": "AI chatbot" },
+    { "slug": "seo", "name": "SEO" },
+    { "slug": "google-ads", "name": "Google Ads" },
+    { "slug": "social-media-management", "name": "Social media management" },
+    { "slug": "logo-brand", "name": "Logo and brand identity" },
+    { "slug": "graphic-design", "name": "Graphic design" },
+    { "slug": "ui-ux", "name": "UI/UX design" },
+    { "slug": "video-editing", "name": "Video editing" },
+    { "slug": "copywriting", "name": "Copywriting" },
+    { "slug": "data-entry", "name": "Data entry" },
+    { "slug": "virtual-assistant", "name": "Virtual assistant" },
+    { "slug": "2d-game", "name": "2D game development" },
+    { "slug": "3d-game", "name": "3D game development" }
+  ]
+}
