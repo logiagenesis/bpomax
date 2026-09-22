@@ -718,3 +718,54 @@ Reason:
 - The client's history, in the sense of previous threads with the same client, has no
   identity to hang on yet (jobs carry the platform's client statistics, not a client id);
   the prompt uses those statistics. A client id arrives with ingest (ARB-022, C-02).
+
+## D-032 — Nothing leaves without approval, an open live gate on both switches, and an allowance; the platform call is an adapter
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-044, session …V4PPWs)
+
+Decision:
+
+- Order of checks at submission: the approval record (status `approved` with a named
+  approver and channel; `submitted` is finished, anything else is skipped), then for an
+  automatic approval its scanner's guardrails, then the live gate, then the account's bid
+  allowance, then the platform. A check that fails records a `proposal.submitted` event
+  with outcome `blocked` or `skipped` and a message the operator can act on.
+- The live gate has two switches and both must be on: `LIVE_MODE` in the environment and
+  `settings.live_mode` for the org, which the database refuses until the margin rules and
+  the retention period exist. Closed, the worker writes an `external.blocked_by_live_mode`
+  event whose payload is the bid that would have been sent — the fields, never an
+  endpoint — and leaves the proposal approved. That is the ticket's first clause.
+- An automatic approval (`approved_via = 'auto'`) is held at the moment of sending to the
+  scanner that found the job: auto-send on, the job's score at or above the scanner's
+  minimum, and one of the scanner's daily slots, counted per South African day in
+  `usage_counters` with the same conditional upsert as the bid allowance. Jobs carry
+  `scanner_id` from migration 0015 for this; the ingest worker (ARB-022) sets it. A
+  person's approval is not capped: the person is the cap (01 section H).
+- The bid is taken from the allowance (D-030) before the platform is called and given
+  back if the platform refuses or no client exists. A refusal on a non-final attempt is
+  rethrown for the queue's backoff; on the final attempt the proposal is marked `failed`
+  with the platform's reason.
+- The platform call is a `BidPlacer` the worker is given. None exists until the
+  Freelancer client (ARB-020, C-02); live without one records `blocked` naming C-02 and
+  sends nothing. The endpoint and its parameters belong to that client, with the official
+  doc URL cited there (01 section B).
+- A placed bid is recorded as an `external.call` event before its bookkeeping, and a
+  later attempt that finds such an event finishes the bookkeeping instead of placing the
+  bid twice.
+- A placed bid opens the pipeline: a `pipeline_items` row at `applied` with the bid's value,
+  and a `pipeline.stage_changed` event.
+
+Reason:
+
+- 01 section H in full: approval by default, a hard daily cap on auto-send, LIVE_MODE
+  blocking every outbound call and logging what would have been sent. Each is a separate
+  check with its own test and its own mutant. Fourteen mutants (gate on the environment
+  alone, approval without an approver, milestones not summing, the cap day in UTC, the
+  slot upsert ignoring the cap, the org switch ignored, the payload not logged, unapproved
+  proposals sent, the allowance not consulted, the bid kept after a refusal, auto
+  approvals not held to the scanner, a bid placed twice, a cap slot kept on a stopped
+  send, no pipeline item) each fail at least one test.
+- The second clause of the acceptance, a sandbox submission, needs the Freelancer client,
+  developer app and sandbox accounts (C-02). It is the one part of this ticket that is not
+  mechanism, and it stays open there.

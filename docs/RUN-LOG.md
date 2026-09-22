@@ -65,6 +65,9 @@ Completed:
   from the estimate, milestones summing to the cent, citations only to recorded items —
   `de42c51` (D-031). Blocked in production until D-07 (templates) and D-10 (portfolio) are
   answered; it says so per job.
+- ARB-044 submit worker: approval, scanner cap, live gate on both switches with the
+  would-send bid logged, allowance, pipeline item; platform call injected — `bfa74cb` (D-032).
+  First clause proven; the sandbox clause stays on C-02.
 
 Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
 
