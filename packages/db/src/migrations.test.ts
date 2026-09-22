@@ -129,7 +129,7 @@ describe('migrations', () => {
     expect(after.rows).toEqual([{ type: 'test.event', count: '1' }]);
   });
 
-  it('refuse live mode until the margin rules are set', async () => {
+  it('refuse live mode until the margin rules and the retention period are set', async () => {
     const org = await db.query<{ id: string }>(
       `insert into orgs (name) values ('Live mode test') returning id`,
     );
@@ -139,11 +139,23 @@ describe('migrations', () => {
       db.query(`insert into settings (org_id, live_mode) values ($1, true)`, [orgId]),
     ).rejects.toThrow(/live_mode_requires_margin_rules/);
 
+    // Margin rules alone are not enough: POPIA retention is the other precondition
+    // (0010, docs/02 T-06).
     await expect(
       db.query(
         `insert into settings
            (org_id, live_mode, min_margin_pct, min_margin_zar_minor, fx_buffer_pct, fee_table)
          values ($1, true, 25, 150000, 5, '[{"platform":"freelancer"}]'::jsonb)`,
+        [orgId],
+      ),
+    ).rejects.toThrow(/live_mode_requires_retention_period/);
+
+    await expect(
+      db.query(
+        `insert into settings
+           (org_id, live_mode, min_margin_pct, min_margin_zar_minor, fx_buffer_pct, fee_table,
+            retention_days)
+         values ($1, true, 25, 150000, 5, '[{"platform":"freelancer"}]'::jsonb, 365)`,
         [orgId],
       ),
     ).resolves.toBeDefined();

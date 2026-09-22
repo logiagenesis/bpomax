@@ -279,3 +279,20 @@ Reason:
 
 - An audit log is only useful if it can be searched, and free-text types drift into near-duplicates that no filter catches. Refusing an unknown type at the point of writing costs one line in a list; discovering six spellings of `proposal.submitted` a year in costs a migration.
 - Answering 400 to a mistyped filter matters more than it looks: an empty result reads as "this never happened", which is exactly the wrong answer from an audit log.
+
+## D-017 — Retention redacts, it does not delete, and refuses to run without a period
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-015)
+
+Decision:
+
+- `settings.retention_days` has no default. With it unset the job does nothing and writes a `retention.purged` event with outcome `skipped` saying why. Live mode is refused while it is unset, alongside the margin rules.
+- When it is set, the job clears message bodies, thread client handles and discovery answers for **closed** conversations with no activity since the cutoff, and stamps `redacted_at`. Rows are never deleted.
+- The privacy notice page carries no wording written here. Legal text is T-06's to supply.
+
+Reason:
+
+- Deleting a thread cascades into messages, discovery sessions, briefs, sourcing and the pipeline, and leaves the audit log pointing at rows that no longer exist. Redaction removes the personal information — which is what POPIA is about — while the figures in ARB-320 still reconcile.
+- "Closed and quiet" rather than "old": an open conversation is still necessary for the purpose it was collected for, whatever its age.
+- A retention job with a guessed period is worse than none: it deletes real data on an invented schedule and makes the compliance claim look satisfied. Standing down loudly is the honest failure.

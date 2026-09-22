@@ -7,6 +7,7 @@
 export * from './client.js';
 export * from './events.js';
 export * from './migrations.js';
+export * from './retention.js';
 export * from './seed.js';
 
 export const PACKAGE_NAME = '@arbitron/db';
