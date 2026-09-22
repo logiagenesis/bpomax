@@ -95,3 +95,35 @@ Decision:
 - `engines.node` is set to `>=20` so Node 20 remains supported and the docs' floor is honoured.
 - CI pins Node 20 so the documented target is the one actually tested on every push.
 - Local development on Node 22 is acceptable; anything that breaks on 20 will surface in CI.
+
+## D-006 — docker-compose carries Redis and Postgres; the full Supabase stack is run by the Supabase CLI
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-004)
+
+Context:
+
+- 01 section C lists `docker-compose.yml  redis + supabase local`. "Supabase local" is ambiguous: Supabase's supported local stack is started by the Supabase CLI (`supabase start`), which orchestrates roughly ten containers of its own (Postgres, Auth, PostgREST, Storage, Realtime, Studio, Kong, and others) and is versioned with the CLI.
+
+Decision:
+
+- `docker-compose.yml` runs Redis and a Postgres built from the `supabase/postgres` image, which carries the extensions the migrations need, pgsodium included.
+- The full Supabase stack is documented as `supabase start` rather than hand-copied into compose.
+
+Reason:
+
+- Hand-maintaining a copy of the Supabase stack in compose means tracking upstream version changes by hand and drifting from what Supabase supports. Redis and Postgres are the two dependencies application code actually opens sockets to; the rest of the stack is only needed when working on Auth or Storage locally, and the CLI is the supported way to get it.
+
+## D-007 — LLM model defaults in .env.example
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-004)
+
+Decision:
+
+- `LLM_MODEL_SCORE` and `LLM_MODEL_DRAFT` both default to `claude-opus-5`.
+
+Reason:
+
+- 01 section C requires model names to be read from config and never hard-coded, so these are configuration values with sensible defaults, not a fixed choice.
+- Scoring is the high-volume path and an obvious candidate for a cheaper model, but which model to run there is a cost decision for the owner, not one to make on their behalf. Changing `LLM_MODEL_SCORE` needs no code change, and ARB-031 meters token cost per call so the trade can be made on real numbers.
