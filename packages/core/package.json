@@ -5,9 +5,13 @@
   "type": "module",
   "description": "Domain logic: margin maths, scoring schemas, taxonomy, brief schema",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./scoring-fixtures": "./src/scoring-fixtures.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
   }
 }

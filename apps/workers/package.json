@@ -11,6 +11,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@arbitron/core": "workspace:*",
+    "@arbitron/db": "workspace:*",
+    "@arbitron/llm": "workspace:*",
     "bullmq": "^5.81.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "ajv": "^8.20.0"
   }
 }

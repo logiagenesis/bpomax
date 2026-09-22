@@ -55,11 +55,31 @@ importers:
 
   apps/workers:
     dependencies:
+      '@arbitron/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@arbitron/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@arbitron/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       bullmq:
         specifier: ^5.81.5
         version: 5.81.5
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
 
-  packages/core: {}
+  packages/core:
+    devDependencies:
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
 
   packages/db:
     dependencies:

@@ -386,3 +386,36 @@ Reason:
 - BullMQ's behaviour lives in Lua scripts inside Redis. A fake would prove the fake.
   Mutation-checked: stopping the unrecoverable branch from dead-lettering turns three
   tests red.
+
+## D-023 — Red flags are found by rules as well as by the model, and rules only make a verdict worse
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-032)
+
+Decision:
+
+- `detectRedFlags` in `packages/core/src/scoring.ts` looks for flags that are visible in
+  the text or the client's stats: off-platform payment or contact, an upfront fee, crypto
+  payment, a request for someone's account or documents, graded academic work, unpaid
+  sample work, and an unverified payment method. Its findings are merged with the model's.
+- Five flags are hard (`HARD_FLAGS`): a job carrying any of them is a `skip` with its
+  score capped at 20 and reply probability 0, whatever the model said. Any other flag turns
+  a `go` into a `caution`. Nothing here can turn a `caution` into a `go`.
+- A reply that fails the schema twice (the first attempt and `completeJson`'s one retry) is
+  final: the job goes to the dead-letter queue with `UnrecoverableError`, not round the
+  queue's backoff. A transport error is retried by the queue as usual.
+- `job_scores.cost_usd_minor` is in cents, rounded **up**. The exact cost stays in
+  `llm_calls.cost_nano_usd` (D-020); the cents figure is for display beside the score.
+- The score prompt carries the job and the client's platform statistics, never a client's
+  name or handle.
+
+Reason:
+
+- A model that misses a scam once costs a real bid, a wasted connect or an account strike;
+  a rule that fires on a false alarm costs the operator a glance. The acceptance test plays
+  a model that misses every flag, so it proves the flags come from this code.
+- The queue's retries exist for failures that might go away. A model that has been shown
+  its own validation errors and still answers wrongly is not one of those, and each extra
+  try is paid for.
+- Rounding cents to nearest would show most scoring calls as free, which is the error
+  D-020 exists to prevent.
