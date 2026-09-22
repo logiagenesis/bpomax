@@ -16,9 +16,13 @@ is built and what is not.
 
 ## Status
 
-Phase 0 (repository and foundations). Nothing is deployed and no marketplace call is
-live. `LIVE_MODE` defaults to `false`, which blocks every outbound marketplace call and
-logs what would have been sent.
+Phase 0 is complete. Phase 1 is in progress: the data model, its tenancy, the role
+split, the audit log and the retention job are built and tested. Nothing is deployed and
+no marketplace call is live. `LIVE_MODE` defaults to `false`, which blocks every
+outbound marketplace call and logs what would have been sent.
+
+`docs/04-PROJECT-BOARD.md` is the live board — status and closing SHA per ticket, and
+the reason for every one that is blocked.
 
 ## Prerequisites
 
@@ -50,8 +54,10 @@ docker compose up -d        # Redis on 6379, Postgres on 54322
 pnpm --filter @arbitron/web dev    # front end on http://localhost:5173
 ```
 
-The API, workers and Telegram bot are scaffolds until ARB-012 onwards; they have no
-runnable server yet.
+The API is built and tested but has no listen entry point yet: signing a request needs
+the Supabase project (B-06), and hosting is ARB-070. It is importable today —
+`buildServer({ db, authenticate })` in `apps/api/src/server.ts` serves `/health` and
+`GET /v1/events`. The workers and the Telegram bot are still scaffolds.
 
 For the full local Supabase stack (Auth, Storage, Studio), use the Supabase CLI rather
 than compose — `supabase start`. See `DECISIONS.md` D-006.
@@ -109,6 +115,20 @@ never an acceptable substitute. The table below stays honest about that.
 | Web preview | NOT DONE — blocked on B-11                     |
 | API health  | NOT DONE — blocked on B-12                     |
 
+## How tenancy works
+
+Every table has row level security. A signed-in user reaches a row only through a
+membership of that row's org, and `anon` is granted nothing at all. Application code
+never passes an `org_id` to scope a read: `withUser(db, authUserId, work)` sets the JWT
+claims and the `authenticated` role for the length of one transaction, and the database
+decides. A handler that forgets a filter therefore returns less than it meant to, never
+more than it should.
+
+Roles are `owner`, `operator` and `viewer`. Operators write records and approve outbound
+actions; only owners change settings, membership and billing; viewers write nothing. The
+rule is stated once in `packages/core/src/auth.ts` for the interface and enforced by the
+policies, and `packages/db/src/role-parity.test.ts` fails if the two ever disagree.
+
 ## Safety
 
 The rules in `docs/01` section H are not optional:
@@ -117,6 +137,13 @@ The rules in `docs/01` section H are not optional:
 - `LIVE_MODE=false` blocks every outbound marketplace call and logs what would have been sent.
 - One marketplace account per verified identity. No multi-account features.
 - No fabricated portfolio items, no copied work samples, no fake reviews, no fake scarcity.
+
+Several of these are enforced by the database rather than by application code, so they
+hold regardless of which worker or console session is writing: an outbound message
+cannot be marked sent without an approval, a scanner cannot auto-send without a daily cap
+and a score floor, a thread can have at most one auto-reply ever, an approval can only
+name the person who made it, and `live_mode` cannot be switched on while a margin rule
+or the retention period is missing.
 
 ## Documentation
 
@@ -129,4 +156,5 @@ The rules in `docs/01` section H are not optional:
 | `docs/04-PROJECT-BOARD.md`       | Live board — status and closing SHA per ticket      |
 | `docs/05-AUDIT-PROTOCOL.md`      | The checklist every ticket passes before it is done |
 | `docs/BLOCKERS.md`               | Blockers found while building                       |
+| `packages/db/seed/README.md`     | What is seeded, and why the price bands are empty   |
 | `DECISIONS.md`                   | Every choice the docs left open, with the reason    |
