@@ -11,6 +11,7 @@ import {
 import { recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { enqueueEstimate } from './estimate.js';
 
 /**
  * The score worker (ARB-032, docs/01 section E): "LLM scoring against strict JSON
@@ -31,6 +32,11 @@ export interface ScoreDeps {
   readonly db: Queryable;
   readonly transport: LlmTransport;
   readonly model: string;
+  /**
+   * Where a job goes next: "estimate — trigger: score verdict ≠ skip" (01 section E).
+   * Optional so the scorer can be run on its own, as its tests do.
+   */
+  readonly estimateQueue?: Queue;
 }
 
 export type ScoreResult =
@@ -229,6 +235,14 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
     });
     return id;
   });
+
+  // Only once the score is committed, so an estimate can never run ahead of its score.
+  if (deps.estimateQueue && score.verdict !== 'skip') {
+    await enqueueEstimate(deps.estimateQueue, {
+      jobId: row.id,
+      ...(requestId ? { requestId } : {}),
+    });
+  }
 
   return { status: 'scored', scoreId, score };
 }
