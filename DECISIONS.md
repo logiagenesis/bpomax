@@ -450,3 +450,21 @@ Reason:
   would fail in CI on the first run. With a bundled font, the only differences left are
   small rasterisation differences between Chromium builds. The 2% tolerance covers those,
   and a real component change moves far more pixels than that.
+
+## D-025 — Visual baselines are rendered by CI, never committed from a working machine
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-060 follow-up, CI run 19)
+
+Context:
+
+- Run 19 failed both visual snapshots: the baselines had been rendered in a build container, and the CI runner produced a page 13 px shorter with 10% of pixels different. Bundling Inter (D-024) removes the font-family difference but not the rasteriser's.
+
+Decision:
+
+- The `visual-baseline` workflow (`workflow_dispatch`) renders the snapshots with `--update-snapshots` on the same runner image CI uses and uploads them as an artifact. Those files, and only those, are committed under `e2e/*-snapshots/`.
+- A baseline is regenerated that way whenever the design system changes on purpose. The 2% tolerance in the spec stays, for runner-to-runner jitter.
+
+Reason:
+
+- The environment that compares is the only one that can render a baseline the comparison will accept. Any other baseline is a snapshot of the wrong machine, and it fails on the first run — as it did.

@@ -1,0 +1,44 @@
+name: Visual baseline
+
+# Renders the style-guide screenshots in the same runner image CI compares against, and
+# hands them back as an artifact to commit under e2e/. Run it whenever the design system
+# changes on purpose. A baseline rendered on any other machine differs on every line of
+# text — CI run 19 failed on exactly that. ARB-060; DECISIONS.md D-025.
+on:
+  workflow_dispatch:
+
+jobs:
+  render:
+    name: Render the style-guide baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build the web app
+        run: pnpm build:web
+
+      - name: Render the baselines
+        env:
+          CI: 'true'
+        run: pnpm exec playwright test --config e2e/playwright.config.ts e2e/style-guide.spec.ts --grep "visual snapshot" --update-snapshots --retries 0
+
+      - name: Upload the baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline
+          path: e2e/**/*-snapshots/**
+          if-no-files-found: error
+          retention-days: 7
