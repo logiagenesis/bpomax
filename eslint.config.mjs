@@ -26,4 +26,10 @@ export default tseslint.config(
       'prefer-const': 'error',
     },
   },
+  {
+    // The web app's browser modules are checked by tsc (checkJs, DOM lib), which knows
+    // every global; ESLint's no-undef does not, and typescript-eslint advises turning it off.
+    files: ['apps/web/src/**/*.js'],
+    rules: { 'no-undef': 'off' },
+  },
 );

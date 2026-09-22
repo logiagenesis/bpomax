@@ -10,6 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: 'src/index.html',
+        'style-guide': 'src/style-guide.html',
       },
     },
   },

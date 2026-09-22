@@ -419,3 +419,34 @@ Reason:
   try is paid for.
 - Rounding cents to nearest would show most scoring calls as free, which is the error
   D-020 exists to prevent.
+
+## D-024 — Display formats: `R1 234,56`, SAST as a fixed UTC+2, and a bundled font
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-060)
+
+Decision:
+
+- Money is shown as `R1 234,56`: a no-break space groups thousands and a comma marks the
+  decimal. docs/05 section 2 offers this or `R1,234.56` and asks for one choice used
+  everywhere. Other currencies use the same digits with their ISO code in front
+  (`USD 1 500,00`). Percentages use the decimal comma too (`28,4%`).
+- `apps/web/src/lib/format.js` is the only place figures are formatted. It works on
+  integer minor units with string and bigint arithmetic, never floats, and refuses a
+  fractional amount instead of rounding it.
+- SAST is a fixed UTC+02:00 offset rather than the browser's `Africa/Johannesburg` zone data.
+- Inter is bundled with the build (`@fontsource/inter`), not loaded from a CDN.
+- The brand colours are tokens in `apps/web/src/styles/tokens.css`. #00C2FF is used as
+  docs/01 gives it, and the style guide says it is provisional until D-11 is answered.
+- The visual snapshots allow a 2% pixel difference.
+
+Reason:
+
+- `R1 234,56` is the South African convention, and its no-break space keeps an amount on
+  one line in a narrow column at 380 px.
+- South Africa has observed no daylight saving since 1944, so a fixed offset is correct.
+  It also gives the same output on every machine whatever time zone data the browser has.
+- A system font stack renders differently on every machine, so a pixel snapshot of it
+  would fail in CI on the first run. With a bundled font, the only differences left are
+  small rasterisation differences between Chromium builds. The 2% tolerance covers those,
+  and a real component change moves far more pixels than that.

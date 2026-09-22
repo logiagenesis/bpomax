@@ -1,0 +1,6 @@
+/* The one stylesheet every page links. Inter is bundled, not fetched from a CDN, so the
+   pages render the same everywhere and the visual snapshot is stable. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-600.css';
+@import './tokens.css';
+@import './components.css';

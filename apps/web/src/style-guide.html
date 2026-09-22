@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Style guide — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./style-guide.js"></script>
+  </head>
+  <body>
+    <header class="app-header" data-component="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./index.html">Arbitron</a>
+        <nav aria-label="Style guide sections">
+          <ul class="nav">
+            <li><a href="#colours">Colours</a></li>
+            <li><a href="#buttons">Buttons</a></li>
+            <li><a href="#forms">Forms</a></li>
+            <li><a href="#data">Data</a></li>
+            <li><a href="#feedback">Feedback</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container stack" style="padding-block: var(--space-8)">
+      <h1>Style guide</h1>
+      <p>
+        Every component the interface is built from, on one page. The figures below are examples and
+        nothing on this page is stored or sent.
+      </p>
+      <div class="alert alert--warning" data-component="alert-warning">
+        <p>
+          The primary colour is provisional: #00C2FF is the value in the specification, and the
+          owner has still to confirm it and supply a secondary colour and logo.
+        </p>
+      </div>
+
+      <section id="colours" class="stack" data-component="colours">
+        <h2>Colours</h2>
+        <div class="grid" id="swatches"></div>
+      </section>
+
+      <section id="type" class="stack" data-component="typography">
+        <h2>Typography</h2>
+        <h1>Heading one</h1>
+        <h2>Heading two</h2>
+        <h3>Heading three</h3>
+        <p>
+          Body text uses the browser's default size and a normal line height, so it stays readable
+          for anyone who has changed their own default. Links look
+          <a href="#type">like this</a> and code like <code>LIVE_MODE=false</code>.
+        </p>
+      </section>
+
+      <section id="buttons" class="stack" data-component="buttons">
+        <h2>Buttons</h2>
+        <div class="cluster">
+          <button type="button" class="btn btn--primary" id="btn-save">Save example</button>
+          <button type="button" class="btn btn--secondary" id="btn-fail">Show an error</button>
+          <button type="button" class="btn btn--danger" id="btn-delete">Delete example</button>
+          <button type="button" class="btn btn--ghost" id="btn-reset">Reset form</button>
+          <button type="button" class="btn btn--primary" disabled aria-describedby="disabled-why">
+            Submit bid
+          </button>
+        </div>
+        <p class="field__hint" id="disabled-why">
+          A disabled button always says why nearby: this one would need an approved bid.
+        </p>
+        <div role="status" aria-live="polite" id="button-status"></div>
+      </section>
+
+      <section id="forms" class="stack" data-component="forms">
+        <h2>Forms</h2>
+        <form id="example-form" class="card stack" novalidate>
+          <div class="field">
+            <label class="field__label" for="scanner-name">Scanner name</label>
+            <input
+              class="input"
+              id="scanner-name"
+              name="name"
+              autocomplete="off"
+              aria-describedby="scanner-name-error"
+            />
+            <p class="field__error" id="scanner-name-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="daily-cap">Daily cap</label>
+            <input
+              class="input"
+              id="daily-cap"
+              name="dailyCap"
+              inputmode="numeric"
+              aria-describedby="daily-cap-hint daily-cap-error"
+            />
+            <p class="field__hint" id="daily-cap-hint">A whole number from 1 to 100.</p>
+            <p class="field__error" id="daily-cap-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="category">Category</label>
+            <select class="select" id="category" name="category">
+              <option value="website-build">Website build</option>
+              <option value="shopify">Shopify</option>
+              <option value="automation">Automation</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="notes">Notes</label>
+            <textarea class="textarea" id="notes" name="notes"></textarea>
+          </div>
+          <div class="field">
+            <label class="field__label" for="locked">Locked field</label>
+            <input class="input" id="locked" value="Set by the platform" disabled />
+          </div>
+          <label class="check" data-component="checkbox">
+            <input type="checkbox" name="active" id="active" checked />
+            Active
+          </label>
+          <label class="switch" data-component="switch">
+            <input type="checkbox" role="switch" id="live-switch" aria-describedby="live-state" />
+            Live mode
+          </label>
+          <p id="live-state"><span class="badge badge--neutral" id="live-badge">Sandbox</span></p>
+          <div class="cluster">
+            <button type="submit" class="btn btn--primary">Check the form</button>
+          </div>
+          <div role="status" aria-live="polite" id="form-status"></div>
+        </form>
+      </section>
+
+      <section id="data" class="stack">
+        <h2>Data</h2>
+        <div class="grid" data-component="stat-tiles">
+          <div class="card">
+            <p class="stat__label">Revenue in, month to date</p>
+            <p class="stat__value" data-money="12345600" data-currency="ZAR"></p>
+            <p class="stat__note">Example figure</p>
+          </div>
+          <div class="card">
+            <p class="stat__label">Margin</p>
+            <p class="stat__value" data-percent="0.284"></p>
+            <p class="stat__note">Example figure</p>
+          </div>
+          <div class="card">
+            <p class="stat__label">Replies</p>
+            <p class="stat__value">14</p>
+            <p class="stat__note">Example figure</p>
+          </div>
+        </div>
+
+        <h3>Badges</h3>
+        <div class="cluster" data-component="badges">
+          <span class="badge badge--go">Go</span>
+          <span class="badge badge--caution">Caution</span>
+          <span class="badge badge--skip">Skip</span>
+          <span class="badge badge--neutral">Draft</span>
+          <span class="badge badge--seed" title="Seed figure, not observed data">Seed</span>
+          <span class="badge badge--live">Live</span>
+        </div>
+
+        <h3>Table</h3>
+        <div class="table-wrap" data-component="table">
+          <table class="table">
+            <caption class="visually-hidden">
+              Example jobs
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Job</th>
+                <th scope="col">First seen</th>
+                <th scope="col">Verdict</th>
+                <th scope="col" class="num">Budget</th>
+                <th scope="col" class="num">Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Rebuild a brochure site in Elementor</td>
+                <td data-datetime="2026-09-22T08:15:00Z"></td>
+                <td><span class="badge badge--go">Go</span></td>
+                <td class="num" data-money="150000" data-currency="USD"></td>
+                <td class="num" data-money="812345" data-currency="ZAR"></td>
+              </tr>
+              <tr>
+                <td>Shopify theme changes for a candle shop</td>
+                <td data-datetime="2026-09-21T22:40:00Z"></td>
+                <td><span class="badge badge--caution">Caution</span></td>
+                <td class="num" data-money="60000" data-currency="GBP"></td>
+                <td class="num" data-money="-125000" data-currency="ZAR"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Empty state</h3>
+        <div class="empty" data-component="empty">
+          <p>No jobs match this scanner yet. New matches appear after the next scan.</p>
+        </div>
+      </section>
+
+      <section id="feedback" class="stack">
+        <h2>Feedback</h2>
+        <div class="alert alert--info" data-component="alert-info">
+          <p>Live mode is off. Nothing is sent to a marketplace.</p>
+        </div>
+        <div class="alert alert--success" data-component="alert-success">
+          <p>Bid approved. It will be sent when live mode is on.</p>
+        </div>
+        <div class="alert alert--error" data-component="alert-error">
+          <p>
+            The scanner was not saved: the daily cap must be 100 or fewer. Lower it and try again.
+          </p>
+        </div>
+        <p data-component="dialog">
+          Confirmation dialogs open from the <strong>Delete example</strong> button and the
+          <strong>Live mode</strong> switch above.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

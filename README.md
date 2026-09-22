@@ -60,7 +60,8 @@ the Supabase project (B-06), and hosting is ARB-070. It is importable today —
 `GET /v1/events`. The workers have their queue wiring — one BullMQ queue per worker in
 docs/01 section E, exponential-backoff retries, a dead-letter queue and a `/health`
 server (`apps/workers/src/`). The score worker (ARB-032) is the first processor; it has
-never called a real model (B-08). The Telegram bot is a scaffold.
+never called a real model (B-08). The Telegram bot is a scaffold. The web design system
+(ARB-060) is served at `/style-guide.html`.
 
 For the full local Supabase stack (Auth, Storage, Studio), use the Supabase CLI rather
 than compose — `supabase start`. See `DECISIONS.md` D-006.

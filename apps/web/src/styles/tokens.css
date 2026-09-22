@@ -1,0 +1,74 @@
+/*
+ * Design tokens (ARB-060, docs/01 section I).
+ *
+ * Dark theme only. The primary is Logi-Ink cyan #00C2FF as docs/01 gives it; the owner
+ * has still to confirm the exact value and supply a secondary (D-11, a SOFT blocker), so
+ * every colour is a token here and changing one line recolours the application.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Brand — provisional until D-11 */
+  --color-primary: #00c2ff;
+  --color-primary-hover: #33ceff;
+  --color-primary-pressed: #00a3d6;
+  --color-on-primary: #00131a;
+
+  /* Surfaces */
+  --color-bg: #0b1220;
+  --color-surface: #111a2c;
+  --color-surface-raised: #17223a;
+  --color-border: #26334d;
+  --color-border-strong: #3a4968;
+
+  /* Text */
+  --color-text: #e6edf7;
+  --color-text-muted: #a3b1c6;
+  --color-text-disabled: #6b7a93;
+
+  /* Status */
+  --color-success: #3ddc97;
+  --color-warning: #ffc857;
+  --color-danger: #ff6b6b;
+  --color-info: var(--color-primary);
+  --color-success-bg: #0f2e24;
+  --color-warning-bg: #332812;
+  --color-danger-bg: #3a1618;
+  --color-info-bg: #0a2a38;
+
+  /* Focus: always visible (docs/05 section 1, rule 6) */
+  --focus-ring: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-primary);
+
+  /* Typography: the browser's default size and a normal line height (docs/01 section I) */
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --line-height: 1.5;
+  --line-height-tight: 1.25;
+  --font-weight-normal: 400;
+  --font-weight-bold: 600;
+
+  /* Space (4 px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.4);
+
+  /* The narrowest layout that must work (docs/01 section I) */
+  --min-width: 380px;
+  --content-width: 72rem;
+}
