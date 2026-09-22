@@ -8,12 +8,13 @@
  *   ARB-021  scanner validation                    (scanners.ts)
  *   ARB-032  job scoring schema and red-flag rules (scoring.ts)
  *   ARB-040  estimate method order and classification (estimating.ts)
- *   ARB-041  margin engine
+ *   ARB-041  margin engine                          (margin.ts)
  *   ARB-131  brief schema
  */
 export * from './auth.js';
 export * from './estimating.js';
 export * from './events.js';
+export * from './margin.js';
 export * from './scanners.js';
 export * from './scoring.js';
 export const PACKAGE_NAME = '@arbitron/core';

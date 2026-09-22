@@ -11,6 +11,7 @@ import {
 import { recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { enqueueMargin } from './margin.js';
 
 /**
  * The estimate worker (ARB-040, docs/01 section E): "Classifies category; estimate order:
@@ -32,6 +33,8 @@ export interface EstimateDeps {
   readonly db: Queryable;
   readonly transport: LlmTransport;
   readonly model: string;
+  /** Where an estimate goes next: "margin — trigger: after estimate" (01 section E). Optional, as in the scorer. */
+  readonly marginQueue?: Queue;
 }
 
 export type EstimateSkipReason =
@@ -379,6 +382,15 @@ export async function estimateJob(
     });
     return id;
   });
+
+  // Only once the estimate is committed, so a margin can never be judged before its estimate.
+  if (deps.marginQueue) {
+    await enqueueMargin(deps.marginQueue, {
+      jobId: job.id,
+      estimateId,
+      ...(requestId ? { requestId } : {}),
+    });
+  }
 
   return { status: 'estimated', estimateId, method: choice.method, categorySlug: category.slug };
 }
