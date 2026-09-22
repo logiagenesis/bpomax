@@ -21,7 +21,7 @@ Blocker references point to 02-BLOCKERS.md.
 |---|---|---|---|---|---|---|
 | ARB-010 | Supabase migrations: tenancy, marketplace, money, events, settings tables per 01-D | 004 | B-06, D-05 | `pnpm db:reset` applies cleanly; generated types committed | BLOCKED (C-01: generated types need a Supabase project, B-06. Migrations themselves apply cleanly — verified against real Postgres via PGlite on every push) | 8c9c8fa |
 | ARB-011 | RLS policies on every table + tests proving cross-org read/write is denied | 010 | — | Test suite shows denial for other org on every table | DONE | ecfc49e |
-| ARB-012 | Auth (Supabase email login), roles owner/operator/viewer | 010 | D-13 | Viewer cannot approve; operator can; owner can change settings | DONE (acceptance proven in full; the hosted sign-in round trip itself is unverified — V-03. The login page is ARB-061.) | PENDING |
+| ARB-012 | Auth (Supabase email login), roles owner/operator/viewer | 010 | D-13 | Viewer cannot approve; operator can; owner can change settings | DONE (acceptance proven in full; the hosted sign-in round trip itself is unverified — V-03. The login page is ARB-061.) | f34a587 |
 | ARB-013 | Seed service_categories and seed market_price_bands flagged source='seed' | 010 | — | Seed idempotent; seed bands visibly labelled "seed" in UI | TODO | |
 | ARB-014 | events audit log writer + viewer API | 010 | — | Every state change in later tickets writes an event (verified by tests) | TODO | |
 | ARB-015 | Data retention job and privacy notice page | 010 | T-06 | Retention period from T-06 enforced by scheduled job with test | TODO | |
