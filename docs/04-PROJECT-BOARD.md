@@ -12,7 +12,7 @@ Blocker references point to 02-BLOCKERS.md.
 | ARB-001 | Create private repo `logiagenesis/arbitron`, push /docs to main | — | B-01, B-02 | Repo URL opens; /docs present on main; remote SHA = local HEAD | DONE | 05b9769 |
 | ARB-002 | Monorepo scaffold (pnpm workspaces, apps/*, packages/*), lint, typecheck, prettier | 001 | — | `pnpm install && pnpm lint && pnpm typecheck` pass on clean clone | DONE | 7ff144c |
 | ARB-003 | GitHub Actions CI: lint, typecheck, Vitest, Playwright on push and PR | 002 | — | Green check on main; failing test turns CI red (proved with a throwaway branch) | TODO | |
-| ARB-004 | docker-compose for Redis and local Supabase; `.env.example` complete per 01 section J | 002 | — | `docker compose up` healthy; every variable in 01-J present in .env.example | TODO | |
+| ARB-004 | docker-compose for Redis and local Supabase; `.env.example` complete per 01 section J | 002 | — | `docker compose up` healthy; every variable in 01-J present in .env.example | BLOCKED (V-01: compose start unverified, no Docker daemon in build container; .env.example clause proven by test) | c194e1c |
 | ARB-005 | README (setup, run, deploy, links section), DECISIONS.md created | 002 | — | Fresh machine can follow README to running app | TODO | |
 
 ## Phase 1 — Find, qualify, price, bid, approve
