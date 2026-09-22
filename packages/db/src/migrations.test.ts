@@ -1,6 +1,7 @@
-import { PGlite } from '@electric-sql/pglite';
+import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadMigrations } from './migrations.js';
+import { createTestDatabase } from './testing.js';
 
 /**
  * ARB-010 acceptance: the migrations apply cleanly.
@@ -8,8 +9,9 @@ import { loadMigrations } from './migrations.js';
  * The build container has the Docker CLI but no daemon (docs/BLOCKERS.md V-01), so the
  * compose Postgres cannot be started here. PGlite is real Postgres compiled to WASM, so
  * the migrations are applied for real in-process rather than merely eyeballed. It is not
- * a substitute for running them against Supabase before go-live — pgsodium and the auth
- * schema are not present here — but "applies cleanly" is now checked on every push.
+ * a substitute for running them against Supabase before go-live — pgsodium is not present
+ * here, and the auth schema is a shim (see testing.ts) rather than Supabase's own — but
+ * "applies cleanly" is now checked on every push.
  */
 let db: PGlite;
 
@@ -51,14 +53,7 @@ const EXPECTED_TABLES = [
 ];
 
 beforeAll(async () => {
-  db = new PGlite();
-  for (const migration of loadMigrations()) {
-    try {
-      await db.exec(migration.sql);
-    } catch (error) {
-      throw new Error(`migration ${migration.name} failed: ${(error as Error).message}`);
-    }
-  }
+  db = await createTestDatabase();
 }, 60_000);
 
 afterAll(async () => {

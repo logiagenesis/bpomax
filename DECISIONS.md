@@ -180,3 +180,41 @@ Decision:
 Reason:
 
 - These are the rules that decide whether a real message reaches a real client, and whether money is committed on numbers nobody supplied. Application code is where bugs live; a constraint holds regardless of which worker, migration or console session is writing. Each one has a test that proves the database refuses the unsafe write.
+
+## D-011 — Tenancy is enforced by RLS policies over SECURITY DEFINER helpers in a private schema
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-011)
+
+Decision:
+
+- Every table in `public` has row level security enabled. Reads and writes are allowed only through a membership of the row's org; `anon` is granted nothing at all, and `service_role` bypasses RLS by design for worker and seed work.
+- The policy predicates call helpers — `app.is_member`, `app.can_write`, `app.is_owner`, `app.shares_org`, `app.current_user_id` — that live in schema `app`, not `public`, and are `security definer`.
+- Write access is split by role in the policies themselves: operators write ordinary records, only owners write `settings`, `subscriptions`, `usage_counters`, `affiliates`, `attribution` and `memberships`, and viewers write nothing.
+- `events` has a select and an insert policy and deliberately no update or delete policy, on top of the rewrite rules from 0007.
+
+Reason:
+
+- Schema `app` keeps the helpers off PostgREST, which exposes `public` functions as RPC endpoints. There is no reason for a browser to be able to ask "am I a member of org X".
+- `security definer` is not a convenience here, it is required: the policy on `memberships` has to read `memberships`, and an invoker-rights helper would recurse into its own policy.
+- Splitting write access by role in the database is half of the ARB-012 acceptance ("viewer cannot approve; operator can; owner can change settings"). Put in the API instead, it would hold only for requests that go through the API.
+
+## D-012 — The Supabase auth schema is shimmed in tests, not invented in a migration
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-011)
+
+Context:
+
+- The policies call `auth.uid()`, which Supabase supplies. PGlite does not have it, so the migrations would not apply in tests.
+
+Decision:
+
+- `packages/db/src/testing.ts` creates the `auth` schema, an `auth.uid()` matching Supabase's definition, and the `anon`, `authenticated` and `service_role` roles, before applying the migrations. It is test scaffolding and is never applied to a real database; no migration creates anything in `auth`.
+- Every RLS assertion runs as the real `authenticated` role with JWT claims set exactly as PostgREST sets them.
+
+Reason:
+
+- A migration that created its own `auth` schema would collide with Supabase's and could mask a policy that is wrong against the real one.
+- Running the assertions as the superuser would prove nothing: superusers bypass RLS, so the tests would pass against no policies at all. Switching role is what makes the result meaningful.
+- The suite was mutation-tested: making `app.is_member` ignore the org turns 31 tests red. A test that cannot fail is not evidence.
