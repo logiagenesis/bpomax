@@ -51,6 +51,7 @@ export const ENTITY = {
   usageCounter: 31,
   affiliate: 32,
   attribution: 33,
+  llmCall: 34,
 } as const;
 
 export const CATEGORY_SLUG = 'web-design';
@@ -234,6 +235,11 @@ export function tenantRows(org: string, ref: string, own: string): readonly Fixt
     {
       table: 'affiliates',
       sql: `insert into affiliates (id, org_id, code) values ('${o(ENTITY.affiliate)}', '${org}', 'code-${own}')`,
+    },
+    {
+      table: 'llm_calls',
+      sql: `insert into llm_calls (id, org_id, purpose, model, input_tokens, output_tokens, cost_nano_usd)
+            values ('${o(ENTITY.llmCall)}', '${org}', 'score', 'claude-opus-5', 1000, 200, 10000000)`,
     },
     {
       table: 'attribution',

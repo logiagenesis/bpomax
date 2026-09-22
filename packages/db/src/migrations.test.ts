@@ -27,6 +27,7 @@ const EXPECTED_TABLES = [
   'events',
   'job_scores',
   'jobs',
+  'llm_calls',
   'margin_evaluations',
   'market_price_bands',
   'memberships',

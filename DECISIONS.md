@@ -304,7 +304,7 @@ Decided by: Claude Code (ARB-021)
 
 Decision:
 
-- `PATCH /v1/scanners/:id` reads the current row, applies the requested changes in memory, and runs `checkAutoSendGuardrails` on the result. An edit is refused if the *resulting* scanner would auto-send without a daily cap and a score floor.
+- `PATCH /v1/scanners/:id` reads the current row, applies the requested changes in memory, and runs `checkAutoSendGuardrails` on the result. An edit is refused if the _resulting_ scanner would auto-send without a daily cap and a score floor.
 - The same rule is a check constraint in the database (migration 0002).
 
 Reason:
@@ -325,3 +325,33 @@ Reason:
 
 - RLS makes "no such row" and "someone else's row" indistinguishable to the query, and that is the right answer to give back: 403 on a read would confirm the id exists, which is itself information about another tenant.
 - On a write the caller supplied the `orgId`, so refusing it plainly tells them nothing they did not already assert.
+
+## D-020 — Model prices are transcribed from the published page, and costs are kept in nano-dollars
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-031)
+
+Decision:
+
+- `packages/llm/src/pricing.ts` holds prices for the models this application may use, transcribed from https://platform.claude.com/docs/en/about-claude/pricing, with the date they were read. A model with no entry is refused at configuration time and at costing time, never metered at zero.
+- Prices are held as whole nano-US-dollars per token, and a call's cost is integer arithmetic on them. `pricing.test.ts` checks the published cache multipliers against every row, so a transcription slip fails the build.
+
+Reason:
+
+- Recalled prices are wrong in the way that matters: silently, and by a plausible amount. The page is the only source, and the date on the table is what tells a reviewer how stale it is.
+- A scoring call costs a fraction of a cent. Metered in cents, nearly every call rounds to zero and every monthly total is wrong in the same direction. Every price on the page is an exact integer in nano-dollars per token, so nothing is ever rounded.
+- Retries are charged. A cost figure that leaves out the attempt that was thrown away understates precisely the calls worth knowing about. Mutation-checked: dropping the wasted attempt's usage turns the two metering tests red.
+
+## D-021 — `llm_calls` is added to the data model
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-031)
+
+Decision:
+
+- Migration 0011 adds `llm_calls`, a per-call metering table, to the thirty-four tables in docs/01 section D. It carries tokens, cost, attempts, outcome and the validator's complaints — never the prompt or the reply.
+
+Reason:
+
+- Section D gives `job_scores` its own token columns, but scoring is not the only thing that calls a model; drafting, discovery and brief building all will, and none of their tables has anywhere to record a cost. ARB-320 has to answer "what did last month cost", which needs one place.
+- Prompts and replies are excluded because they carry client content and this table is kept for years; the retention job (ARB-015) redacts conversations, and it should not have to know about this table to do so.
