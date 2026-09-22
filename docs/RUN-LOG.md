@@ -83,3 +83,28 @@ Blockers recorded: C-01, V-01, V-02, V-03, V-04, D-14.
 
 Also: the board's IN PROGRESS claim was introduced here (`d801cbb`) after both sessions
 built ARB-060 at once; this session's ARB-060 was discarded in favour of the one on main.
+
+## 22/09/2026 — session …JmtXArNa (scheduled run, 22:46 UTC)
+
+Completed:
+
+- ARB-061 pages: login, dashboard, feed, approvals, settings, with their API routes,
+  a Supabase token verifier, one validation function per form shared by page and API,
+  `docs/audit/<page>.md` for every control, 79 Playwright tests and 25 route tests
+  against real Postgres; 6 mutants caught — `3e72a7e` (D-035). The board claim from
+  session …V4PPWs (19:51 UTC) was three hours old with no push and was taken over under
+  D-034, recorded in `356fbce`.
+
+Marked BLOCKED without work started, because the acceptance needs a credential:
+
+- ARB-070 deploy — C-03 (no hosting account, B-11 and B-12).
+
+New blockers (docs/BLOCKERS.md): C-03. D-15 narrowed: ARB-061 is built; its sign-in
+waits on B-06 (V-03).
+
+No unblocked tickets remain. ARB-099 needs all of Phase 1, and ARB-004, 010, 013, 015,
+020, 022 and 070 each wait on an item in docs/02-BLOCKERS.md (B-03, B-04, B-06, B-11,
+B-12, T-06, or a figure the owner must supply). Every Phase 2 to 4 ticket depends on
+ARB-099. The highest-value answers remain T-02, D-02 and D-03 (the margin engine), then
+B-06 (sign-in and the generated types) and B-11/B-12 (the preview link Phase 1 needs).
+

@@ -850,3 +850,72 @@ Reason:
   short enough that a dead session costs at most one run. A live session that has gone
   quiet for an hour on one ticket has itself stopped pushing after each ticket, which D-004
   asks for.
+
+## D-035 — The pages read stored rows and call the API; sign-in is Supabase's password grant verified server-side; one copy of every form rule
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-061, session …JmtXArNa)
+
+Decision:
+
+- Sign-in is `POST {SUPABASE_URL}/auth/v1/token?grant_type=password` from the browser,
+  the request `supabase.auth.signInWithPassword()` makes, with the project's public anon
+  key; no client library is added for one call. The session is kept in `sessionStorage`
+  for the tab (D-027: bearer tokens, no cookies). The API verifies a token by asking the
+  same server who it belongs to (`GET /auth/v1/user`, `apps/api/src/auth.ts`), which
+  holds whichever key the project signs with, so no signing secret is kept in the API. A
+  verified token is remembered for one minute. Both endpoints are cited in code.
+- The browser build reads `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `API_URL` — three of
+  docs/01 section J's own names — from the repository's `.env` or the host's
+  environment (`apps/web/vite.config.js`), rather than a second `VITE_`-prefixed set
+  that could drift from the first. Nothing else in `.env` reaches the browser. The
+  end-to-end build (`vite build --mode e2e`) reads `/.env.e2e`, committed stand-in
+  hosts the specs intercept; without it the login form is disabled with the reason
+  and no spec could exercise it.
+- Every form is checked before it sends with the same `@arbitron/core` function the API
+  runs on the same body — `validateMarginRules`, `parseFeeTable`, `validatePlanRecord`,
+  `validateScanner`, `checkAutoSendGuardrails`, `validateProposalEdit`,
+  `validateRejection` — so docs/05 section 1.5 ("the same rules") is met by having one
+  copy, not two kept in step. The API's 422 field errors land on the same fields.
+- The dashboard's figures are the API's (`GET /v1/dashboard`), each a sum or count over
+  stored rows with its formula written beside it; the page formats and never calculates
+  (05 section 3.3). Money crosses the wire as text and is formatted with BigInt. The
+  month is the South African calendar month (D-024, D-030). Win rate is won ÷ (won +
+  lost) over pipeline items decided this month; a payment in another currency with no
+  stored rand figure is listed as unconverted rather than guessed into a total.
+- "Queue bid" on the feed asks for a bid, it does not make one: the API drafts from a
+  passed margin evaluation (D-031), scores a job nobody has looked at (the chain then
+  carries it), and otherwise refuses with the stored reason. It records
+  `proposal.draft_requested` naming the person; the vocabulary gains that one type.
+- Approvals on the web are the Telegram bot's rules (D-033) reached from a page:
+  `approved_via = 'web'`, the approver is the caller by the restrictive policy in 0009,
+  an edit clears the approval, a rejection records its reason, a sent bid changes for
+  nobody. Bulk approve and reject run one bid per transaction and report each outcome,
+  so a bid that moved on since the page loaded does not stop the rest.
+- Live mode's org switch (D-032) is refused, with the list, while any rule is missing —
+  the same list the database constraint holds — and is a `confirmAction` on the page.
+  The switch is an update, never an upsert: Postgres checks a proposed insert row's
+  constraints before it finds the conflict, and that row's defaults have no rules.
+- The plan and monthly bid allowance (D-030, docs/02 T-03) are entered on the platform
+  account in Settings, with the day recorded stored beside them. "Connect
+  Freelancer.com" is a disabled button with its reason (C-02): the state and the reason
+  are the behaviour, and the test asserts both, so it is not a dead control.
+- An action's success message stays on screen while the list refreshes underneath it
+  (a "Loaded N" message replacing "Approved X" is the kind of thing a person reads as
+  "did it happen?").
+- A stale board claim is one with no push for an hour (D-034, made at the start of this
+  ticket).
+
+Reason:
+
+- The acceptance is "every button audited per 05; Playwright covers every button and
+  form". Each page has `docs/audit/<page>.md` listing every control with its test, and
+  `e2e/<page>.spec.ts` answers the API and Supabase at the network edge with the shapes
+  the real routes return, which are themselves proven against real Postgres in
+  `apps/api/src/routes/pages.test.ts` (dashboard figures hand-worked; approve, reject,
+  edit and bulk as owner, operator, viewer and stranger; live mode refused then allowed;
+  the plan dated in South African time).
+- The token cache is a minute because a page's first paint makes several requests at
+  once; a revoked session lasting up to a minute longer is the trade, recorded.
+- `visually-hidden` inside a table header escaped the table's own scroll box and made
+  the document scroll sideways at 380 px; the action columns now have visible headers.
