@@ -218,3 +218,33 @@ Reason:
 - A migration that created its own `auth` schema would collide with Supabase's and could mask a policy that is wrong against the real one.
 - Running the assertions as the superuser would prove nothing: superusers bypass RLS, so the tests would pass against no policies at all. Switching role is what makes the result meaningful.
 - The suite was mutation-tested: making `app.is_member` ignore the org turns 31 tests red. A test that cannot fail is not evidence.
+
+## D-013 — Roles are defined once in the database and mirrored in code under test
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-012)
+
+Decision:
+
+- `packages/core/src/auth.ts` states what each role may do; the RLS policies in 0008 and 0009 enforce it. `packages/db/src/role-parity.test.ts` signs in as one member per role against real Postgres and asserts that the database's answer equals the function's answer, for writing, approving and changing settings.
+- The code copy is for the interface only — greying out a button instead of letting someone press it and collect an error. It is never the thing standing between a viewer and an approval.
+
+Reason:
+
+- Two copies of an authorisation rule drift, and the copy that drifts is always the one nobody tested. Making the disagreement a test failure is cheaper than choosing one copy and pretending the other does not exist.
+- Mutation-checked: making `canApprove` return true for everyone turns the viewer case red.
+
+## D-014 — An approval records the person who made it, enforced by restrictive policies
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-012)
+
+Decision:
+
+- On `proposals`, `messages` and `sourcing_posts`, `approved_by` may only ever be set to the acting user. This is a RESTRICTIVE policy, so it is ANDed with the permissive ones in 0008 rather than widening them.
+- An org cannot lose its last owner: a trigger refuses the delete or the demotion.
+
+Reason:
+
+- 0008 decides who may write the approval columns; it does not stop an operator writing the owner's name into one. Section H's rule is that an outbound action carries an approval, and an approval that can name someone who never gave it is not one.
+- A permissive policy would have ORed with the existing write policy and changed nothing. That failure mode is silent, so it is mutation-tested: switching these six policies to permissive turns exactly the two tests that cover them red.

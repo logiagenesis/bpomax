@@ -26,6 +26,14 @@ stable
 as $$
   select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid;
 $$;
+
+-- Supabase's identity table, reduced to the columns this schema reads. The triggers in
+-- 0009 hang off it, so it has to exist before the migrations run.
+create table auth.users (
+  id uuid primary key default gen_random_uuid(),
+  email text unique,
+  created_at timestamptz not null default now()
+);
 `;
 
 /** A fresh in-memory Postgres with the shim and every migration applied. */

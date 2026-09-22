@@ -48,6 +48,10 @@ importers:
   packages/core: {}
 
   packages/db:
+    dependencies:
+      '@arbitron/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@types/node':
         specifier: ^26.6.2

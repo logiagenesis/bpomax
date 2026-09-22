@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.2"
+  },
+  "dependencies": {
+    "@arbitron/core": "workspace:*"
   }
 }
