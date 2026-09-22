@@ -24,6 +24,7 @@ export const EVENT_TYPES = [
   'estimate.created',
   'margin.evaluated',
   'proposal.drafted',
+  'proposal.edited',
   'proposal.approved',
   'proposal.rejected',
   'proposal.submitted',
@@ -43,6 +44,9 @@ export const EVENT_TYPES = [
   'delivery.order_created',
   'payment.recorded',
   // governance
+  'telegram.linked',
+  'bidding.paused',
+  'bidding.resumed',
   'settings.changed',
   'live_mode.changed',
   'external.call',

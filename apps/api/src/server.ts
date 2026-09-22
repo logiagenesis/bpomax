@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { ServerOptions } from './context.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerScannerRoutes } from './routes/scanners.js';
+import { registerTelegramRoutes } from './routes/telegram.js';
 
 /**
  * The Arbitron API.
@@ -30,6 +31,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
 
   registerEventRoutes(app, options);
   registerScannerRoutes(app, options);
+  registerTelegramRoutes(app, options);
 
   return app;
 }

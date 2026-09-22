@@ -48,6 +48,7 @@ export interface SubmitDeps {
 }
 
 export type SubmitBlockReason =
+  | 'paused'
   | 'live_mode_off'
   | 'no_client'
   | 'allowance'
@@ -230,6 +231,18 @@ export async function submitProposal(
     return { status: 'submitted', platformRef: earlierRef, pipelineItemId };
   }
 
+  const settings = await db.query<{ live_mode: boolean; bidding_paused: boolean }>(
+    'select live_mode, bidding_paused from settings where org_id = $1',
+    [proposal.org_id],
+  );
+  // /pause (ARB-050): nothing is sent, whoever approved it, and the approval is kept for /resume.
+  if (settings.rows[0]?.bidding_paused) {
+    const message =
+      'Bidding is paused. The approval is kept; /resume in Telegram or the settings page sends it.';
+    await note('blocked', { reason: 'paused', message });
+    return { status: 'blocked', reason: 'paused', message };
+  }
+
   // An auto approval is held to its scanner's guardrails (01 section H) at the moment of
   // sending, whatever approved it: the cap, the score floor, and auto-send being on.
   let scannerSlotTaken = false;
@@ -289,10 +302,6 @@ export async function submitProposal(
     scannerSlotTaken = true;
   }
 
-  const settings = await db.query<{ live_mode: boolean }>(
-    'select live_mode from settings where org_id = $1',
-    [proposal.org_id],
-  );
   const gate = liveGate({
     envLiveMode: deps.liveMode,
     orgLiveMode: settings.rows[0]?.live_mode ?? false,

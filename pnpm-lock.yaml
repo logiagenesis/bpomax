@@ -48,7 +48,27 @@ importers:
         specifier: ^5.12.5
         version: 5.12.5
 
-  apps/telegram: {}
+  apps/telegram:
+    dependencies:
+      '@arbitron/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@arbitron/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@arbitron/workers':
+        specifier: workspace:*
+        version: link:../workers
+      bullmq:
+        specifier: ^5.81.5
+        version: 5.81.5
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
 
   apps/web:
     dependencies:

@@ -54,6 +54,8 @@ export const ENTITY = {
   llmCall: 34,
   portfolioItem: 35,
   proposalCitation: 36,
+  telegramLinkCode: 37,
+  telegramPending: 38,
 } as const;
 
 export const CATEGORY_SLUG = 'web-design';
@@ -257,6 +259,16 @@ export function tenantRows(org: string, ref: string, own: string): readonly Fixt
       table: 'proposal_citations',
       sql: `insert into proposal_citations (id, org_id, proposal_id, portfolio_item_id)
             values ('${o(ENTITY.proposalCitation)}', '${org}', '${r(ENTITY.proposal)}', '${r(ENTITY.portfolioItem)}')`,
+    },
+    {
+      table: 'telegram_link_codes',
+      sql: `insert into telegram_link_codes (id, org_id, user_id, code, expires_at)
+            values ('${o(ENTITY.telegramLinkCode)}', '${org}', '${r(ENTITY.user)}', 'code-${own}', now() + interval '10 minutes')`,
+    },
+    {
+      table: 'telegram_pending',
+      sql: `insert into telegram_pending (id, org_id, chat_id, action, proposal_id)
+            values ('${o(ENTITY.telegramPending)}', '${org}', 'chat-${own}', 'edit', '${r(ENTITY.proposal)}')`,
     },
   ];
 }

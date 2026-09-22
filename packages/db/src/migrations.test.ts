@@ -48,6 +48,8 @@ const EXPECTED_TABLES = [
   'supplier_candidates',
   'supplier_rate_cards',
   'suppliers',
+  'telegram_link_codes',
+  'telegram_pending',
   'template_variants',
   'templates',
   'threads',

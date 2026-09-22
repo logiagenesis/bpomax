@@ -206,6 +206,29 @@ describe('with LIVE_MODE off', () => {
   });
 });
 
+describe('while bidding is paused (ARB-050)', () => {
+  it('sends nothing, keeps the approval, and says so', async () => {
+    await setLive(true);
+    await setAllowance(50);
+    await db.query('update settings set bidding_paused = true where org_id = $1', [ORG]);
+    try {
+      const proposalId = await insertProposal(await insertJob('paused'));
+      const placer = new ScriptedPlacer();
+      const result = await submitProposal(
+        { db, liveMode: true, placer, now: () => NOW },
+        { proposalId },
+      );
+      expect(result).toMatchObject({ status: 'blocked', reason: 'paused' });
+      if (result.status === 'blocked') expect(result.message).toMatch(/resume/);
+      expect(placer.placed).toEqual([]);
+      expect(await proposalState(proposalId)).toMatchObject({ status: 'approved' });
+      expect(await bidsUsed()).toBe(0);
+    } finally {
+      await db.query('update settings set bidding_paused = false where org_id = $1', [ORG]);
+    }
+  });
+});
+
 describe('approval', () => {
   it('sends nothing that is not approved, and does not send twice', async () => {
     await setLive(true);
