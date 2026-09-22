@@ -61,6 +61,10 @@ Completed:
   until T-02, D-02, D-03 and B-10 are answered; it says so per job (D-029).
 - ARB-042 bid allowance on the platform account, counted per month with an atomic
   reserve; unknown or spent allowance blocks with a clear message — `4b0d2e7` (D-030).
+- ARB-043 draft-bid worker with a portfolio table: price from the margin output, timeline
+  from the estimate, milestones summing to the cent, citations only to recorded items —
+  `de42c51` (D-031). Blocked in production until D-07 (templates) and D-10 (portfolio) are
+  answered; it says so per job.
 
 Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
 

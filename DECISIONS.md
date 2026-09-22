@@ -670,3 +670,51 @@ Reason:
   against a limit nobody checked.
 - `usage_counters` already exists for exactly this shape of count (01 section D), and its
   unique key (org, metric, period) is what makes the conditional upsert atomic.
+
+## D-031 — The draft-bid worker writes the words; the price, the timeline, the milestones and the citations are decided by code
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-043, session …V4PPWs)
+
+Decision:
+
+- The bid amount is the margin evaluation's `client_budget_minor`: the price the stored
+  margin was judged at (D-029), so "price equals margin output" is literal and the margin
+  shown for a proposal is the margin at its price. The lowest clearing price stays in the
+  margin event for the operator; editing down to it is the operator's call.
+- The timeline is the estimate's `turnaround_days` when the estimate has one. When it has
+  none (a market band carries no turnaround) the model proposes a number of days and the
+  proposal is flagged `timelineSource: proposed_by_model` in its event, for the operator
+  to check before approving. A proposal is never blocked for want of a turnaround alone.
+- Milestones come from the model as titles and shares; `splitMilestones` normalises the
+  shares and rounds down, with the remainder on the last, so they sum to the price to the
+  cent whatever the model's arithmetic (05 section 3.5).
+- Portfolio items are a new table (migration 0014), each `own_work` or `labelled_demo`
+  with `permission_to_show` (docs/02 D-10, 01 section H). A draft is offered only
+  active items with permission; the JSON schema's enum is exactly those ids, so a
+  citation the owner did not record is rejected before it is read; the citation itself is
+  a foreign key in `proposal_citations`, and a cited item cannot be deleted from under its
+  proposal. Links are written into the body by code from the cited items; a body with a
+  link in it is rejected and retried.
+- The template is the job's category's, else a general one, only if active (D-07), and
+  its variant the one with the best reply rate, then the most sent. No template means no
+  draft: the event says `blocked` and names D-07. The worker writes no copy of its own.
+- The proposal is stored `queued`, for approval (01 section H); the margin worker
+  enqueues a draft only for a committed, passed evaluation. One draft per evaluation,
+  unless it was rejected.
+- The prompt carries the job, the client's platform record without names, the template,
+  the price and timeline to quote exactly, and the offered items. It never carries the
+  supplier cost or the margin. The system prompt forbids invented clients, results,
+  reviews, deadlines, urgency and scarcity (01 section H).
+
+Reason:
+
+- The acceptance names three invariants; each is held by code and by the database, not by
+  the prompt, and each has a mutant that breaks it and a test that catches the mutant.
+  Eleven mutants (remainder dropped, links allowed, any citation accepted, demos
+  unlabelled, unpermitted items offered, price from the budget, timeline always the
+  model's, stored as draft, failed margin drafted, inactive template used, draft enqueued
+  on a failed evaluation) each fail at least one test.
+- The client's history, in the sense of previous threads with the same client, has no
+  identity to hang on yet (jobs carry the platform's client statistics, not a client id);
+  the prompt uses those statistics. A client id arrives with ingest (ARB-022, C-02).
