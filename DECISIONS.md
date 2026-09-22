@@ -61,3 +61,26 @@ Decision:
 
 Note for the owner:
 - A second, later copy of the same package exists in Drive (folder `1tDIk2rn8ASNjoLkN6ZJhHmBNSfw6RKX8`, the one the shared link in Build.txt points to). File sizes are identical across both copies. The copy named above is the one used. Worth deleting one of the two so there is a single source of truth in Drive as well.
+
+## D-004 — Continuous board execution, no per-ticket check-in
+
+Date: 22/09/2026
+Decided by: Owner (explicit instruction, this session)
+
+Decision:
+- Work 04-PROJECT-BOARD.md continuously: commit and push after each ticket, update the board as we go, and do not pause for approval on settings, commit messages or minor choices.
+- Minor choices are decided here in DECISIONS.md rather than raised with the owner.
+- Only genuine blockers stop the work: missing credentials, a paid service, or a decision the docs contradict. Those go in docs/BLOCKERS.md and the dependent ticket is marked BLOCKED, per 01 rule 6.
+
+## D-005 — Node 22 runtime locally, Node 20 as the floor
+
+Date: 22/09/2026
+Decided by: Claude Code
+
+Observation:
+- 01 section C fixes the stack at "Node 20 LTS". The build container runs Node v22.22.2 and pnpm 10.33.0; no Node 20 is installed and installing one is not worth a blocker.
+
+Decision:
+- `engines.node` is set to `>=20` so Node 20 remains supported and the docs' floor is honoured.
+- CI pins Node 20 so the documented target is the one actually tested on every push.
+- Local development on Node 22 is acceptable; anything that breaks on 20 will surface in CI.
