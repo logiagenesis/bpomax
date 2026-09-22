@@ -56,6 +56,9 @@ Completed:
 - ARB-040 estimate worker: category from the model, price from the owner's rows, one test
   per branch, 11 mutants caught — `6c1f43a`. D-15 narrowed: the mechanism needed no figure,
   and B-10 moves to ARB-041 (D-028).
+- ARB-041 margin engine: fee table with provenance, FX buffer, minimum rules, every line
+  stored, hand-worked to the cent, 14 mutants caught — `208ea79`. Blocked in production
+  until T-02, D-02, D-03 and B-10 are answered; it says so per job (D-029).
 
 Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
 

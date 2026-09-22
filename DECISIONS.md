@@ -577,3 +577,59 @@ Reason:
   category, hourly jobs reading bands, seed band ranked first, upper-middle median, skipped
   verdicts estimated, inactive suppliers read, cards in any currency, category not stored,
   scorer enqueuing skipped jobs) each fail at least one test. Closing commit: `6c1f43a`.
+
+## D-029 — The margin engine judges the client's ceiling in whole minor units, and a missing rule blocks rather than defaults
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-041, session …V4PPWs)
+
+Decision:
+
+- The formula is the spec's (01 section E, reference R3 section 3.4): margin = client
+  budget − platform fee − supplier cost − FX buffer − tool costs. The budget judged is the
+  job's upper bound (`budget_max_minor`, else `budget_min_minor`): a deal that cannot
+  clear at the client's ceiling cannot clear at all, and one that does leaves the
+  draft-bid worker room below it.
+- The platform fee is the fee table's percentage of the budget, or the platform's minimum
+  fee when that is more. The fee table is `settings.fee_table`, a JSON array of rules
+  `{platform, project_type, side, percent, min_minor?, min_currency?, source_url, read_on}`;
+  `parseFeeTable` refuses a rule without the official page it was read from and the day
+  it was read (05 section 5.2, docs/02 T-02). Bids use the `freelancer` side; the
+  `employer` side is for sourcing posts (Phase 2).
+- The FX buffer is `fx_buffer_pct` of the budget when the deal is not in ZAR, and nothing
+  when it is: a ZAR deal carries no exchange exposure.
+- The supplier cost is the estimate's expected figure (D-028), in the job's currency; an
+  estimate in another currency blocks rather than being converted in passing.
+- Tool costs are a stored line, 0 until a paid boost or the like is entered at submission
+  (ARB-044). No per-bid tool figure exists to assume.
+- Two rules: `min_margin_pct` against margin ÷ budget, and `min_margin_zar_minor` against
+  the margin converted to ZAR at the provider's rate, which is stored with its timestamp
+  (`fx_rate_used`, `fx_rate_at`; 05 section 3.4). An hourly deal is judged per hour, so the
+  ZAR minimum, a per-job amount, is not applied to it; the reason says so.
+- Arithmetic is BigInt over whole minor units, rounded half away from zero; percentages
+  with at most three decimals are scaled integers; rates are parsed exactly to eight
+  decimals (`numeric(18, 8)`); `margin_pct` is kept to three decimals. No float touches money.
+- The engine also returns `requiredPriceMinor`, the lowest price at which the deal clears
+  both rules (null when the percentages leave nothing), in the event payload. That is
+  what the draft-bid worker prices from (ARB-043: "price equals margin output").
+- A missing rule blocks. `margin.evaluated` gets outcome `blocked` naming each rule not
+  set (D-02, D-03, T-02), or the fee table's field errors, or the platform and project
+  type no rule covers, or the FX provider that is not configured (B-10) — for a non-ZAR
+  deal, and for a fee minimum quoted in another currency. A provider that exists but does
+  not answer is an error the queue retries. Nothing is filled in.
+- VAT is not a margin line. 01 section G's "shown to the operator VAT-inclusive at 15%
+  where VAT applies" is a display rule for the interface (ARB-061); whether VAT applies to
+  a given client is a tax question the owner answers with T-06's advice.
+- `FxRateSource` is an interface in `apps/workers`; the provider adapter waits on B-10.
+
+Reason:
+
+- The acceptance is "hand-calculated test cases pass to the cent for fixed, hourly,
+  multi-currency". `packages/core/src/margin.test.ts` works every expected value in a
+  comment beside it, including the cent at which rounding decides the required price; the
+  figures are the file's own test data, since T-02, D-02 and D-03 are open.
+- Fourteen mutants (rounding half down, buffer on ZAR deals, fee minimum ignored, ZAR
+  minimum per hour, tool costs dropped, an exact-boundary margin failed, fee rule matched on
+  platform alone, a rule without its source accepted, a missing buffer read as 0, the
+  minimum budget judged, idempotency per job, the rate not stored, currency mismatch
+  ignored, the estimate worker not enqueuing) each fail at least one test.
