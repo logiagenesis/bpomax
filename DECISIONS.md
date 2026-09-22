@@ -500,3 +500,28 @@ Reason:
 
 - The wrap-margin test turns the failure mode into a named, local test failure with the
   offending sentence in the message, instead of a 10% pixel diff in CI.
+
+## D-027 — The API answers the web app's origin only, with bearer tokens and no cookies
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-062, session …V4PPWs)
+
+Decision:
+
+- `buildServer` registers `@fastify/cors`. The allowed origin is `ServerOptions.webOrigin`,
+  which is `APP_URL` from `.env`; when it is unset no cross-origin request is allowed at all.
+- `credentials: false`. The session token travels in the `Authorization` header, read from
+  `sessionStorage` by `apps/web/src/lib/api.js`, never in a cookie, so the browser is never
+  told to send credentials and cross-site request forgery has nothing to ride on.
+- Three response headers are exposed to the page: `content-disposition`, `x-export-rows` and
+  `x-export-truncated`. They are what the CSV export tells the page about the file.
+
+Reason:
+
+- Two Playwright failures found the gap. Without CORS the page could not call the API from
+  another origin at all; without the exposed headers the browser hid the file name and the
+  row count, and the page reported an export of 0 rows.
+- A wildcard origin would work today, because nothing ambient authenticates a request, but
+  it gives up a control for no gain, and `APP_URL` already exists for exactly this.
+- Four tests in `apps/api/src/server.test.ts` hold it. Each of three mutants (drop the
+  exposed headers, allow any origin, turn credentials on) fails at least one of them.

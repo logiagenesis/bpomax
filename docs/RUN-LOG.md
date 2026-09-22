@@ -35,3 +35,33 @@ Note for the owner: two scheduled sessions ran against main at once today and bo
 within ten minutes of each other. The IN PROGRESS claim on the board, which the other session
 introduced, is now the lock. Running only one schedule at a time would avoid the duplicate
 work altogether.
+
+## 22/09/2026 — session …V4PPWs
+
+Completed:
+
+- ARB-001 repository, docs on main — `05b9769`
+- ARB-002 monorepo scaffold — `7ff144c`
+- ARB-003 CI, proved green and red — `4dddeb8`
+- ARB-005 README and DECISIONS.md — `e0f8c85`
+- ARB-011 row level security, proved against real Postgres — `ecfc49e`
+- ARB-012 auth wiring, role split, approval integrity — `f34a587`
+- ARB-014 audit log writer, reader and `GET /v1/events` — `8b18d29`
+- ARB-021 scanner CRUD over the API with the auto-send guardrail — `02f516d`
+- ARB-031 LLM package with schema validation, one retry and metering — `9e32179`
+- ARB-062 audit log page with server-side CSV export — `39d4f39`, merged with main as
+  `5189e9f`. The API side is session …iZW8GE's `63a9506`, taken with credit; the page and
+  tests are this session's. The first page to call the API showed the API had no CORS
+  (D-027).
+
+Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
+
+- ARB-004 docker-compose and `.env.example` — `c194e1c` (V-01: no Docker daemon here)
+- ARB-010 migrations for the full data model, verified with PGlite — `8c9c8fa` (C-01)
+- ARB-013 category taxonomy seeded; price bands not seeded — `c21c34e` (D-14)
+- ARB-015 retention job that redacts, and refuses to guess a period — `447e6a9` (T-06)
+
+Blockers recorded: C-01, V-01, V-02, V-03, V-04, D-14.
+
+Also: the board's IN PROGRESS claim was introduced here (`d801cbb`) after both sessions
+built ARB-060 at once; this session's ARB-060 was discarded in favour of the one on main.
