@@ -59,6 +59,8 @@ Completed:
 - ARB-041 margin engine: fee table with provenance, FX buffer, minimum rules, every line
   stored, hand-worked to the cent, 14 mutants caught — `208ea79`. Blocked in production
   until T-02, D-02, D-03 and B-10 are answered; it says so per job (D-029).
+- ARB-042 bid allowance on the platform account, counted per month with an atomic
+  reserve; unknown or spent allowance blocks with a clear message — `4b0d2e7` (D-030).
 
 Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
 

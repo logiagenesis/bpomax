@@ -633,3 +633,40 @@ Reason:
   platform alone, a rule without its source accepted, a missing buffer read as 0, the
   minimum budget judged, idempotency per job, the rate not stored, currency mismatch
   ignored, the estimate worker not enqueuing) each fail at least one test.
+
+## D-030 — The bid allowance lives on the marketplace account, is counted per SAST month, and an unknown allowance blocks
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-042, session …V4PPWs)
+
+Decision:
+
+- The plan name and monthly bid limit (docs/02 T-03) are columns on `platform_accounts`
+  (migration 0013: `plan_name`, `monthly_bid_allowance`, `plan_recorded_on`), because the
+  allowance is what the platform grants that account's membership, not a property of the
+  org. Both are null until the owner records them.
+- Bids used are counted in `usage_counters` under metric `bids:<platform>`, one row per
+  calendar month in South African time (D-024's fixed UTC+2), with `period_start` the
+  first of the month. The month is an assumption about the platform's cycle, recorded
+  here so T-03's answer can correct it: if the allowance renews on the membership's own
+  date, `bidPeriod` is the one function to change.
+- A bid is taken with `reserveBid` before the platform is called: one conditional upsert
+  that moves `used` only while it is below the allowance, so two submissions racing for
+  the last bid cannot both take it. A submission that fails before the platform accepted it
+  gives the bid back with `releaseBid`, never below zero. The submit worker (ARB-044) is
+  the caller.
+- An allowance that is null refuses with a message naming T-03; a platform with no
+  account refuses; an allowance of zero refuses; the counter is not touched in any of
+  these. A refusal carries the count, the limit, the plan name and the day the
+  allowance resets, in plain language for the operator and the Telegram card.
+- The allowance can be changed at any time: the count stands, the new limit applies from
+  the next reservation.
+
+Reason:
+
+- The acceptance is "submission blocked with clear message when allowance reached", and
+  docs/02 says T-03's figure will not be assumed. Refusing on an unrecorded allowance is
+  the only reading of both together; a null read as "unlimited" would submit real bids
+  against a limit nobody checked.
+- `usage_counters` already exists for exactly this shape of count (01 section D), and its
+  unique key (org, metric, period) is what makes the conditional upsert atomic.
