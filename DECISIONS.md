@@ -525,3 +525,55 @@ Reason:
   it gives up a control for no gain, and `APP_URL` already exists for exactly this.
 - Four tests in `apps/api/src/server.test.ts` hold it. Each of three mutants (drop the
   exposed headers, allow any origin, turn credentials on) fails at least one of them.
+
+## D-028 — The estimate worker prices from the owner's rows only, in the job's currency
+
+Date: 22/09/2026
+Decided by: Claude Code (ARB-040, session …V4PPWs)
+
+Decision:
+
+- The method order is the spec's: `in_house` → `rate_card` → `market_band` → `ai_build`.
+  Each reads a row and nothing else. In-house means the category is ticked `in_house`
+  (docs/02 D-04) and a supplier on the `in_house` channel has a rate card for it. A
+  supplier rate card is any active supplier on the freelancer, upwork, fiverr or direct
+  channels. A market band is the best one for the category and currency, observed sources
+  before seed (`completed_projects` > `owner_csv` > `marketplace_sample` > `seed`), newest
+  first, and a seed band is flagged `isSeed` in the event. The AI-build tier is the rate
+  card of a supplier on the `ai_build` channel: reference R2 costs the AI-build pipeline
+  "as a supplier tier", so it is a supplier row, not a new table.
+- "Website categories only" is `AI_BUILD_CATEGORIES` in `packages/core`: website-build,
+  wordpress, elementor, shopify, landing-page. The AI-build pipeline is a website template
+  engine; an app, a game or a piece of writing is not a website. The owner can change the
+  list; it is one constant.
+- Several rate cards give low = the lowest, expected = the median, high = the highest, in
+  integer minor units; an even count takes the mean of the two middle values rounded down.
+- An hourly job is priced per hour from hourly rates. Bands are fixed-project prices and
+  are never used for an hourly job.
+- Only sources in the job's currency are read, and the estimate is stored in that currency.
+  This worker does no conversion: the margin engine (ARB-041) is where the rate and its
+  timestamp are stored with every other input line (05 section 3.4), so B-10 (the FX
+  provider) blocks ARB-041, not ARB-040.
+- No source means no estimate. The job gets an `estimate.created` event with outcome
+  `skipped` and one line per method saying why it did not apply. No figure is synthesised,
+  averaged in from another currency, or guessed.
+- The category is asked of the model once, held to the taxonomy by the JSON schema (the
+  enum is the seeded slugs, plus null), retried once on a bad reply, metered as purpose
+  `estimate`, and stored on the job by migration 0012 (`jobs.category_slug`,
+  `jobs.category_confidence`) so it is never paid for twice. A null answer is recorded as
+  `no_category` and nothing is stored.
+- The scorer hands over: after committing a score whose verdict is not `skip` it enqueues
+  the estimate (`ScoreDeps.estimateQueue`, optional so the scorer still runs alone).
+
+Reason:
+
+- docs/01 rule 6 forbids invented figures, and D-15 listed ARB-040 as blocked on D-04, B-10
+  and D-14 for that reason. The mechanism does not need the figures to exist; it needs
+  them to be rows. Built this way it ships with every branch tested against figures the
+  tests own and label as test data, and in production it writes `skipped` until the owner's
+  rows exist. That is the same shape as ARB-021 (mechanism built, D-06 seed pending) and
+  ARB-031 (transport scripted, V-04 pending).
+- Eleven mutants (suppliers before in-house, in-house tick ignored, AI-build for every
+  category, hourly jobs reading bands, seed band ranked first, upper-middle median, skipped
+  verdicts estimated, inactive suppliers read, cards in any currency, category not stored,
+  scorer enqueuing skipped jobs) each fail at least one test. Closing commit: `6c1f43a`.

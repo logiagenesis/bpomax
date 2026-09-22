@@ -53,6 +53,9 @@ Completed:
   `5189e9f`. The API side is session …iZW8GE's `63a9506`, taken with credit; the page and
   tests are this session's. The first page to call the API showed the API had no CORS
   (D-027).
+- ARB-040 estimate worker: category from the model, price from the owner's rows, one test
+  per branch, 11 mutants caught — `6c1f43a`. D-15 narrowed: the mechanism needed no figure,
+  and B-10 moves to ARB-041 (D-028).
 
 Built, then marked BLOCKED because the acceptance needs a figure or credential (docs/BLOCKERS.md):
 
