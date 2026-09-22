@@ -52,6 +52,8 @@ export const ENTITY = {
   affiliate: 32,
   attribution: 33,
   llmCall: 34,
+  portfolioItem: 35,
+  proposalCitation: 36,
 } as const;
 
 export const CATEGORY_SLUG = 'web-design';
@@ -245,6 +247,16 @@ export function tenantRows(org: string, ref: string, own: string): readonly Fixt
       table: 'attribution',
       sql: `insert into attribution (id, org_id, affiliate_id, source)
             values ('${o(ENTITY.attribution)}', '${org}', '${r(ENTITY.affiliate)}', 'test')`,
+    },
+    {
+      table: 'portfolio_items',
+      sql: `insert into portfolio_items (id, org_id, title, kind, permission_to_show)
+            values ('${o(ENTITY.portfolioItem)}', '${org}', 'Work ${own}', 'own_work', true)`,
+    },
+    {
+      table: 'proposal_citations',
+      sql: `insert into proposal_citations (id, org_id, proposal_id, portfolio_item_id)
+            values ('${o(ENTITY.proposalCitation)}', '${org}', '${r(ENTITY.proposal)}', '${r(ENTITY.portfolioItem)}')`,
     },
   ];
 }

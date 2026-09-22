@@ -36,6 +36,8 @@ const EXPECTED_TABLES = [
   'payments',
   'pipeline_items',
   'platform_accounts',
+  'portfolio_items',
+  'proposal_citations',
   'proposals',
   'scanners',
   'service_categories',

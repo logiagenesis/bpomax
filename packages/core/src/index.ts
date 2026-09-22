@@ -10,10 +10,12 @@
  *   ARB-040  estimate method order and classification (estimating.ts)
  *   ARB-041  margin engine                          (margin.ts)
  *   ARB-042  bid allowance                          (allowance.ts)
+ *   ARB-043  draft rules: price, timeline, milestones, citations (drafting.ts)
  *   ARB-131  brief schema
  */
 export * from './allowance.js';
 export * from './auth.js';
+export * from './drafting.js';
 export * from './estimating.js';
 export * from './events.js';
 export * from './margin.js';

@@ -10,6 +10,7 @@ import {
 } from '@arbitron/core';
 import { recordEvent, type Queryable } from '@arbitron/db';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { enqueueDraft } from './draft-bid.js';
 
 /**
  * The margin worker (ARB-041, docs/01 section E): "margin = client budget − platform fee −
@@ -38,6 +39,8 @@ export interface MarginDeps {
   readonly db: Queryable;
   /** Absent until B-10 is answered. Only needed for deals not in ZAR. */
   readonly fx?: FxRateSource | null;
+  /** Where a passed evaluation goes next: "draft-bid — trigger: margin passed" (01 section E). */
+  readonly draftQueue?: Queue;
 }
 
 export type MarginBlockReason =
@@ -321,6 +324,15 @@ export async function evaluateJobMargin(
     });
     return id;
   });
+
+  // Only a committed, passed evaluation is drafted from.
+  if (deps.draftQueue && evaluation.passed) {
+    await enqueueDraft(deps.draftQueue, {
+      jobId: job.id,
+      marginEvaluationId: evaluationId,
+      ...(requestId ? { requestId } : {}),
+    });
+  }
 
   return { status: 'evaluated', evaluationId, passed: evaluation.passed };
 }
