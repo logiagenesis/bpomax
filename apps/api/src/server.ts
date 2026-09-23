@@ -14,6 +14,7 @@ import { registerPriceBandRoutes } from './routes/price-bands.js';
 import { registerProposalRoutes } from './routes/proposals.js';
 import { registerScannerRoutes } from './routes/scanners.js';
 import { registerSettingsRoutes } from './routes/settings.js';
+import { registerSourcingPostRoutes } from './routes/sourcing-posts.js';
 import { registerSourcingRoutes } from './routes/sourcing.js';
 import { registerSupplierRoutes } from './routes/suppliers.js';
 import { registerTelegramRoutes } from './routes/telegram.js';
@@ -56,6 +57,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerPriceBandRoutes(app, options);
   registerSupplierRoutes(app, options);
   registerSourcingRoutes(app, options);
+  registerSourcingPostRoutes(app, options);
   registerPlatformAccountRoutes(app, options);
   registerEventRoutes(app, options);
   registerScannerRoutes(app, options);

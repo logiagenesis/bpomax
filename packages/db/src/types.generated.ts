@@ -1760,6 +1760,7 @@ export type Database = {
           posted_at: string | null;
           sourcing_request_id: string;
           status: Database['public']['Enums']['sourcing_post_status'];
+          title: string;
           updated_at: string;
         };
         Insert: {
@@ -1777,6 +1778,7 @@ export type Database = {
           posted_at?: string | null;
           sourcing_request_id: string;
           status?: Database['public']['Enums']['sourcing_post_status'];
+          title?: string;
           updated_at?: string;
         };
         Update: {
@@ -1794,6 +1796,7 @@ export type Database = {
           posted_at?: string | null;
           sourcing_request_id?: string;
           status?: Database['public']['Enums']['sourcing_post_status'];
+          title?: string;
           updated_at?: string;
         };
         Relationships: [

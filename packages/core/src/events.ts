@@ -48,7 +48,10 @@ export const EVENT_TYPES = [
   // sourcing and delivery
   'sourcing.requested',
   'sourcing.shortlisted',
+  'sourcing.post_drafted',
+  'sourcing.post_edited',
   'sourcing.post_approved',
+  'sourcing.post_closed',
   'sourcing.posted',
   'supplier.imported',
   'supplier.candidate_added',
