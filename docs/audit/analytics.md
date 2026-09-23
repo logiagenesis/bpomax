@@ -9,7 +9,7 @@ figures are grouped by `aggregateAnalytics` in `@arbitron/core`, hand-worked in
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×10, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Analytics | — | — | — | — | Yes | shows each group’s figures as the API worked them, with the total, and every link goes somewhere | ✅ |
+| Link, nav links ×11, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Analytics | — | — | — | — | Yes | shows each group’s figures as the API worked them, with the total, and every link goes somewhere | ✅ |
 | Select | Group by | Category, Template, Supplier or Scanner | Sent with Apply as `by` | — | — | — | Never | Yes | Group by and a start date ask the API again, and land in the address bar | ✅ |
 | Input | Bids sent since (DD/MM/YYYY) | Count only bids sent from that SAST day | Read as DD/MM/YYYY and sent as an ISO day; empty means every bid | — | — | "Must be a real date as DD/MM/YYYY." on the field; nothing is asked | Never | Yes | a false date is refused on its field, and nothing is asked | ✅ |
 | Button (submit) | Apply | Read the figures again | `GET /v1/analytics?by=&since=`; the table, the total and the unconverted note rebuilt; `?by=&since=` in the address bar | Spinner, aria-busy, disabled | "Counted N bids by <grouping>." / "No bids sent yet." | The API's message | While busy | Yes | Group by and a start date…; a linked view opens with its grouping and date; with no bids sent… | ✅ |

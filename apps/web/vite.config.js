@@ -54,6 +54,7 @@ export default defineConfig(({ mode }) => {
           suppliers: 'src/suppliers.html',
           sourcing: 'src/sourcing.html',
           pipeline: 'src/pipeline.html',
+          templates: 'src/templates.html',
           analytics: 'src/analytics.html',
           settings: 'src/settings.html',
           'style-guide': 'src/style-guide.html',

@@ -59,6 +59,11 @@ import {
   supplierCsvTemplate,
   suppliersToCsv,
   validateSupplierCsv,
+  templateFigures,
+  validateTemplateChange,
+  validateVariantChange,
+  variantFigures,
+  variantWordsLocked,
 } from '@arbitron/core';
 
 const env = /** @type {Record<string, string | undefined>} */ (import.meta.env ?? {});
@@ -73,7 +78,8 @@ const SESSION_KEY = 'arbitron.session';
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
  *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
  *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[],
- *   sourcing?: Row[], posts?: Row[], pipeline?: Row[], orders?: Row[], payments?: Row[] }} Store
+ *   sourcing?: Row[], posts?: Row[], pipeline?: Row[], orders?: Row[], payments?: Row[],
+ *   templates?: Row[] }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -734,6 +740,98 @@ function logEvent(store, type, partial = {}) {
   store.events.unshift(
     event(type, { actor_kind: 'user', actor_user_id: USER, payload: { via: 'web' }, ...partial }),
   );
+}
+
+/**
+ * Whether a sent bid had a client message on its job's conversation at or after it went:
+ * the reply rule of analytics and templates (D-061, D-064).
+ * @param {Store} store @param {Row} p
+ */
+function repliedAfter(store, p) {
+  const t = (store.threads ?? []).find((x) => x.jobId === p.job_id);
+  return (store.inbound ?? []).some(
+    (m) =>
+      t &&
+      m.threadId === t.id &&
+      new Date(m.sentAt ?? m.createdAt ?? 0).getTime() >= new Date(p.submitted_at).getTime(),
+  );
+}
+
+/**
+ * ARB-340 in the demo: one sample template with two variants, the tab's sent bid written
+ * from the first. Made the first time a page asks, so a tab opened before it still works.
+ * @param {Store} store
+ */
+function templatesOf(store) {
+  if (!store.templates) {
+    const made = ago(5);
+    const variant = (/** @type {string} */ label, /** @type {string} */ body) => ({
+      id: uuid(),
+      label,
+      body,
+      active: true,
+      createdAt: made,
+      updatedAt: made,
+    });
+    const a = variant(
+      'A',
+      'Open with the outcome the client asked for, then the plan in three steps. (sample words)',
+    );
+    const b = variant(
+      'B',
+      'Open with one question about their goal, then the plan in three steps. (sample words)',
+    );
+    store.templates = [
+      {
+        id: uuid(),
+        name: 'Website builds (sample)',
+        categorySlug: 'website-build',
+        description: 'Sample words. Replace them with your own.',
+        active: true,
+        variants: [a, b],
+        createdAt: made,
+        updatedAt: made,
+      },
+    ];
+    const sent = store.proposals.find((p) => p.status === 'submitted' && !p.template_variant_id);
+    if (sent) sent.template_variant_id = a.id;
+  }
+  return store.templates;
+}
+
+/** A template as `GET /v1/templates` gives it. @param {Store} store @param {Row} t */
+function templateView(store, t) {
+  const variants = t.variants.map((/** @type {Row} */ v) => {
+    const sent = store.proposals.filter(
+      (p) => p.template_variant_id === v.id && p.status === 'submitted' && p.submitted_at,
+    );
+    const replies = sent.filter((p) => repliedAfter(store, p)).length;
+    return {
+      id: v.id,
+      label: v.label,
+      body: v.body,
+      active: v.active,
+      ...variantFigures(sent.length, replies),
+      wordsLocked: variantWordsLocked(sent.length),
+      createdAt: v.createdAt,
+      updatedAt: v.updatedAt,
+    };
+  });
+  const totals = templateFigures(variants);
+  return {
+    id: t.id,
+    name: t.name,
+    categorySlug: t.categorySlug,
+    categoryName: t.categorySlug ? categoryName(t.categorySlug) : null,
+    description: t.description,
+    active: t.active,
+    variants,
+    sends: totals.sends,
+    replies: totals.replies,
+    replyRate: totals.replyRate,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  };
 }
 
 /**
@@ -1759,12 +1857,9 @@ function api(method, url, body) {
         const order = item
           ? orders.find((o) => o.pipelineItemId === item.id && o.status !== 'cancelled')
           : undefined;
-        const t = (store.threads ?? []).find((x) => x.jobId === p.job_id);
-        const replied = (store.inbound ?? []).some(
-          (m) =>
-            t &&
-            m.threadId === t.id &&
-            new Date(m.sentAt ?? m.createdAt ?? 0).getTime() >= new Date(p.submitted_at).getTime(),
+        const replied = repliedAfter(store, p);
+        const template = templatesOf(store).find((x) =>
+          x.variants.some((/** @type {Row} */ v) => v.id === p.template_variant_id),
         );
         const mine = payments.filter((y) => item && y.pipelineItemId === item.id);
         const zar = (/** @type {string} */ direction) =>
@@ -1777,8 +1872,8 @@ function api(method, url, body) {
           jobId: p.job_id,
           categoryKey: category,
           categoryLabel: category,
-          templateKey: null,
-          templateLabel: null,
+          templateKey: template?.id ?? null,
+          templateLabel: template?.name ?? null,
           supplierKey: order?.supplierCandidateId ?? null,
           supplierLabel: order?.supplierName ?? null,
           scannerKey: null,
@@ -2012,6 +2107,111 @@ function api(method, url, body) {
     }
     row.updatedAt = now;
     return respond(200, { post: describePost(row) });
+  }
+
+  // ARB-340 in the demo: templates and their variants, held to the API's rules.
+  if (key === 'GET /v1/templates') {
+    return respond(200, { templates: templatesOf(store).map((t) => templateView(store, t)) });
+  }
+  /** @param {{ field: string, message: string }[]} errors */
+  const refused = (errors) => respond(422, { error: 'the request was not accepted', errors });
+  /** @param {Row} change @param {Row | null} self */
+  const templateProblems = (change, self) => {
+    if (change.categorySlug && !DEMO_CATEGORIES.includes(change.categorySlug))
+      return [{ field: 'categorySlug', message: 'is not a service category' }];
+    if (
+      change.name !== undefined &&
+      templatesOf(store).some((x) => x !== self && x.name === change.name)
+    )
+      return [{ field: 'name', message: 'is already used by another template' }];
+    return [];
+  };
+  if (key === 'POST /v1/templates') {
+    const checked = validateTemplateChange(body, { partial: false });
+    if (!checked.ok) return refused(checked.errors);
+    const problems = templateProblems(checked.value, null);
+    if (problems.length > 0) return refused(problems);
+    const now = new Date().toISOString();
+    const row = {
+      id: uuid(),
+      name: checked.value.name,
+      categorySlug: checked.value.categorySlug ?? null,
+      description: checked.value.description ?? null,
+      active: checked.value.active ?? true,
+      variants: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    templatesOf(store).unshift(row);
+    logEvent(store, 'template.created', {
+      subject_table: 'templates',
+      subject_id: row.id,
+      payload: { via: 'web', name: row.name, category_slug: row.categorySlug },
+    });
+    return respond(201, { template: templateView(store, row) });
+  }
+  if (method === 'PATCH' && /^\/v1\/templates\/[^/]+$/.test(path)) {
+    const row = templatesOf(store).find((x) => x.id === path.split('/')[3]);
+    if (!row) return respond(404, { error: 'no such template' });
+    const checked = validateTemplateChange(body, { partial: true });
+    if (!checked.ok) return refused(checked.errors);
+    const problems = templateProblems(checked.value, row);
+    if (problems.length > 0) return refused(problems);
+    Object.assign(row, checked.value, { updatedAt: new Date().toISOString() });
+    logEvent(store, 'template.updated', { subject_table: 'templates', subject_id: row.id });
+    return respond(200, { template: templateView(store, row) });
+  }
+  if (method === 'POST' && /^\/v1\/templates\/[^/]+\/variants$/.test(path)) {
+    const row = templatesOf(store).find((x) => x.id === path.split('/')[3]);
+    if (!row) return respond(404, { error: 'no such template' });
+    const checked = validateVariantChange(body, { partial: false });
+    if (!checked.ok) return refused(checked.errors);
+    if (row.variants.some((/** @type {Row} */ v) => v.label === checked.value.label))
+      return refused([{ field: 'label', message: 'is already used in this template' }]);
+    const now = new Date().toISOString();
+    const v = {
+      id: uuid(),
+      label: checked.value.label,
+      body: checked.value.body,
+      active: checked.value.active ?? true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    row.variants.push(v);
+    logEvent(store, 'template.variant_created', {
+      subject_table: 'template_variants',
+      subject_id: v.id,
+      payload: { via: 'web', template_id: row.id, label: v.label },
+    });
+    return respond(201, { template: templateView(store, row) });
+  }
+  if (method === 'PATCH' && /^\/v1\/template-variants\/[^/]+$/.test(path)) {
+    const id = path.split('/')[3];
+    const row = templatesOf(store).find((x) =>
+      x.variants.some((/** @type {Row} */ v) => v.id === id),
+    );
+    const v = row?.variants.find((/** @type {Row} */ x) => x.id === id);
+    if (!row || !v) return respond(404, { error: 'no such variant' });
+    const checked = validateVariantChange(body, { partial: true });
+    if (!checked.ok) return refused(checked.errors);
+    if (checked.value.body !== undefined && checked.value.body !== v.body) {
+      const sent =
+        templateView(store, row).variants.find((/** @type {Row} */ x) => x.id === id)?.sends ?? 0;
+      const locked = variantWordsLocked(sent);
+      if (locked) return respond(409, { error: locked });
+    }
+    if (
+      checked.value.label !== undefined &&
+      row.variants.some((/** @type {Row} */ x) => x !== v && x.label === checked.value.label)
+    )
+      return refused([{ field: 'label', message: 'is already used in this template' }]);
+    Object.assign(v, checked.value, { updatedAt: new Date().toISOString() });
+    logEvent(store, 'template.variant_updated', {
+      subject_table: 'template_variants',
+      subject_id: v.id,
+      payload: { via: 'web', template_id: row.id },
+    });
+    return respond(200, { template: templateView(store, row) });
   }
 
   // ARB-200 in the demo: the supplier database, the template, the export and the import,

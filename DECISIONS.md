@@ -1886,3 +1886,43 @@ Decision:
 
 Why: D-015 (every tenant read runs as the signed-in user, under RLS) holds only if each
 request has its transaction to itself.
+
+## D-064 — Templates: sends and replies counted from the rows; an even split across variants; a sent variant's words are locked
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-340, session …tJv8)
+
+Decision:
+
+- 0006 gave `template_variants` two counters, `sends` and `replies`, but nothing ever
+  wrote them: every variant read 0 of 0. Migration 0030 drops them and adds the view
+  `template_variant_stats` (security_invoker), which counts, per variant, the bids sent
+  from it (`submitted`, with `submitted_at`) and those whose job's conversation had a
+  client message at or after the bid went. That is the reply rule of
+  `analytics_job_facts` (D-061), so the analytics page's "by template" and this page
+  agree. docs/01 section B's "template_variants (sends, replies)" is met by the view
+  under the same two names; a stored count beside the rows could drift from them. (A job
+  has at most one sent bid, since a new one is refused while one is waiting, approved or
+  sent, so counting sent bids and counting jobs are the same here.)
+- The drafter (ARB-043, D-031) picked "the best reply rate, then the most sent". With
+  every rate at no data it always wrote from the first label, so a second variant was
+  never tried; and picking a winner on a handful of sends needs a minimum sample, which
+  would be an invented figure. It now writes from the matching template's switched-on
+  variant that the fewest bids have been drafted from, then by label: an even A/B split.
+  The owner reads the rates on the templates page and switches off the one that loses.
+  The category's template still comes before a general one.
+- Once a bid written from a variant has gone, its words are locked (409 with the reason;
+  the page disables the field and says why): the rate measures those words. New words
+  are a new variant. The label and the switch stay editable. Nothing is deleted: a
+  variant a bid was written from keeps its link to that bid.
+- Reply rate = replies ÷ sends, with core's `ratio` (one decimal, half up; no data with
+  nothing sent). A template's rate adds its variants' sends and replies before dividing.
+- Anyone in the organisation reads; an owner or operator creates and changes. Every
+  change is logged (`template.created`, `template.updated`, `template.variant_created`,
+  `template.variant_updated`); the log records a change of words by their lengths, not
+  the words. Templates sits in the nav between Pipeline and Analytics, following docs/01
+  section I's order.
+
+Why: ARB-340's acceptance, "Reply rate = replies/sends verified" (the API test checks
+each variant against a hand count and raw SQL over proposals, threads and messages), and
+docs/01 section I's "templates (variants, reply rates)".

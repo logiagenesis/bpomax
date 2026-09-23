@@ -2282,8 +2282,6 @@ export type Database = {
           id: string;
           label: string;
           org_id: string;
-          replies: number;
-          sends: number;
           template_id: string;
           updated_at: string;
         };
@@ -2294,8 +2292,6 @@ export type Database = {
           id?: string;
           label: string;
           org_id: string;
-          replies?: number;
-          sends?: number;
           template_id: string;
           updated_at?: string;
         };
@@ -2306,8 +2302,6 @@ export type Database = {
           id?: string;
           label?: string;
           org_id?: string;
-          replies?: number;
-          sends?: number;
           template_id?: string;
           updated_at?: string;
         };

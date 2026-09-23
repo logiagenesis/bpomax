@@ -65,6 +65,11 @@ export const EVENT_TYPES = [
   'delivery.handover_ticked',
   'delivery.milestone_changed',
   'payment.recorded',
+  // templates
+  'template.created',
+  'template.updated',
+  'template.variant_created',
+  'template.variant_updated',
   // governance
   'telegram.linked',
   'bidding.paused',

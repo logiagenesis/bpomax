@@ -14,6 +14,7 @@ const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/suppliers.html', /^Loaded \d+ suppliers?\.$/, true],
   ['/sourcing.html', /^Loaded \d+ sourcing requests?\.$/, true],
   ['/pipeline.html', /^Loaded \d+ jobs? in the pipeline\.$/, true],
+  ['/templates.html', /^Showing \d+ templates?\.$/, true],
   ['/analytics.html', /^Counted \d+ bids? by category\.$|^No bids sent yet\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
@@ -304,6 +305,24 @@ test('a payment recorded in the demo is worked into realised margin by the real 
   await expect(page.locator('#board section[data-stage="paid"]')).toContainText(
     'Shopify store rebuild (sample)',
   );
+});
+
+test('a variant added in the demo starts at no data, and a sent variant’s words stay locked', async ({
+  page,
+}) => {
+  await page.goto('/templates.html');
+  const sample = page.getByRole('region', { name: 'Website builds (sample)' });
+  // The tab's sent bid was written from variant A.
+  await expect(sample.locator('tbody tr').nth(0)).toContainText('of 1)');
+  await sample.getByRole('button', { name: 'Edit variant A' }).click();
+  await expect(sample.getByLabel('Words', { exact: true }).first()).toBeDisabled();
+  await sample.getByLabel('Label', { exact: true }).last().fill('C');
+  await sample.getByLabel('Words', { exact: true }).last().fill('Open with the deadline.');
+  await sample.getByRole('button', { name: 'Add the variant' }).click();
+  await expect(page.locator('#status')).toHaveText('Added variant C to “Website builds (sample)”.');
+  await expect(sample.locator('tbody tr').nth(2)).toContainText('No data (0 of 0)');
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('template.variant_created');
 });
 
 test('the dashboard’s retainer total follows the pipeline’s retainer toggle', async ({ page }) => {

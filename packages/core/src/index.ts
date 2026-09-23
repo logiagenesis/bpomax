@@ -47,4 +47,5 @@ export * from './sourcing.js';
 export * from './sourcing-posts.js';
 export * from './submitting.js';
 export * from './suppliers.js';
+export * from './templates.js';
 export const PACKAGE_NAME = '@arbitron/core';
