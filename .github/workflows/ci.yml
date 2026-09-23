@@ -105,9 +105,19 @@ jobs:
       - name: Start the stack and wait for every health check
         run: docker compose up -d --wait --wait-timeout 240
 
-      - name: Show the services
+      - name: Apply every migration to the Supabase Postgres image (ARB-010)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/arbitron
+        run: |
+          sh scripts/db-migrate.sh
+          psql "$DATABASE_URL" -X -A -t -c "select count(*) || ' public tables' from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'"
+          psql "$DATABASE_URL" -X -A -t -c "select 'pgsodium available: ' || count(*)::text from pg_available_extensions where name = 'pgsodium'"
+
+      - name: Show the services, and the logs of any that did not come up
         if: ${{ always() }}
-        run: docker compose ps
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail 120
 
       - name: Stop the stack
         if: ${{ always() }}
