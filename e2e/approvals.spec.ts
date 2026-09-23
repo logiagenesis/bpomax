@@ -67,6 +67,32 @@ function reply(partial: Record<string, unknown>) {
   };
 }
 
+/** Rows as GET /v1/sourcing-posts returns them (apps/api/src/routes/sourcing-posts.ts, ARB-210). */
+function sourcingPost(partial: Record<string, unknown>) {
+  return {
+    id: crypto.randomUUID(),
+    sourcingRequestId: 'aaaaaaaa-0000-4000-8000-000000000071',
+    briefTitle: 'Shopify store rebuild',
+    platform: 'freelancer',
+    manual: false,
+    title: 'Shopify: An online shop that takes orders',
+    body: 'An online shop that takes orders\n\nMust have:\n- Checkout',
+    budgetMinMinor: '800000',
+    budgetMaxMinor: '1200000',
+    currency: 'ZAR',
+    status: 'draft',
+    approvedBy: null,
+    approvedByName: null,
+    approvedVia: null,
+    externalId: null,
+    postedAt: null,
+    failureReason: null,
+    createdAt: '2026-09-23T09:57:00Z',
+    updatedAt: '2026-09-23T09:57:00Z',
+    ...partial,
+  };
+}
+
 /** Serves an in-memory queue that the actions change, the way the API would. */
 async function open(
   page: Page,
@@ -75,9 +101,11 @@ async function open(
     paused?: boolean;
     rows?: ReturnType<typeof proposal>[];
     replies?: ReturnType<typeof reply>[];
+    posts?: ReturnType<typeof sourcingPost>[];
   } = {},
 ) {
   const replies = options.replies ?? [];
+  const posts = options.posts ?? [];
   const rows = options.rows ?? [
     proposal({ job_title: 'Shopify store rebuild' }),
     proposal({
@@ -117,6 +145,23 @@ async function open(
         return route.fulfill({
           json: { messages: replies.filter((row) => state === 'all' || row.state === state) },
         });
+      },
+      'GET /v1/sourcing-posts': (request, route) => {
+        const state = request.query.get('status') ?? 'draft';
+        return route.fulfill({
+          json: { posts: posts.filter((row) => state === 'all' || row.status === state) },
+        });
+      },
+      'POST /v1/sourcing-posts/:id/:action': (request, route) => {
+        const row = posts.find((r) => request.path.includes(r.id))!;
+        if (request.path.endsWith('/approve'))
+          Object.assign(row, {
+            status: 'approved',
+            approvedByName: 'Ayanda Nkosi',
+            approvedVia: 'web',
+          });
+        if (request.path.endsWith('/close')) Object.assign(row, { status: 'closed' });
+        return route.fulfill({ json: { post: row, queued: false } });
       },
       'POST /v1/outbound-messages/:id/approve': (request, route) => {
         const row = replies.find((r) => request.path.includes(r.id))!;
@@ -180,11 +225,8 @@ async function open(
     { role: options.role },
   );
   await page.goto('/approvals.html');
-  await expectStatus(
-    page,
-    /Loaded \d+ (bids?|repl(y|ies))( and \d+ repl(y|ies))?\.|Nothing is waiting for approval\./,
-  );
-  return { requests, rows, replies };
+  await expectStatus(page, /^Loaded .+\.$|^Nothing is waiting for approval\.$/);
+  return { requests, rows, replies, posts };
 }
 
 test('shows each waiting bid with its figures from the stored rows, and the margin in rand at the stored rate', async ({
@@ -508,4 +550,102 @@ test('a viewer sees a waiting reply and can change nothing about it', async ({ p
     );
   }
   await expect(card).toContainText('Reply to acme-shop');
+});
+
+test('a waiting sourcing post is listed beside the bids; approving it, confirmed, approves it', async ({
+  page,
+}) => {
+  const { requests } = await open(page, { replies: [reply({})], posts: [sourcingPost({})] });
+  await expectStatus(page, 'Loaded 2 bids, 1 reply and 1 sourcing post.');
+  const card = page.locator('#list article[data-kind="post"]');
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText('Sourcing post on Freelancer.com');
+  await expect(card).toContainText('Waiting');
+  await expect(card).toContainText('Shopify: An online shop that takes orders');
+  await expect(card).toContainText('R8 000,00 to R12 000,00');
+  await expect(card).toContainText('23/09/2026 11:57');
+  const name = 'Approve the Freelancer.com post for Shopify store rebuild';
+  await page.getByRole('button', { name }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Approve the Freelancer.com post?');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect(requests.filter((r) => r.method === 'POST')).toHaveLength(0);
+  await page.getByRole('button', { name }).click();
+  await dialog.getByRole('button', { name: 'Approve' }).click();
+  await expectStatus(
+    page,
+    'Approved the Freelancer.com post for Shopify store rebuild. It is posted when live mode allows; until then the audit log shows what would be sent.',
+  );
+  expect(requests.filter((r) => r.method === 'POST').map((r) => r.path)).toEqual([
+    expect.stringMatching(/^\/v1\/sourcing-posts\/[0-9a-f-]+\/approve$/),
+  ]);
+  await expect(card).toHaveCount(0);
+});
+
+test('a Freelancer.com post with no budget cannot be approved here, and Edit goes to its sourcing request', async ({
+  page,
+}) => {
+  await open(page, {
+    posts: [sourcingPost({ budgetMinMinor: null, budgetMaxMinor: null, currency: null })],
+  });
+  const approve = page.getByRole('button', {
+    name: 'Approve the Freelancer.com post for Shopify store rebuild',
+  });
+  await expect(approve).toBeDisabled();
+  await expect(approve).toHaveAttribute(
+    'title',
+    'A Freelancer.com post needs a budget before it is approved. Edit it to add one.',
+  );
+  await expect(page.locator('#list article[data-kind="post"]')).toContainText('No budget');
+  const edit = page.getByRole('link', {
+    name: 'Edit the Freelancer.com post for Shopify store rebuild on the sourcing page',
+  });
+  await expect(edit).toHaveAttribute(
+    'href',
+    'sourcing.html?request=aaaaaaaa-0000-4000-8000-000000000071',
+  );
+});
+
+test('Close asks first and closes the post; the Rejected filter shows closed posts', async ({
+  page,
+}) => {
+  const { requests } = await open(page, {
+    posts: [sourcingPost({ platform: 'upwork', manual: true })],
+  });
+  await page
+    .getByRole('button', { name: 'Close the Upwork post for Shopify store rebuild' })
+    .click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Close the Upwork post?');
+  await dialog.getByRole('button', { name: 'Close the post' }).click();
+  await expectStatus(page, 'Closed the Upwork post for Shopify store rebuild.');
+  await page.getByLabel('Show', { exact: true }).selectOption('rejected');
+  await page.getByRole('button', { name: 'Apply filter' }).click();
+  await expectStatus(page, 'Loaded 1 sourcing post.');
+  expect(
+    requests
+      .filter((r) => r.path === '/v1/sourcing-posts')
+      .at(-1)
+      ?.query.get('status'),
+  ).toBe('closed');
+  const card = page.locator('#list article[data-kind="post"]');
+  await expect(card).toContainText('Closed');
+  await expect(
+    card.getByRole('button', { name: 'Close the Upwork post for Shopify store rebuild' }),
+  ).toHaveAttribute('title', 'This post is closed.');
+});
+
+test('a viewer sees a waiting sourcing post and can change nothing about it', async ({ page }) => {
+  await open(page, { role: 'viewer', posts: [sourcingPost({})] });
+  for (const name of [
+    'Approve the Freelancer.com post for Shopify store rebuild',
+    'Close the Freelancer.com post for Shopify store rebuild',
+  ]) {
+    const button = page.getByRole('button', { name });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute(
+      'title',
+      'Your role can view sourcing posts but not change them.',
+    );
+  }
 });

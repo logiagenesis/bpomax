@@ -12,7 +12,7 @@ edge, of `apps/api/src/routes/proposals.ts` (tested against real Postgres in
 |---|---|---|---|---|---|---|---|---|---|---|
 | Link, nav links ×5, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Approvals | — | — | — | — | Yes | shows each waiting bid… | ✅ |
 | Select | Show | Waiting / approved / sent / rejected / failed / everything | Sends `status=`; address bar updated | — | — | — | Never | Yes | the filter shows other states… | ✅ |
-| Button (submit) | Apply filter | Load the list | `GET /v1/proposals?status=` and `GET /v1/outbound-messages?status=` (`submitted` asked for as `sent`) | Spinner, aria-busy, disabled | "Loaded N bids." / "Loaded N bids and M replies." / "Loaded M replies." / "Nothing is waiting for approval." | API message | While busy | Yes | the filter shows other states…; a waiting reply is shown beside the bids… | ✅ |
+| Button (submit) | Apply filter | Load the list | `GET /v1/proposals?status=`, `GET /v1/outbound-messages?status=` (`submitted` asked for as `sent`) and `GET /v1/sourcing-posts?status=` (waiting → `draft`, sent → `posted`, rejected → `closed`) | Spinner, aria-busy, disabled | "Loaded N bids." / "Loaded N bids and M replies." / "Loaded N bids, M replies and K sourcing posts." / "Nothing is waiting for approval." | API message | While busy | Yes | the filter shows other states…; a waiting reply is shown beside the bids…; Close asks first and closes the post; the Rejected filter shows closed posts | ✅ |
 | Button | Refresh | Ask again | Same request | as Apply | as Apply | as Apply | While busy | Yes | refresh asks again | ✅ |
 | Checkbox | Select all shown | Select every selectable bid | Ticks every enabled row box; count updated | — | "N selected." | — | When no row is selectable (viewer, or nothing queued) | Yes | select all, then bulk approve… | ✅ |
 | Checkbox (per bid) | Select <job> | Add this bid to the selection | Count updated; bulk buttons enabled | — | "N selected." | — | Unless the bid is queued and the person may approve | Yes | one selected bid, bulk rejected…; a viewer sees the queue… | ✅ |
@@ -31,6 +31,9 @@ edge, of `apps/api/src/routes/proposals.ts` (tested against real Postgres in
 | Button (submit) | Save text | Save the new words | `PATCH /v1/outbound-messages/:id {body}`; reply back to waiting with its approval (or rejection) cleared; list refreshed, message kept | Spinner, aria-busy, disabled | "Saved the new text for the reply to “<client>”. It needs approval again." | API message; field error attached | While busy | Yes | a reply can be edited… | ✅ |
 | Button | Cancel | Discard the edit | Original text back, editor closed, focus returned to Edit | — | — | — | Never | Yes | (same control as the bids' Cancel) | ✅ |
 | Button (per reply) | Reject reply to <client> | Ask a reason, then reject | Modal form; `POST /v1/outbound-messages/:id/reject {reason}` | Spinner, aria-busy, disabled | "Rejected the reply to “<client>”." | API message | Unless the person may approve and the reply is neither sent nor already rejected | Yes | a reply can be edited, which clears its approval, and rejected with a reason | ✅ |
+| Button (per sourcing post) | Approve (aria-label "Approve the <platform> post for <brief>") | Confirm, then approve the post's words (ARB-210, D-054) | Modal as on the sourcing page; cancel sends nothing; `POST /v1/sourcing-posts/:id/approve` (the API checks the words once more and names the person); a Freelancer.com post goes to the sender, which holds the live gate | Spinner, aria-busy, disabled | "Approved the <platform> post for <brief>." (a Freelancer.com post adds that it is posted when live mode allows) | API message | Unless a draft and the person may approve; a Freelancer.com post without a budget (title says why) | Yes | a waiting sourcing post is listed beside the bids…; a Freelancer.com post with no budget cannot be approved here…; a viewer sees a waiting sourcing post… | ✅ |
+| Link (per sourcing post) | Edit on the sourcing page (aria-label "Edit the <platform> post for <brief> on the sourcing page") | Edit the words where the client-identity check sits beside the brief | `sourcing.html?request=<request id>` | — | — | — | Never | Yes | a Freelancer.com post with no budget cannot be approved here, and Edit goes to its sourcing request | ✅ |
+| Button (per sourcing post) | Close (aria-label "Close the <platform> post for <brief>") | Confirm, then close the post (a post is closed, not rejected) | Danger modal; `POST /v1/sourcing-posts/:id/close` | Spinner, aria-busy, disabled | "Closed the <platform> post for <brief>." | API message | Once closed (title says so); unless the person may approve | Yes | Close asks first and closes the post…; a viewer sees a waiting sourcing post… | ✅ |
 
 Replies (ARB-122): each card shows who it is to, the job, the client's last message with
 its time, when it was drafted, the approver once approved, and the text. Replies are not
@@ -48,6 +51,8 @@ confirmation and is logged by the API as `proposal.approved` naming the person; 
 asks for a reason and is logged as `proposal.rejected` with it. A paused org is shown
 with a banner and in the approval message. A reply's Approve and Reject are the same,
 logged as `message.approved` and `message.rejected`; the send itself is `message.sent`
-by the worker, or `external.blocked_by_live_mode` while live mode is off.
+by the worker, or `external.blocked_by_live_mode` while live mode is off. A sourcing
+post's Approve and Close ask first as on the sourcing page, and are logged as
+`sourcing.post_approved` and `sourcing.post_closed`.
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.

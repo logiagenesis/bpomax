@@ -222,6 +222,30 @@ test('a sourcing post drafted in the demo carries the scope and not the client, 
   await expect(page.locator('[id$="-body-error"]')).toHaveText('Contains the client’s handle.');
 });
 
+test('a sourcing post drafted in the demo waits on the approvals page and is approved there', async ({
+  page,
+}) => {
+  await page.goto('/sourcing.html');
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild (sample)' })
+    .click();
+  await page.getByLabel('Platform').selectOption('fiverr');
+  await page.getByRole('button', { name: 'Draft a post' }).click();
+  await expect(page.locator('#posts-status')).toContainText('Drafted the Fiverr post');
+  await page.goto('/approvals.html');
+  await expect(page.locator('#status')).toContainText('1 sourcing post');
+  const card = page.locator('#list article[data-kind="post"]');
+  await expect(card).toContainText('Sourcing post on Fiverr');
+  await page
+    .getByRole('button', { name: 'Approve the Fiverr post for Shopify store rebuild (sample)' })
+    .click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.locator('#status')).toHaveText(
+    'Approved the Fiverr post for Shopify store rebuild (sample).',
+  );
+  await expect(card).toHaveCount(0);
+});
+
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({
   page,
 }) => {

@@ -309,6 +309,32 @@ test('a viewer can read and download but not import, with the reason in the titl
   await expect(page.getByRole('button', { name: 'Export CSV' })).toBeEnabled();
 });
 
+test('the controls are reached by keyboard in reading order, labelled, and Check works from the keyboard', async ({
+  page,
+}) => {
+  const requests = await open(page);
+  await page.locator('#refresh').focus();
+  for (const id of [
+    'download-template',
+    'export',
+    'import-file',
+    'import-text',
+    'import-check',
+    'import-run',
+  ]) {
+    await page.keyboard.press('Tab');
+    await expect(page.locator(`#${id}`)).toBeFocused();
+  }
+  await expect(page.getByLabel('CSV file', { exact: true })).toHaveAttribute('id', 'import-file');
+  await expect(page.getByLabel('Or paste the CSV')).toHaveAttribute('id', 'import-text');
+  await page.locator('#import-text').focus();
+  await page.keyboard.insertText(GOOD);
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expectStatus(page, 'The file is fine: 2 suppliers and 1 rate card would be imported.');
+  expect(requests.find((r) => r.method === 'POST')?.body).toEqual({ csv: GOOD, dryRun: true });
+});
+
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
   await open(page);

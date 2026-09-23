@@ -729,6 +729,35 @@ test('a viewer can read the posts but not draft, edit, approve or close them', a
   }
 });
 
+test('a request is opened and a candidate repriced and shortlisted from the keyboard, in reading order', async ({
+  page,
+}) => {
+  const requests = await open(page);
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild' })
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#request-status')).toContainText('Opened the sourcing request');
+  const reprice = page.getByRole('button', { name: 'Reprice the bid with Thandi Web’s quote' });
+  await reprice.focus();
+  // The row reads left to right: Reprice sits in the Margin column, before Shortlist.
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Shortlist Thandi Web' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(reprice).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#request-status')).toContainText(
+    'Asked for the bid to be priced with Thandi Web’s quote.',
+  );
+  await page.getByRole('button', { name: 'Shortlist Thandi Web' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#request-status')).toHaveText('Shortlisted Thandi Web.');
+  expect(
+    requests.filter((r) => r.method !== 'GET').map((r) => `${r.method} ${r.path.split('/').pop()}`),
+  ).toEqual(['POST reprice', `PATCH ${THANDI}`]);
+  await expect(page.getByLabel('Platform')).toHaveAttribute('id', 'post-platform');
+});
+
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
   await openRequest(page);

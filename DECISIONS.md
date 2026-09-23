@@ -1671,3 +1671,27 @@ logged; alert fires on breach"); rule 6: no fee or figure that is not supplied.
 Consequences: until T-02 (both sides), D-02 and D-03 are answered, every reprice records
 `blocked` naming them, as the margin engine does for bids. The alert reaches Telegram once
 B-09 is set; the worker runs where the other workers run (B-12).
+
+## D-057 — Sourcing posts on the approvals page: listed by status beside bids and replies, approved or closed there, edited on the sourcing page
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-210, session …tJv8)
+
+Decision:
+
+- `GET /v1/sourcing-posts?status=` lists the organisation's posts in one status (draft,
+  approved, posted, failed, closed, or all), newest first, each with the title of the
+  brief it was written from. Any member may read it; RLS keeps it to the organisation.
+- The approvals page asks for it beside bids and replies, with its filter words mapped to
+  a post's states: waiting → draft, approved → approved, sent → posted, failed → failed,
+  rejected → closed (a post is closed, not rejected), everything → all.
+- A post's card offers Approve and Close, the sourcing page's own calls, with the same
+  confirmations and the same rules (a Freelancer.com post needs a budget; the API checks
+  the words once more). Edit is a link to the post's sourcing request: the words are
+  edited where the client-identity check sits beside the brief, not in a second editor.
+- Posts are not in the bulk selection: bulk approval covers bids, whose confirmation
+  names the sender's checks; a post's approval is a different act (it may mean a person
+  posts by hand).
+
+Why: docs/01 section I ("approvals (all pending outbound items, approve / edit / reject,
+bulk)") and the loose end D-054 left.

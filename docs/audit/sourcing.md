@@ -1,4 +1,4 @@
-# Control audit — sourcing.html (ARB-201)
+# Control audit — sourcing.html (ARB-201; ARB-202 to ARB-204; re-walked for ARB-210)
 
 Per docs/05 section 1. Every control on the page, and the Playwright test (in
 `e2e/sourcing.spec.ts`) that exercises it. The API is an in-memory copy, at the network
@@ -53,4 +53,9 @@ marketplace. Freelancer.com posting is ARB-203, behind the approval and the live
 Upwork and Fiverr posts are made by a person and only recorded here.
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px;
-`?request=` restores the view.
+`?request=` restores the view. Rule 6 (keyboard, re-walked for ARB-210): a request is
+opened with Enter, the candidate row's controls are reached in reading order (Reprice in
+the Margin column, then Shortlist) and work with Enter, and the posts panel's Platform
+select has its label attached — "a request is opened and a candidate repriced and
+shortlisted from the keyboard, in reading order". Sourcing posts also wait on the
+approvals page (docs/audit/approvals.md, D-057).

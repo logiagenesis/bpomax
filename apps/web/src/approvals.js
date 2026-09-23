@@ -5,14 +5,16 @@ import {
   validateMessageDraft,
   validateProposalEdit,
 } from '@arbitron/core';
+import { POST_STATE, postCard } from './approvals-posts.js';
 import { apiGet, apiSend } from './lib/api.js';
 import { formatDateTime, formatMoney } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
 import { confirmAction, promptText, runAction } from './lib/ui.js';
 
 /**
- * Approvals (ARB-061, ARB-122): the bids and the replies waiting for a person, with
- * Approve, Edit and Reject per item, and in bulk for bids. Each figure is read from the row the API sends; the ZAR margin
+ * Approvals (ARB-061, ARB-122, ARB-210): the bids, the replies and the sourcing posts
+ * waiting for a person, with Approve, Edit and Reject (Close for a post) per item, and in
+ * bulk for bids. Each figure is read from the row the API sends; the ZAR margin
  * is the deal-currency margin at the rate the evaluation stored (05 section 3.4).
  *
  * Approve is a confirmation: it is the action that lets a bid leave (05 section 1.3).
@@ -121,7 +123,7 @@ function statusBadge(status) {
   const kind =
     status === 'queued'
       ? 'caution'
-      : status === 'approved' || status === 'submitted'
+      : status === 'approved' || status === 'submitted' || status === 'posted'
         ? 'go'
         : status === 'rejected' || status === 'failed'
           ? 'skip'
@@ -135,6 +137,8 @@ function statusBadge(status) {
       rejected: 'Rejected',
       failed: 'Failed',
       draft: 'Draft',
+      posted: 'Posted',
+      closed: 'Closed',
     }[status] ?? status;
   return badge;
 }
@@ -593,46 +597,61 @@ function syncBulk() {
 /**
  * @param {Proposal[]} proposals
  * @param {OutboundMessage[]} messages
+ * @param {import('./approvals-posts.js').ApprovalPost[]} posts
  */
-function render(proposals, messages) {
+function render(proposals, messages, posts) {
   shown = proposals;
-  list.replaceChildren(...proposals.map(card), ...messages.map(messageCard));
-  empty.hidden = proposals.length + messages.length !== 0;
+  const ctx = { mayApprove, status, reload: reloadQuietly, statusBadge, figure };
+  list.replaceChildren(
+    ...proposals.map(card),
+    ...messages.map(messageCard),
+    ...posts.map((p) => postCard(p, ctx)),
+  );
+  empty.hidden = proposals.length + messages.length + posts.length !== 0;
   syncBulk();
 }
 
 /** The page's own filter words map onto the messages' states (`sent`, not `submitted`). */
 const MESSAGE_STATE = /** @type {Record<string, string>} */ ({ submitted: 'sent' });
 
-/** @param {{ bids: number, replies: number }} counts */
+/** @param {{ bids: number, replies: number, posts: number }} counts */
 function loadedText(counts) {
-  const bids = `${String(counts.bids)} bid${counts.bids === 1 ? '' : 's'}`;
-  const replies = `${String(counts.replies)} repl${counts.replies === 1 ? 'y' : 'ies'}`;
-  if (counts.bids + counts.replies === 0) {
+  const parts = [
+    counts.bids ? `${String(counts.bids)} bid${counts.bids === 1 ? '' : 's'}` : '',
+    counts.replies ? `${String(counts.replies)} repl${counts.replies === 1 ? 'y' : 'ies'}` : '',
+    counts.posts ? `${String(counts.posts)} sourcing post${counts.posts === 1 ? '' : 's'}` : '',
+  ].filter(Boolean);
+  if (parts.length === 0) {
     return stateSelect.value === 'queued' ? 'Nothing is waiting for approval.' : 'Nothing here.';
   }
-  if (counts.replies === 0) return `Loaded ${bids}.`;
-  if (counts.bids === 0) return `Loaded ${replies}.`;
-  return `Loaded ${bids} and ${replies}.`;
+  const last = parts.pop();
+  return `Loaded ${parts.length > 0 ? `${parts.join(', ')} and ${String(last)}` : String(last)}.`;
 }
 
 async function fetchList() {
   const state = stateSelect.value;
-  const [bids, replies] = await Promise.all([
+  const [bids, replies, posts] = await Promise.all([
     /** @type {Promise<{ proposals: Proposal[], biddingPaused: boolean }>} */ (
       apiGet('/v1/proposals', { status: state })
     ),
     /** @type {Promise<{ messages: OutboundMessage[] }>} */ (
       apiGet('/v1/outbound-messages', { status: MESSAGE_STATE[state] ?? state })
     ),
+    /** @type {Promise<{ posts: import('./approvals-posts.js').ApprovalPost[] }>} */ (
+      apiGet('/v1/sourcing-posts', { status: POST_STATE[state] ?? state })
+    ),
   ]);
   paused.hidden = !bids.biddingPaused;
-  render(bids.proposals, replies.messages);
+  render(bids.proposals, replies.messages, posts.posts);
   const params = new URLSearchParams();
   if (state !== 'queued') params.set('status', state);
   const query = params.toString();
   history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}`);
-  return { bids: bids.proposals.length, replies: replies.messages.length };
+  return {
+    bids: bids.proposals.length,
+    replies: replies.messages.length,
+    posts: posts.posts.length,
+  };
 }
 
 /** After an action: the list is refreshed and the action's own message stays on screen. */

@@ -147,7 +147,45 @@ function send(reply: { code: (n: number) => { send: (b: unknown) => unknown } },
     .send(errors ? { error: messageOf(error), errors } : { error: messageOf(error) });
 }
 
+/** The approvals page's filter (ARB-210): one status, or every post. */
+const LIST_STATUSES = ['draft', 'approved', 'posted', 'failed', 'closed', 'all'] as const;
+
 export function registerSourcingPostRoutes(app: FastifyInstance, options: ServerOptions): void {
+  /**
+   * Every sourcing post of the organisation in one status, newest first, with the brief it
+   * was written from (ARB-210: the approvals page lists them beside bids and replies).
+   */
+  app.get('/v1/sourcing-posts', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const status = (request.query as { status?: string }).status ?? 'draft';
+    if (!(LIST_STATUSES as readonly string[]).includes(status))
+      return reply
+        .code(422)
+        .send(
+          invalid([{ field: 'status', message: `must be one of ${LIST_STATUSES.join(', ')}` }]),
+        );
+    try {
+      const posts = await withUser(options.db, authUserId, async (tx) => {
+        const me = await currentMembership(tx);
+        if (!me) throw refuse(403, 'you are not a member of an organisation');
+        const { rows } = await tx.query<PostRow & { brief_title: string }>(
+          `select q.*, b.title as brief_title
+             from (${POST_SQL} where ($1 = 'all' or p.status::text = $1)) q
+             join sourcing_requests r on r.id = q.sourcing_request_id
+             join briefs b on b.id = r.brief_id
+            order by q.created_at desc, q.id
+            limit 200`,
+          [status],
+        );
+        return rows.map((row) => ({ ...describePost(row), briefTitle: row.brief_title }));
+      });
+      return reply.send({ posts });
+    } catch (error) {
+      return send(reply, error);
+    }
+  });
+
   app.get('/v1/sourcing-requests/:id/posts', async (request, reply) => {
     const authUserId = await options.authenticate(request);
     if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
