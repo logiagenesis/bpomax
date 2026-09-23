@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-demo/
 build/
 coverage/
 .turbo/
@@ -9,6 +10,7 @@ coverage/
 .env.*
 !.env.example
 !.env.e2e
+!.env.demo
 
 playwright-report/
 test-results/

@@ -67,7 +67,7 @@ describe('exchangeCode', () => {
     // 2 592 000 s = 30 days after 23/09/2026 10:00 UTC.
     expect(tokens.expiresAt?.toISOString()).toBe('2026-10-23T10:00:00.000Z');
 
-    const call = fake.calls.findLast((c) => c.path === '/oauth/token')!;
+    const call = fake.calls.filter((c) => c.path === '/oauth/token').at(-1)!;
     expect(call.method).toBe('POST');
     expect(call.headers['content-type']).toBe('application/x-www-form-urlencoded');
     expect(call.form).toEqual({
@@ -113,7 +113,7 @@ describe('refreshTokens', () => {
     const first = await exchangeCode(config, fake.issueCode(REDIRECT));
     const renewed = await refreshTokens(config, first.refreshToken!);
     expect(renewed.accessToken).not.toBe(first.accessToken);
-    const call = fake.calls.findLast((c) => c.path === '/oauth/token')!;
+    const call = fake.calls.filter((c) => c.path === '/oauth/token').at(-1)!;
     expect(call.form).toMatchObject({
       grant_type: 'refresh_token',
       refresh_token: first.refreshToken,
@@ -129,7 +129,7 @@ describe('getSelf', () => {
     const tokens = await exchangeCode(config, fake.issueCode(REDIRECT));
     const self = await getSelf(config, tokens.accessToken);
     expect(self).toMatchObject({ id: '424242', username: 'logiink' });
-    const call = fake.calls.findLast((c) => c.path === '/api/users/0.1/self/')!;
+    const call = fake.calls.filter((c) => c.path === '/api/users/0.1/self/').at(-1)!;
     expect(call.headers['freelancer-oauth-v1']).toBe(tokens.accessToken);
   });
 

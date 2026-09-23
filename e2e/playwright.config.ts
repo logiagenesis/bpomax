@@ -4,6 +4,8 @@ const PORT = 4173;
 
 export default defineConfig({
   testDir: '.',
+  // The demo build has its own config and server (playwright.demo.config.ts, D-043).
+  testIgnore: 'demo.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

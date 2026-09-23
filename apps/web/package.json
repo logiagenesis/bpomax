@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "build:e2e": "vite build --mode e2e"
+    "build:e2e": "vite build --mode e2e",
+    "build:demo": "vite build --mode demo --outDir ../dist-demo"
   },
   "devDependencies": {
     "vite": "^7.1.12"

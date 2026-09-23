@@ -1,0 +1,74 @@
+import { expect, test } from '@playwright/test';
+
+/**
+ * Demo mode (D-043): the build deployed while credentials are missing. Every page must
+ * open from its own link, say it is a demo, and show sample data rather than an error.
+ * Actions work against the tab's sample data and show up in the audit log. Nothing
+ * reaches a server: the only requests the pages make are for the site's own files.
+ */
+const SIGNED_IN: [string, RegExp | string, boolean][] = [
+  ['/dashboard.html', 'Figures are up to date.', true],
+  ['/feed.html', /^Loaded \d+ jobs\.$/, true],
+  ['/approvals.html', /^Loaded \d+ bids?\.$/, true],
+  ['/settings.html', 'Settings loaded.', true],
+  // The audit log predates the shared page shell and has no "who" line.
+  ['/audit-log.html', /^Loaded \d+ events?\.$/, false],
+];
+
+for (const [path, status, shell] of SIGNED_IN) {
+  test(`${path} opens from its own link with sample data and the demo banner`, async ({ page }) => {
+    const outside: string[] = [];
+    page.on('request', (request) => {
+      if (!request.url().startsWith('http://127.0.0.1:')) outside.push(request.url());
+    });
+    await page.goto(path);
+    await expect(page.locator('#demo-banner')).toContainText('Demo mode: sample data only.');
+    await expect(page.locator('#status')).toHaveText(status);
+    if (shell) {
+      await expect(page.locator('#who')).toHaveText('Demo Owner · owner · Logi-Ink (demo)');
+    }
+    expect(outside).toEqual([]);
+  });
+}
+
+for (const path of ['/index.html', '/login.html', '/privacy.html', '/style-guide.html']) {
+  test(`${path} opens with the demo banner`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page.locator('#demo-banner')).toBeVisible();
+    await expect(page.locator('h1').first()).toBeVisible();
+  });
+}
+
+test('any email and password sign in, and the dashboard opens', async ({ page }) => {
+  await page.goto('/login.html');
+  await page.getByLabel('Email').fill('visitor@example.com');
+  await page.getByLabel('Password').fill('anything');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/dashboard\.html$/);
+  await expect(page.locator('#status')).toHaveText('Figures are up to date.');
+});
+
+test('an approval is kept for the tab and appears in the audit log; reset brings the sample back', async ({
+  page,
+}) => {
+  await page.goto('/approvals.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 2 bids.');
+  await page.getByRole('button', { name: 'Approve Shopify store rebuild (sample)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.locator('#status')).toContainText('Approved');
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('proposal.approved');
+  await page.goto('/approvals.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 1 bid.');
+  await page.getByRole('button', { name: 'Reset the sample data' }).click();
+  await expect(page.locator('#status')).toHaveText('Loaded 2 bids.');
+});
+
+test('the settings rules are the real ones: live mode stays off until every rule is set', async ({
+  page,
+}) => {
+  await page.goto('/settings.html');
+  await expect(page.locator('#status')).toHaveText('Settings loaded.');
+  await expect(page.getByRole('switch', { name: 'Organisation live mode' })).toBeDisabled();
+  await expect(page.locator('#live-blockers-list li')).toHaveCount(5);
+});
