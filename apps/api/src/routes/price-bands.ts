@@ -25,6 +25,24 @@ interface BandRow {
 }
 
 export function registerPriceBandRoutes(app: FastifyInstance, options: ServerOptions): void {
+  /** The seeded categories (docs/01 section D), for the brief's category field (ARB-140). */
+  app.get('/v1/service-categories', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const result = await withUser(options.db, authUserId, async (tx) => {
+      const me = await currentMembership(tx);
+      if (!me) return null;
+      const { rows } = await tx.query<{ slug: string; name: string; in_house: boolean }>(
+        'select slug, name, in_house from service_categories order by sort_order, name',
+      );
+      return rows;
+    });
+    if (!result) return reply.code(403).send({ error: 'you are not a member of an organisation' });
+    return reply.send({
+      categories: result.map((row) => ({ slug: row.slug, name: row.name, inHouse: row.in_house })),
+    });
+  });
+
   app.get('/v1/price-bands', async (request, reply) => {
     const authUserId = await options.authenticate(request);
     if (!authUserId) return reply.code(401).send({ error: 'not signed in' });

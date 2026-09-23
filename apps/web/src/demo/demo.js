@@ -15,10 +15,18 @@
  * figures are samples, not real prices, fees or clients.
  */
 import {
+  DISCOVERY_QUESTIONS,
+  briefFromDiscovery,
+  briefLockBlockers,
   checkAutoSendGuardrails,
+  discoveryCompleteness,
   liveModeBlockers,
+  nextDiscoveryBatch,
   parseFeeTable,
+  renderDiscoveryBatch,
   validateAutoReply,
+  validateBrief,
+  validateDiscoveryAnswers,
   validateMarginRules,
   validateMessageDraft,
   validatePlanRecord,
@@ -35,7 +43,8 @@ const SESSION_KEY = 'arbitron.session';
 /**
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
- *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[] }} Store
+ *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
+ *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[] }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -226,8 +235,88 @@ function initialStore() {
   landing.proposal_id = bidLanding.id;
   landing.proposal_status = 'queued';
 
+  // ARB-140: two sample conversations. The first is mid-discovery with a reply waiting;
+  // the second has no messages yet.
+  const THREAD_ACME = 'd0d0d0d0-0000-4000-8000-000000000041';
+  const THREAD_QUIET = 'd0d0d0d0-0000-4000-8000-000000000042';
+  const threads = [
+    {
+      id: THREAD_ACME,
+      platform: 'freelancer',
+      externalThreadId: '5001',
+      jobId: shop.id,
+      jobTitle: shop.title,
+      clientHandle: 'acme-shop (sample)',
+      status: 'awaiting_operator',
+      createdAt: ago(1),
+    },
+    {
+      id: THREAD_QUIET,
+      platform: 'freelancer',
+      externalThreadId: '5002',
+      jobId: landing.id,
+      jobTitle: landing.title,
+      clientHandle: 'quiet-client (sample)',
+      status: 'open',
+      createdAt: ago(0, 6),
+    },
+  ];
+  const inbound = [
+    {
+      id: uuid(),
+      threadId: THREAD_ACME,
+      direction: 'out',
+      origin: 'platform',
+      body: 'Hello, thank you for reading our bid. Happy to answer any question. (sample)',
+      state: 'observed',
+      sentAt: ago(1),
+      createdAt: ago(1),
+    },
+    {
+      id: uuid(),
+      threadId: THREAD_ACME,
+      direction: 'in',
+      origin: 'platform',
+      body: 'Hi, can you start on Monday? (sample)',
+      state: 'received',
+      sentAt: ago(0, 2),
+      createdAt: ago(0, 2),
+    },
+  ];
+  const discovery = [
+    {
+      id: uuid(),
+      threadId: THREAD_ACME,
+      version: '1',
+      answers: {
+        outcome: {
+          answer: 'An online shop for our customers (sample)',
+          source: 'client',
+          capturedAt: ago(0, 2),
+        },
+        users: {
+          answer: 'Our customers and two staff (sample)',
+          source: 'operator',
+          capturedAt: ago(0, 1),
+        },
+        day_one: {
+          answer: 'Take orders; loyalty can wait (sample)',
+          source: 'client',
+          capturedAt: ago(0, 2),
+        },
+      },
+      asked: { outcome: ago(1), users: ago(1), day_one: ago(1) },
+      createdAt: ago(1),
+      updatedAt: ago(0, 1),
+    },
+  ];
+
   return {
     version: 1,
+    threads,
+    inbound,
+    discovery,
+    briefs: [],
     telegramLinked: false,
     biddingPaused: false,
     settings: {
@@ -561,6 +650,378 @@ function api(method, url, body) {
     row.updatedAt = new Date().toISOString();
     logEvent(store, 'message.edited', { subject_table: 'messages', subject_id: row.id });
     return respond(200, { message: row });
+  }
+
+  // ARB-140 in the demo: the conversations page. Rules are @arbitron/core's, as in the API.
+  const threads = store.threads ?? [];
+  const inbound = store.inbound ?? [];
+  const discovery = store.discovery ?? [];
+  const briefs = store.briefs ?? [];
+  /** @param {Row} t @returns {Row} */
+  const describeThread = (t) => {
+    const messages = threadMessages(t.id);
+    const last = messages.at(-1) ?? null;
+    const session = discovery.find((d) => d.threadId === t.id) ?? null;
+    const current =
+      briefs.filter((b) => b.threadId === t.id).sort((a, b) => b.version - a.version)[0] ?? null;
+    return {
+      ...t,
+      lastMessageAt: last ? (last.sentAt ?? last.createdAt) : null,
+      messageCount: messages.length,
+      pendingReplies: messages.filter((m) => m.state === 'queued' || m.state === 'approved').length,
+      lastMessage: last
+        ? { direction: last.direction, body: last.body, sentAt: last.sentAt }
+        : null,
+      discovery: session ? { completeness: discoveryCompleteness(session.answers) } : null,
+      brief: current ? { id: current.id, version: current.version, locked: current.locked } : null,
+      updatedAt: last ? (last.sentAt ?? last.createdAt) : t.createdAt,
+    };
+  };
+  /** @param {string} threadId */
+  function threadMessages(threadId) {
+    const drafts = outbound
+      .filter((m) => m.threadId === threadId)
+      .map((m) => ({
+        id: m.id,
+        direction: 'out',
+        origin: 'app',
+        body: m.body,
+        state: m.state,
+        sentAt: m.sentAt,
+        approvedByName: m.approvedByName,
+        approvedVia: m.approvedVia,
+        rejectedAt: m.rejectedAt,
+        failureReason: m.failureReason,
+        createdAt: m.createdAt,
+      }));
+    return [...inbound.filter((m) => m.threadId === threadId), ...drafts].sort((a, b) =>
+      String(a.sentAt ?? a.createdAt).localeCompare(String(b.sentAt ?? b.createdAt)),
+    );
+  }
+  /** @param {Row} session */
+  const describeSession = (session) => ({
+    id: session.id,
+    threadId: session.threadId,
+    version: session.version,
+    completeness: discoveryCompleteness(session.answers),
+    answers: session.answers,
+    asked: session.asked,
+    questions: DISCOVERY_QUESTIONS.map((q) => ({
+      key: q.key,
+      text: q.text,
+      answer: session.answers[q.key] ?? null,
+      askedAt: session.asked[q.key] ?? null,
+    })),
+    nextBatch: nextDiscoveryBatch(session.answers, session.asked).map((q) => q.key),
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+  });
+  /** @param {Row} b */
+  const describeBrief = (b) => ({
+    ...b,
+    lockBlockers: b.locked ? [] : briefLockBlockers(/** @type {any} */ (b)),
+  });
+  /** @param {Row} b */
+  const versionOf = (b) => ({
+    id: b.id,
+    version: b.version,
+    locked: b.locked,
+    lockedAt: b.lockedAt,
+    updatedAt: b.updatedAt,
+  });
+  /** A batch of questions drafted as a reply waiting for approval (ARB-130 in the demo). */
+  const draftBatch = (/** @type {Row} */ t, /** @type {Row} */ session) => {
+    const batch = nextDiscoveryBatch(session.answers, session.asked);
+    if (batch.length === 0) return null;
+    const now = new Date().toISOString();
+    const body = renderDiscoveryBatch(batch, t.clientHandle);
+    const row = {
+      id: uuid(),
+      threadId: t.id,
+      externalThreadId: t.externalThreadId,
+      clientHandle: t.clientHandle,
+      jobId: t.jobId,
+      jobTitle: t.jobTitle,
+      body,
+      state: 'queued',
+      approvedBy: null,
+      approvedByName: null,
+      approvedVia: null,
+      sentAt: null,
+      rejectedAt: null,
+      failureReason: null,
+      externalMessageId: null,
+      createdAt: now,
+      updatedAt: now,
+      lastInbound: null,
+    };
+    outbound.unshift(row);
+    for (const q of batch) session.asked[q.key] = now;
+    session.updatedAt = now;
+    logEvent(store, 'message.drafted', {
+      subject_table: 'messages',
+      subject_id: row.id,
+      payload: { via: 'discovery', thread_id: t.id, questions: batch.map((q) => q.key) },
+    });
+    return { messageId: row.id, keys: batch.map((q) => q.key), body };
+  };
+
+  if (key === 'GET /v1/service-categories') {
+    return respond(200, {
+      categories: [
+        'website-build',
+        'wordpress',
+        'elementor',
+        'shopify',
+        'landing-page',
+        'web-app',
+        'mobile-app',
+        'api-integration',
+        'automation',
+        'ai-chatbot',
+        'seo',
+        'google-ads',
+        'social-media-management',
+        'logo-brand',
+        'graphic-design',
+        'ui-ux',
+        'video-editing',
+        'copywriting',
+        'data-entry',
+        'virtual-assistant',
+        '2d-game',
+        '3d-game',
+      ].map((slug) => ({
+        slug,
+        name: slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+        inHouse: false,
+      })),
+    });
+  }
+  if (key === 'GET /v1/threads') {
+    const wanted = url.searchParams.get('status');
+    const rows = threads
+      .map(describeThread)
+      .filter((t) => !wanted || t.status === wanted)
+      .sort((a, b) => String(b.lastMessageAt ?? '').localeCompare(String(a.lastMessageAt ?? '')));
+    return respond(200, { threads: rows, page: { limit: 50, offset: 0 } });
+  }
+  if (method === 'GET' && /^\/v1\/threads\/[^/]+$/.test(path)) {
+    const t = threads.find((row) => row.id === idIn('/v1/threads/'));
+    if (!t) return respond(404, { error: 'no such thread' });
+    return respond(200, { thread: describeThread(t), messages: threadMessages(t.id) });
+  }
+  if (method === 'POST' && /^\/v1\/threads\/[^/]+\/messages$/.test(path)) {
+    const t = threads.find((row) => row.id === idIn('/v1/threads/'));
+    if (!t) return respond(404, { error: 'no such thread' });
+    const validated = validateMessageDraft(body);
+    if (!validated.ok)
+      return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+    const now = new Date().toISOString();
+    const lastIn = inbound.filter((m) => m.threadId === t.id && m.direction === 'in').at(-1);
+    const row = {
+      id: uuid(),
+      threadId: t.id,
+      externalThreadId: t.externalThreadId,
+      clientHandle: t.clientHandle,
+      jobId: t.jobId,
+      jobTitle: t.jobTitle,
+      body: validated.value.text,
+      state: 'queued',
+      approvedBy: null,
+      approvedByName: null,
+      approvedVia: null,
+      sentAt: null,
+      rejectedAt: null,
+      failureReason: null,
+      externalMessageId: null,
+      createdAt: now,
+      updatedAt: now,
+      lastInbound: lastIn ? { body: lastIn.body, sentAt: lastIn.sentAt } : null,
+    };
+    outbound.unshift(row);
+    store.outbound = outbound;
+    logEvent(store, 'message.drafted', {
+      subject_table: 'messages',
+      subject_id: row.id,
+      payload: { via: 'web', thread_id: t.id, bodyLength: row.body.length },
+    });
+    return respond(201, { message: row });
+  }
+  if (method === 'GET' && /^\/v1\/threads\/[^/]+\/discovery$/.test(path)) {
+    const session = discovery.find((d) => d.threadId === idIn('/v1/threads/'));
+    return respond(200, { session: session ? describeSession(session) : null });
+  }
+  if (method === 'POST' && /^\/v1\/threads\/[^/]+\/discovery$/.test(path)) {
+    const t = threads.find((row) => row.id === idIn('/v1/threads/'));
+    if (!t) return respond(404, { error: 'no such thread' });
+    if (discovery.some((d) => d.threadId === t.id))
+      return respond(409, { error: 'Discovery has already started on this thread.' });
+    const now = new Date().toISOString();
+    const session = {
+      id: uuid(),
+      threadId: t.id,
+      version: '1',
+      answers: {},
+      asked: {},
+      createdAt: now,
+      updatedAt: now,
+    };
+    discovery.push(session);
+    store.discovery = discovery;
+    const draft = draftBatch(t, session);
+    logEvent(store, 'discovery.updated', {
+      subject_table: 'discovery_sessions',
+      subject_id: session.id,
+      payload: { via: 'web', started: true, drafted: draft?.keys ?? [] },
+    });
+    return respond(201, { session: describeSession(session), draft });
+  }
+  if (method === 'PATCH' && /^\/v1\/threads\/[^/]+\/discovery\/answers$/.test(path)) {
+    const session = discovery.find((d) => d.threadId === idIn('/v1/threads/'));
+    if (!session) return respond(404, { error: 'Discovery has not started on this thread.' });
+    const validated = validateDiscoveryAnswers(body);
+    if (!validated.ok)
+      return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+    const now = new Date().toISOString();
+    for (const [k, answer] of Object.entries(validated.value)) {
+      session.answers[k] = { answer, source: 'operator', capturedAt: now };
+    }
+    session.updatedAt = now;
+    logEvent(store, 'discovery.updated', {
+      subject_table: 'discovery_sessions',
+      subject_id: session.id,
+      payload: {
+        via: 'web',
+        captured: Object.keys(validated.value),
+        completeness: discoveryCompleteness(session.answers),
+      },
+    });
+    return respond(200, { session: describeSession(session) });
+  }
+  if (method === 'POST' && /^\/v1\/threads\/[^/]+\/discovery\/next$/.test(path)) {
+    const t = threads.find((row) => row.id === idIn('/v1/threads/'));
+    const session = discovery.find((d) => d.threadId === idIn('/v1/threads/'));
+    if (!t || !session) return respond(404, { error: 'Discovery has not started on this thread.' });
+    const draft = draftBatch(t, session);
+    if (!draft)
+      return respond(409, {
+        error: 'Every question has been answered; there is nothing left to ask.',
+      });
+    return respond(201, { session: describeSession(session), draft });
+  }
+  if (method === 'GET' && /^\/v1\/threads\/[^/]+\/brief$/.test(path)) {
+    const rows = briefs
+      .filter((b) => b.threadId === idIn('/v1/threads/'))
+      .sort((a, b) => b.version - a.version);
+    return respond(200, {
+      brief: rows[0] ? describeBrief(rows[0]) : null,
+      versions: rows.map(versionOf),
+    });
+  }
+  if (method === 'POST' && /^\/v1\/threads\/[^/]+\/brief$/.test(path)) {
+    const t = threads.find((row) => row.id === idIn('/v1/threads/'));
+    if (!t) return respond(404, { error: 'no such thread' });
+    if (briefs.some((b) => b.threadId === t.id))
+      return respond(409, {
+        error:
+          'This thread already has a brief. Edit it, or start a new version from the locked one.',
+      });
+    const session = discovery.find((d) => d.threadId === t.id);
+    const draft = briefFromDiscovery(session?.answers ?? {}, t.jobTitle);
+    const now = new Date().toISOString();
+    const row = {
+      id: uuid(),
+      threadId: t.id,
+      version: 1,
+      locked: false,
+      lockedAt: null,
+      ...draft,
+      outcome: draft.outcome || '(not answered yet)',
+      createdAt: now,
+      updatedAt: now,
+    };
+    briefs.push(row);
+    store.briefs = briefs;
+    logEvent(store, 'brief.drafted', {
+      subject_table: 'briefs',
+      subject_id: row.id,
+      payload: { via: 'web', version: 1 },
+    });
+    return respond(201, { brief: describeBrief(row) });
+  }
+  if (method === 'GET' && /^\/v1\/briefs\/[^/]+$/.test(path)) {
+    const row = briefs.find((b) => b.id === idIn('/v1/briefs/'));
+    if (!row) return respond(404, { error: 'no such brief' });
+    return respond(200, { brief: describeBrief(row) });
+  }
+  if (method === 'PUT' && /^\/v1\/briefs\/[^/]+$/.test(path)) {
+    const row = briefs.find((b) => b.id === idIn('/v1/briefs/'));
+    if (!row) return respond(404, { error: 'no such brief' });
+    if (row.locked)
+      return respond(409, {
+        error: `Version ${String(row.version)} is locked and cannot be changed. Start a new version to change it.`,
+      });
+    const validated = validateBrief(body);
+    if (!validated.ok)
+      return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+    Object.assign(row, validated.value, { updatedAt: new Date().toISOString() });
+    logEvent(store, 'brief.updated', {
+      subject_table: 'briefs',
+      subject_id: row.id,
+      payload: { via: 'web', version: row.version },
+    });
+    return respond(200, { brief: describeBrief(row) });
+  }
+  if (method === 'POST' && /^\/v1\/briefs\/[^/]+\/lock$/.test(path)) {
+    const row = briefs.find((b) => b.id === idIn('/v1/briefs/'));
+    if (!row) return respond(404, { error: 'no such brief' });
+    if (row.locked)
+      return respond(409, { error: `Version ${String(row.version)} is already locked.` });
+    const missing = briefLockBlockers(/** @type {any} */ (row));
+    if (missing.length > 0) {
+      return respond(422, {
+        error: `The brief cannot lock without ${missing.join(', ')}.`,
+        errors: missing.map((what) => ({ field: 'lock', message: `needs ${what}` })),
+      });
+    }
+    row.locked = true;
+    row.lockedAt = new Date().toISOString();
+    row.updatedAt = row.lockedAt;
+    logEvent(store, 'brief.locked', {
+      subject_table: 'briefs',
+      subject_id: row.id,
+      payload: { via: 'web', version: row.version },
+    });
+    return respond(200, { brief: describeBrief(row) });
+  }
+  if (method === 'POST' && /^\/v1\/briefs\/[^/]+\/versions$/.test(path)) {
+    const from = briefs.find((b) => b.id === idIn('/v1/briefs/'));
+    if (!from) return respond(404, { error: 'no such brief' });
+    const current = briefs
+      .filter((b) => b.threadId === from.threadId)
+      .sort((a, b) => b.version - a.version)[0];
+    if (current && !current.locked)
+      return respond(409, {
+        error: `Version ${String(current.version)} is still open. Edit it, or lock it before starting another.`,
+      });
+    const now = new Date().toISOString();
+    const row = {
+      ...from,
+      id: uuid(),
+      version: (current?.version ?? 0) + 1,
+      locked: false,
+      lockedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    briefs.push(row);
+    logEvent(store, 'brief.drafted', {
+      subject_table: 'briefs',
+      subject_id: row.id,
+      payload: { via: 'web', version: row.version, from: `version ${String(from.version)}` },
+    });
+    return respond(201, { brief: describeBrief(row) });
   }
 
   if (key === 'GET /v1/proposals') {
