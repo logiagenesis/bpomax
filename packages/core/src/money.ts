@@ -46,3 +46,29 @@ export function formatMoney(minor: number | bigint, currency: string): string {
 export function formatPercent(ratio: number, decimals = 1): string {
   return `${(ratio * 100).toFixed(decimals).replace('.', ',')}%`;
 }
+
+/**
+ * A marketplace amount, as its JSON gives it (`250`, `462.57575757575756`), as whole
+ * minor units of its currency. The digits are worked as text, never multiplied as a
+ * float; anything past the currency's minor digits is rounded half up.
+ */
+export function toMinor(amount: number, currency: string): number {
+  if (!Number.isFinite(amount)) throw new RangeError(`not an amount: ${String(amount)}`);
+  const code = currency.toUpperCase();
+  if (!/^[A-Z]{3}$/.test(code)) throw new RangeError(`not a currency code: ${currency}`);
+  const digits = MINOR_DIGITS[code] ?? 2;
+  const negative = amount < 0;
+  // The shortest decimal that reads back as this number is the text the JSON carried
+  // (`1.005`, not the float's own expansion `1.00499…`). Exponent form only appears for
+  // amounts under a millionth or over 10^21, which no budget is; it is rounded as written.
+  const shortest = String(Math.abs(amount));
+  const text = shortest.includes('e') ? Math.abs(amount).toFixed(20) : shortest;
+  const [whole = '0', fraction = ''] = text.split('.');
+  const kept = fraction.slice(0, digits).padEnd(digits, '0');
+  const next = fraction.charAt(digits);
+  let minor = BigInt(whole + kept);
+  if (next !== '' && Number(next) >= 5) minor += 1n;
+  const result = Number(negative ? -minor : minor);
+  if (!Number.isSafeInteger(result)) throw new RangeError(`amount too large: ${String(amount)}`);
+  return result;
+}

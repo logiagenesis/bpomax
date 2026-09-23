@@ -19,6 +19,7 @@ export const EVENT_TYPES = [
   'scanner.created',
   'scanner.updated',
   'scanner.deleted',
+  'scanner.polled',
   // the pipeline
   'job.ingested',
   'job.scored',
