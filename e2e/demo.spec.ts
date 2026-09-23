@@ -142,6 +142,27 @@ test('the sample sourcing request is ranked by the real rule, and a shortlist is
   await expect(page.locator('#rows tr').first()).toContainText('sourcing.shortlisted');
 });
 
+test('a sourcing post drafted in the demo carries the scope and not the client, and an edit naming them is refused', async ({
+  page,
+}) => {
+  await page.goto('/sourcing.html');
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild (sample)' })
+    .click();
+  await page.getByLabel('Platform').selectOption('upwork');
+  await page.getByRole('button', { name: 'Draft a post' }).click();
+  await expect(page.locator('#posts-status')).toContainText('Drafted the Upwork post');
+  const card = page.locator('#posts article');
+  await expect(card).toContainText('Wordpress: An online shop for our customers (sample)');
+  await expect(card).toContainText('- Take orders');
+  await expect(card).not.toContainText('acme-shop');
+  await expect(card).not.toContainText('R10 000');
+  await page.getByRole('button', { name: 'Edit the Upwork post' }).click();
+  await page.getByLabel('Post text').fill('Built for acme-shop (sample)');
+  await page.getByRole('button', { name: 'Save the Upwork post' }).click();
+  await expect(page.locator('[id$="-body-error"]')).toHaveText('Contains the client’s handle.');
+});
+
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({
   page,
 }) => {

@@ -100,6 +100,30 @@ function request(shortlisted: string[] = [], partial: Record<string, unknown> = 
   };
 }
 
+/** A post as the API describes one (routes/sourcing-posts.ts). */
+function post(partial: Record<string, unknown>) {
+  return {
+    id: 'p-freelancer',
+    sourcingRequestId: REQUEST,
+    platform: 'freelancer',
+    manual: false,
+    title: 'Shopify: An online shop that takes orders',
+    body: 'An online shop that takes orders\n\nMust have:\n- Checkout\n\nPlease quote a fixed price and a turnaround in days.',
+    budgetMinMinor: null,
+    budgetMaxMinor: null,
+    currency: null,
+    status: 'draft',
+    approvedBy: null,
+    approvedByName: null,
+    approvedVia: null,
+    externalId: null,
+    postedAt: null,
+    createdAt: '2026-09-23T12:00:00Z',
+    updatedAt: '2026-09-23T12:00:00Z',
+    ...partial,
+  };
+}
+
 interface Options {
   role?: Role;
   /** No requests at all, for the empty state. */
@@ -107,11 +131,16 @@ interface Options {
   /** Fields that differ from the sample request, such as its status. */
   partial?: Record<string, unknown>;
   patch?: { status: number; json: unknown };
+  /** Posts already on the request (ARB-202). */
+  posts?: Record<string, unknown>[];
+  /** The API's answer to a post edit, in place of the stand-in's own. */
+  postEdit?: { status: number; json: unknown };
 }
 
 async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
   await signedIn(page);
   let shortlisted: string[] = [];
+  const posts = [...(options.posts ?? [])];
   const current = () => request(shortlisted, options.partial ?? {});
   const summary = () => {
     const { candidates: _candidates, ...rest } = current();
@@ -127,6 +156,45 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
         if (id !== REQUEST)
           return route.fulfill({ status: 404, json: { error: 'no such sourcing request' } });
         return route.fulfill({ json: { request: current() } });
+      },
+      'GET /v1/sourcing-requests/:id/posts': (_req, route) => route.fulfill({ json: { posts } }),
+      'POST /v1/sourcing-requests/:id/posts': (req, route) => {
+        const platform = (req.body as { platform: string }).platform;
+        const row = post({ id: `p-${platform}`, platform, manual: platform !== 'freelancer' });
+        posts.push(row);
+        return route.fulfill({ status: 201, json: { post: row } });
+      },
+      'PATCH /v1/sourcing-posts/:id': (req, route) => {
+        if (options.postEdit) return route.fulfill(options.postEdit);
+        const row = posts.find((p) => p.id === req.path.split('/').pop());
+        const b = req.body as Record<string, unknown>;
+        Object.assign(row ?? {}, {
+          title: b.title,
+          body: b.body,
+          currency: b.currency,
+          budgetMinMinor: b.budgetMinMinor === null ? null : String(b.budgetMinMinor),
+          budgetMaxMinor: b.budgetMaxMinor === null ? null : String(b.budgetMaxMinor),
+          status: 'draft',
+          approvedByName: null,
+          approvedVia: null,
+        });
+        return route.fulfill({ json: { post: row } });
+      },
+      'POST /v1/sourcing-posts/:id/:action': (req, route) => {
+        const parts = req.path.split('/');
+        const action = parts.pop();
+        const row = posts.find((p) => p.id === parts.pop());
+        if (!row) return route.fulfill({ status: 404, json: { error: 'no such sourcing post' } });
+        if (action === 'approve')
+          Object.assign(row, {
+            status: 'approved',
+            approvedByName: 'Ayanda Nkosi',
+            approvedVia: 'web',
+          });
+        if (action === 'posted')
+          Object.assign(row, { status: 'posted', postedAt: '2026-09-23T12:30:00Z' });
+        if (action === 'close') Object.assign(row, { status: 'closed' });
+        return route.fulfill({ json: { post: row } });
       },
       'PATCH /v1/sourcing-requests/:id/candidates/:candidateId': (req, route) => {
         if (options.patch) return route.fulfill(options.patch);
@@ -294,6 +362,167 @@ test('a viewer can read everything but not shortlist', async ({ page }) => {
     const button = page.getByRole('button', { name });
     await expect(button).toBeDisabled();
     await expect(button).toHaveAttribute('title', 'Your role can view sourcing but not change it.');
+  }
+});
+
+test('Draft a post writes the brief’s scope for the chosen platform, with no budget', async ({
+  page,
+}) => {
+  const requests = await openRequest(page);
+  await expect(page.locator('#posts-empty')).toBeVisible();
+  await page.getByLabel('Platform').selectOption('freelancer');
+  await page.getByRole('button', { name: 'Draft a post' }).click();
+  await expect(page.locator('#posts-status')).toHaveText(
+    'Drafted the Freelancer.com post from the brief’s scope. Read it, edit it, then approve it.',
+  );
+  expect(requests.find((r) => r.method === 'POST' && r.path.endsWith('/posts'))).toMatchObject({
+    path: `/v1/sourcing-requests/${REQUEST}/posts`,
+    body: { platform: 'freelancer' },
+  });
+  const card = page.locator('#posts article');
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText('Freelancer.com post');
+  await expect(card).toContainText('Draft');
+  await expect(card).toContainText('Shopify: An online shop that takes orders');
+  await expect(card).toContainText('Budget: No budget named');
+  await expect(
+    page.getByRole('button', { name: 'Record the Freelancer.com post as posted by hand' }),
+  ).toHaveCount(0);
+});
+
+test('an edit that names the client is refused on the page, and nothing is sent', async ({
+  page,
+}) => {
+  const requests = await openRequest(page, { posts: [post({})] });
+  await page.getByRole('button', { name: 'Edit the Freelancer.com post' }).click();
+  await page.getByLabel('Post title').fill('Rebuild for acme-shop');
+  await page.getByLabel('Post text').fill('Scope. Write to buyer@example.org');
+  await page.getByRole('button', { name: 'Save the Freelancer.com post' }).click();
+  await expect(page.locator('#post-p-freelancer-title-error')).toHaveText(
+    'Contains the client’s handle.',
+  );
+  await expect(page.locator('#post-p-freelancer-body-error')).toHaveText(
+    'Contains an email address.',
+  );
+  expect(requests.filter((r) => r.method === 'PATCH')).toHaveLength(0);
+});
+
+test('Save post sends the budget as whole cents and shows it in the one money format', async ({
+  page,
+}) => {
+  const requests = await openRequest(page, { posts: [post({})] });
+  await page.getByRole('button', { name: 'Edit the Freelancer.com post' }).click();
+  await page.getByLabel('Budget currency').fill('zar');
+  await page.getByLabel('Budget from').fill('8 000,00');
+  await page.getByLabel('Budget to').fill('12000');
+  await page.getByRole('button', { name: 'Save the Freelancer.com post' }).click();
+  await expect(page.locator('#posts-status')).toHaveText('Saved the Freelancer.com post.');
+  // Hand-worked: R8 000,00 is 800 000 cents; R12 000 is 1 200 000 cents.
+  expect(requests.find((r) => r.method === 'PATCH')?.body).toMatchObject({
+    currency: 'ZAR',
+    budgetMinMinor: 800000,
+    budgetMaxMinor: 1200000,
+  });
+  await expect(page.locator('#posts article')).toContainText('Budget: R8 000,00 – R12 000,00');
+});
+
+test('the API’s identity check lands on the fields with its own sentence', async ({ page }) => {
+  await openRequest(page, {
+    posts: [post({})],
+    postEdit: {
+      status: 422,
+      json: {
+        error: 'The post could identify the client. Take out what is named and save again.',
+        errors: [{ field: 'body', message: 'contains the name of the client’s sign-off person' }],
+      },
+    },
+  });
+  await page.getByRole('button', { name: 'Edit the Freelancer.com post' }).click();
+  await page.getByLabel('Post text').fill('Thandi signs off');
+  await page.getByRole('button', { name: 'Save the Freelancer.com post' }).click();
+  await expect(page.locator('#posts-status')).toHaveText(
+    'The post could identify the client. Take out what is named and save again.',
+  );
+  await expect(page.locator('#post-p-freelancer-body-error')).toHaveText(
+    'Contains the name of the client’s sign-off person.',
+  );
+});
+
+test('Cancel leaves the post as it was', async ({ page }) => {
+  const requests = await openRequest(page, { posts: [post({})] });
+  await page.getByRole('button', { name: 'Edit the Freelancer.com post' }).click();
+  await page.getByLabel('Post title').fill('Changed');
+  await page.getByRole('button', { name: 'Cancel editing the Freelancer.com post' }).click();
+  await expect(page.getByRole('button', { name: 'Edit the Freelancer.com post' })).toBeVisible();
+  expect(requests.filter((r) => r.method === 'PATCH')).toHaveLength(0);
+});
+
+test('Approve asks first, then approves in the person’s name; it cannot be approved twice', async ({
+  page,
+}) => {
+  const requests = await openRequest(page, { posts: [post({})] });
+  await page.getByRole('button', { name: 'Approve the Freelancer.com post' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Approve the Freelancer.com post?');
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  expect(requests.filter((r) => r.path.endsWith('/approve'))).toHaveLength(0);
+  await page.getByRole('button', { name: 'Approve the Freelancer.com post' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.locator('#posts-status')).toHaveText('Approved the Freelancer.com post.');
+  await expect(page.locator('#posts article')).toContainText('approved by Ayanda Nkosi via web');
+  const approve = page.getByRole('button', { name: 'Approve the Freelancer.com post' });
+  await expect(approve).toBeDisabled();
+  await expect(approve).toHaveAttribute(
+    'title',
+    'This post is approved, so it cannot be approved.',
+  );
+});
+
+test('an Upwork post is recorded as posted by hand only once approved', async ({ page }) => {
+  const requests = await openRequest(page, {
+    posts: [post({ id: 'p-upwork', platform: 'upwork', manual: true })],
+  });
+  const record = page.getByRole('button', { name: 'Record the Upwork post as posted by hand' });
+  await expect(record).toBeDisabled();
+  await expect(record).toHaveAttribute(
+    'title',
+    'Approve the post first, then post it by hand and record it here.',
+  );
+  await page.getByRole('button', { name: 'Approve the Upwork post' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.locator('#posts-status')).toHaveText('Approved the Upwork post.');
+  await page.getByRole('button', { name: 'Record the Upwork post as posted by hand' }).click();
+  await expect(page.locator('#posts-status')).toHaveText(
+    'Recorded the Upwork post as posted by hand.',
+  );
+  expect(requests.find((r) => r.path.endsWith('/posted'))?.path).toBe(
+    '/v1/sourcing-posts/p-upwork/posted',
+  );
+  await expect(page.locator('#posts article')).toContainText('posted 23/09/2026 14:30 by hand');
+});
+
+test('Close asks first and closes the post', async ({ page }) => {
+  await openRequest(page, { posts: [post({})] });
+  await page.getByRole('button', { name: 'Close the Freelancer.com post' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Close the post' }).click();
+  await expect(page.locator('#posts-status')).toHaveText('Closed the Freelancer.com post.');
+  await expect(page.locator('#posts article')).toHaveAttribute('data-status', 'closed');
+  await expect(page.getByRole('button', { name: 'Close the Freelancer.com post' })).toBeDisabled();
+});
+
+test('a viewer can read the posts but not draft, edit, approve or close them', async ({ page }) => {
+  await openRequest(page, { role: 'viewer', posts: [post({})] });
+  await expect(page.getByRole('button', { name: 'Draft a post' })).toHaveAttribute(
+    'title',
+    'Your role can view posts but not draft them.',
+  );
+  for (const [name, title] of [
+    ['Edit the Freelancer.com post', 'Your role can view posts but not change them.'],
+    ['Approve the Freelancer.com post', 'Your role can view posts but not approve them.'],
+    ['Close the Freelancer.com post', 'Your role can view posts but not change them.'],
+  ] as const) {
+    const button = page.getByRole('button', { name });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute('title', title);
   }
 });
 

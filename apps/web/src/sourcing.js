@@ -1,9 +1,10 @@
 // @ts-check
-import { canWrite } from '@arbitron/core';
+import { canApprove, canWrite } from '@arbitron/core';
 import { apiGet, apiSend } from './lib/api.js';
 import { formatDateTime, formatMoney } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
 import { runAction } from './lib/ui.js';
+import { loadPosts, setPostRoles } from './sourcing-posts.js';
 
 /**
  * Sourcing (ARB-201, docs/01 section I: "sourcing (requests, posts, candidates,
@@ -310,6 +311,7 @@ async function loadRequest(id) {
     await apiGet(`/v1/sourcing-requests/${id}`)
   );
   renderRequest(body.request);
+  void loadPosts(body.request);
   return body.request;
 }
 
@@ -384,6 +386,7 @@ const linked = new URLSearchParams(location.search).get('request');
 void mountShell().then(async (me) => {
   if (!me) return;
   mayWrite = canWrite(me.role);
+  setPostRoles({ mayWrite, mayApprove: canApprove(me.role) });
   if (linked) {
     try {
       const r = await loadRequest(linked);

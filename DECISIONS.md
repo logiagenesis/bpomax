@@ -1544,3 +1544,41 @@ decide the order only, never a price.
 
 Consequences: ARB-202 drafts sourcing posts from the same request; ARB-204 reprices from a
 candidate's real quote. Changing a weight is a one-line change with its hand-worked tests.
+
+## D-054 — Sourcing posts: the brief's scope only, checked for anything that could lead back to the client, never the client's budget, and approved by a person
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-202, session …tJv8)
+
+Decision:
+
+- `buildSourcingPost` in `@arbitron/core` writes a post from the locked brief's scope:
+  outcome, who uses it, must-haves, what can wait, technology, assets available and still
+  needed, acceptance criteria, the deadline (DD/MM/YYYY, fixed or flexible), and the
+  number of reference examples. It never copies the brief's title (often the client's
+  public job title), the sign-off person, the reference links or the client's budget.
+  The title is the category and the outcome's first sentence. Migration 0024 adds
+  `sourcing_posts.title`.
+- The client's budget is never put in a post: a supplier who sees it prices against it.
+  The operator types the budget suppliers see, or none. Until the margin rules are set
+  (docs/02 D-02, D-03) no figure is suggested.
+- `clientIdentifyingProblems` refuses a draft, an edit, or an approval whose title or text
+  contains the client's handle, the sign-off person's name, the public job title or job
+  number, an email address, a phone number (seven or more digits), a link, or a web
+  domain with a common generic or South African ending. Framework names such as Next.js
+  are not domains. The check is a guard, not a guarantee; the person who approves reads
+  the words.
+- One live post per platform per request. An edit clears an approval (D-033). Approval
+  names the person (0009). Upwork and Fiverr posts are made by a person, outside the app,
+  and recorded as posted once approved; a Freelancer.com post is never recorded by hand,
+  because ARB-203 posts it through the API behind the live gate.
+- T-02 (the employer fee on Freelancer.com) does not touch a draft; it matters to the
+  margin once a quote arrives (ARB-204), so ARB-202 does not wait on it.
+- Posts are approved on the sourcing page. Listing them on the approvals page beside bids
+  and replies is left for ARB-210, the sourcing and suppliers pages ticket.
+
+Why: the ticket's acceptance is "Drafts contain brief scope only, no client-identifying
+data"; docs/01 section H puts sourcing posts among the outbound actions that need approval.
+
+Consequences: ARB-203 posts an approved Freelancer.com draft; its title and text are the
+approved ones, unchanged.

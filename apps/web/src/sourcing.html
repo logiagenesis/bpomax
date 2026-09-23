@@ -96,6 +96,28 @@
           No supplier could be ranked for this brief. The reasons are below; import suppliers with a
           rate card in this category and start sourcing again from a new version of the brief.
         </p>
+        <section class="card stack" aria-labelledby="posts-heading">
+          <h3 id="posts-heading">Posts</h3>
+          <p class="section-note">
+            A post asks suppliers to quote. It carries the brief's scope and nothing that could lead
+            back to the client, and never the client's budget. Freelancer.com posts go out through
+            its API after approval; Upwork and Fiverr posts are copied by hand and recorded here.
+          </p>
+          <form id="post-new" class="cluster" novalidate>
+            <div class="field">
+              <label class="field__label" for="post-platform">Platform</label>
+              <select class="select" id="post-platform" name="platform">
+                <option value="freelancer">Freelancer.com</option>
+                <option value="upwork">Upwork (by hand)</option>
+                <option value="fiverr">Fiverr (by hand)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn--primary" id="post-draft">Draft a post</button>
+          </form>
+          <div role="status" aria-live="polite" id="posts-status"></div>
+          <div class="stack" id="posts"></div>
+          <p class="field__hint" id="posts-empty" hidden>No posts drafted for this request yet.</p>
+        </section>
         <section class="card stack" aria-labelledby="excluded-heading">
           <h3 id="excluded-heading">Not ranked</h3>
           <ul id="excluded"></ul>
