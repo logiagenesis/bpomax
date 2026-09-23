@@ -42,11 +42,42 @@ function proposal(partial: Record<string, unknown>) {
   };
 }
 
+/** Rows as GET /v1/outbound-messages returns them (apps/api/src/routes/messages.ts, ARB-122). */
+function reply(partial: Record<string, unknown>) {
+  return {
+    id: crypto.randomUUID(),
+    threadId: crypto.randomUUID(),
+    externalThreadId: '5001',
+    clientHandle: 'acme-shop',
+    jobId: crypto.randomUUID(),
+    jobTitle: 'Shopify store rebuild',
+    body: 'Yes, Monday works. I will send a plan today.',
+    state: 'queued',
+    approvedBy: null,
+    approvedByName: null,
+    approvedVia: null,
+    sentAt: null,
+    rejectedAt: null,
+    failureReason: null,
+    externalMessageId: null,
+    createdAt: '2026-09-23T09:59:00Z',
+    updatedAt: '2026-09-23T09:59:00Z',
+    lastInbound: { body: 'Hi, can you start on Monday?', sentAt: '2026-09-23T09:58:00Z' },
+    ...partial,
+  };
+}
+
 /** Serves an in-memory queue that the actions change, the way the API would. */
 async function open(
   page: Page,
-  options: { role?: Role; paused?: boolean; rows?: ReturnType<typeof proposal>[] } = {},
+  options: {
+    role?: Role;
+    paused?: boolean;
+    rows?: ReturnType<typeof proposal>[];
+    replies?: ReturnType<typeof reply>[];
+  } = {},
 ) {
+  const replies = options.replies ?? [];
   const rows = options.rows ?? [
     proposal({ job_title: 'Shopify store rebuild' }),
     proposal({
@@ -80,6 +111,32 @@ async function open(
             biddingPaused: options.paused ?? false,
           },
         });
+      },
+      'GET /v1/outbound-messages': (request, route) => {
+        const state = request.query.get('status') ?? 'queued';
+        return route.fulfill({
+          json: { messages: replies.filter((row) => state === 'all' || row.state === state) },
+        });
+      },
+      'POST /v1/outbound-messages/:id/approve': (request, route) => {
+        const row = replies.find((r) => request.path.includes(r.id))!;
+        row.state = 'approved';
+        row.approvedByName = 'Ayanda Nkosi';
+        row.approvedVia = 'web';
+        return route.fulfill({ json: { message: row, queued: true } });
+      },
+      'POST /v1/outbound-messages/:id/reject': (request, route) => {
+        const row = replies.find((r) => request.path.includes(r.id))!;
+        row.state = 'rejected';
+        row.failureReason = (request.body as { reason: string }).reason;
+        return route.fulfill({ json: { message: row } });
+      },
+      'PATCH /v1/outbound-messages/:id': (request, route) => {
+        const row = replies.find((r) => request.path.includes(r.id))!;
+        row.body = (request.body as { body: string }).body;
+        row.state = 'queued';
+        row.approvedByName = null;
+        return route.fulfill({ json: { message: row } });
       },
       'POST /v1/proposals/bulk': (request, route) => {
         const { action, ids, reason } = request.body as {
@@ -123,8 +180,11 @@ async function open(
     { role: options.role },
   );
   await page.goto('/approvals.html');
-  await expectStatus(page, /Loaded \d+ bids?\.|Nothing is waiting for approval\./);
-  return { requests, rows };
+  await expectStatus(
+    page,
+    /Loaded \d+ (bids?|repl(y|ies))( and \d+ repl(y|ies))?\.|Nothing is waiting for approval\./,
+  );
+  return { requests, rows, replies };
 }
 
 test('shows each waiting bid with its figures from the stored rows, and the margin in rand at the stored rate', async ({
@@ -164,7 +224,19 @@ test('the filter shows other states, including sent bids with their approver, an
   await page.getByLabel('Show', { exact: true }).selectOption('submitted');
   await page.getByRole('button', { name: 'Apply filter' }).click();
   await expectStatus(page, 'Loaded 1 bid.');
-  expect(requests.at(-1)?.query.get('status')).toBe('submitted');
+  expect(
+    requests
+      .filter((r) => r.path === '/v1/proposals')
+      .at(-1)
+      ?.query.get('status'),
+  ).toBe('submitted');
+  // The replies are asked for in their own words: a sent reply is `sent`.
+  expect(
+    requests
+      .filter((r) => r.path === '/v1/outbound-messages')
+      .at(-1)
+      ?.query.get('status'),
+  ).toBe('sent');
   const card = page.locator('#list article').first();
   await expect(card).toContainText('Sent');
   await expect(card).toContainText('Ayanda Nkosi via telegram');
@@ -345,4 +417,95 @@ test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
   await open(page);
   await expectNoSidewaysScroll(page);
+});
+
+test('a waiting reply is shown beside the bids with the client message quoted; approving it, confirmed, hands it to the sender', async ({
+  page,
+}) => {
+  const { requests } = await open(page, { replies: [reply({})] });
+  await expectStatus(page, 'Loaded 2 bids and 1 reply.');
+  const card = page.locator('#list article[data-kind="reply"]');
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText('Reply to acme-shop');
+  await expect(card).toContainText('Shopify store rebuild');
+  await expect(card).toContainText('Hi, can you start on Monday? (23/09/2026 11:58)');
+  await expect(card).toContainText('Yes, Monday works. I will send a plan today.');
+  await expect(card).toContainText('Waiting');
+
+  await page.getByRole('button', { name: 'Approve reply to acme-shop' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText(
+    'The reply to “acme-shop” about “Shopify store rebuild” will be handed to the sender.',
+  );
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect(requests.filter((r) => r.method === 'POST')).toHaveLength(0);
+
+  await page.getByRole('button', { name: 'Approve reply to acme-shop' }).click();
+  await dialog.getByRole('button', { name: 'Approve' }).click();
+  await expectStatus(page, 'Approved the reply to “acme-shop”. The sender has it.');
+  expect(requests.filter((r) => r.method === 'POST').map((r) => r.path)).toEqual([
+    expect.stringMatching(/^\/v1\/outbound-messages\/[0-9a-f-]+\/approve$/),
+  ]);
+  // Approved, it leaves the waiting list.
+  await expect(card).toHaveCount(0);
+  await expectStatus(page, 'Approved the reply to “acme-shop”. The sender has it.');
+});
+
+test('a reply can be edited, which clears its approval, and rejected with a reason', async ({
+  page,
+}) => {
+  const { requests } = await open(page, {
+    replies: [reply({ state: 'approved', approvedByName: 'Ayanda Nkosi', approvedVia: 'web' })],
+  });
+  await page.getByLabel('Show', { exact: true }).selectOption('approved');
+  await page.getByRole('button', { name: 'Apply filter' }).click();
+  await expectStatus(page, 'Loaded 1 reply.');
+  const card = page.locator('#list article[data-kind="reply"]');
+  await expect(card).toContainText('Ayanda Nkosi via web');
+  await expect(card.getByRole('button', { name: /^Approve/ })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Edit reply to acme-shop' }).click();
+  const textarea = page.getByLabel('Reply text');
+  await expect(textarea).toBeFocused();
+  await textarea.fill('   ');
+  await page.getByRole('button', { name: 'Save text' }).click();
+  await expect(card.locator('.field__error')).toHaveText('Must not be empty.');
+  expect(requests.filter((r) => r.method === 'PATCH')).toHaveLength(0);
+  await textarea.fill('Yes, Monday works.');
+  await page.getByRole('button', { name: 'Save text' }).click();
+  await expectStatus(
+    page,
+    'Saved the new text for the reply to “acme-shop”. It needs approval again.',
+  );
+  expect(requests.filter((r) => r.method === 'PATCH')[0]?.body).toEqual({
+    body: 'Yes, Monday works.',
+  });
+
+  await page.getByLabel('Show', { exact: true }).selectOption('queued');
+  await page.getByRole('button', { name: 'Apply filter' }).click();
+  await expectStatus(page, 'Loaded 2 bids and 1 reply.');
+  await page.getByRole('button', { name: 'Reject reply to acme-shop' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Reason (kept with the reply and in the audit log)').fill('Too vague');
+  await dialog.getByRole('button', { name: 'Reject' }).click();
+  await expectStatus(page, 'Rejected the reply to “acme-shop”.');
+  const rejectPost = requests.find((r) => r.method === 'POST' && r.path.endsWith('/reject'));
+  expect(rejectPost?.body).toEqual({ reason: 'Too vague' });
+});
+
+test('a viewer sees a waiting reply and can change nothing about it', async ({ page }) => {
+  await open(page, { role: 'viewer', replies: [reply({})] });
+  const card = page.locator('#list article[data-kind="reply"]');
+  for (const name of [
+    'Approve reply to acme-shop',
+    'Edit reply to acme-shop',
+    'Reject reply to acme-shop',
+  ]) {
+    await expect(page.getByRole('button', { name })).toBeDisabled();
+    await expect(page.getByRole('button', { name })).toHaveAttribute(
+      'title',
+      'Your role can view replies but not change them.',
+    );
+  }
+  await expect(card).toContainText('Reply to acme-shop');
 });

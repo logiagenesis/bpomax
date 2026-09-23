@@ -19,6 +19,7 @@ export interface Enqueue {
     requestId?: string;
   }) => Promise<unknown>;
   readonly score?: (data: { jobId: string; requestId?: string }) => Promise<unknown>;
+  readonly sendMessage?: (data: { messageId: string; requestId?: string }) => Promise<unknown>;
 }
 
 export interface ServerOptions {

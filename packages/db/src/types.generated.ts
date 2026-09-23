@@ -1039,10 +1039,12 @@ export type Database = {
           created_at: string;
           direction: Database['public']['Enums']['message_direction'];
           external_message_id: string | null;
+          failure_reason: string | null;
           id: string;
           org_id: string;
           origin: string;
           redacted_at: string | null;
+          rejected_at: string | null;
           sent_at: string | null;
           thread_id: string;
           updated_at: string;
@@ -1054,10 +1056,12 @@ export type Database = {
           created_at?: string;
           direction: Database['public']['Enums']['message_direction'];
           external_message_id?: string | null;
+          failure_reason?: string | null;
           id?: string;
           org_id: string;
           origin?: string;
           redacted_at?: string | null;
+          rejected_at?: string | null;
           sent_at?: string | null;
           thread_id: string;
           updated_at?: string;
@@ -1069,10 +1073,12 @@ export type Database = {
           created_at?: string;
           direction?: Database['public']['Enums']['message_direction'];
           external_message_id?: string | null;
+          failure_reason?: string | null;
           id?: string;
           org_id?: string;
           origin?: string;
           redacted_at?: string | null;
+          rejected_at?: string | null;
           sent_at?: string | null;
           thread_id?: string;
           updated_at?: string;

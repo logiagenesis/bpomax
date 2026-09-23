@@ -34,6 +34,9 @@ export const EVENT_TYPES = [
   'pipeline.stage_changed',
   // conversation
   'message.received',
+  'message.drafted',
+  'message.edited',
+  'message.rejected',
   'inbox.synced',
   'message.approved',
   'message.sent',
