@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatMoney, formatPercent, formatTime } from './format.js';
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatPercent,
+  formatTime,
+  parseDateSast,
+} from './format.js';
 
 /** ARB-060: display formats, with every expected value worked by hand (docs/05 section 3). */
 const NBSP = ' ';
@@ -61,5 +68,27 @@ describe('percentages', () => {
   it('uses a decimal comma to match money', () => {
     expect(formatPercent(0.125)).toBe('12,5%');
     expect(formatPercent(0.3, 0)).toBe('30%');
+  });
+});
+
+describe('reading a DD/MM/YYYY date typed in SAST', () => {
+  it('returns the UTC instant the SAST day starts: 22:00 the evening before', () => {
+    expect(parseDateSast('22/09/2026')).toBe('2026-09-21T22:00:00.000Z');
+    expect(parseDateSast(' 1/2/2026 ')).toBe('2026-01-31T22:00:00.000Z');
+  });
+
+  it('gives the start of the next day as the end of the day, so the whole day is included', () => {
+    expect(parseDateSast('22/09/2026', { endOfDay: true })).toBe('2026-09-22T22:00:00.000Z');
+  });
+
+  it.each(['31/02/2026', '2026-09-22', '09/22', '', '22/13/2026', '00/01/2026'])(
+    'refuses %j',
+    (text) => {
+      expect(parseDateSast(text)).toBeNull();
+    },
+  );
+
+  it('round-trips with formatDate', () => {
+    expect(formatDate(parseDateSast('29/02/2028')!)).toBe('29/02/2028');
   });
 });
