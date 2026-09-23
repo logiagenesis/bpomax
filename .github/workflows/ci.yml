@@ -105,13 +105,39 @@ jobs:
       - name: Start the stack and wait for every health check
         run: docker compose up -d --wait --wait-timeout 240
 
-      - name: Apply every migration to the Supabase Postgres image (ARB-010)
+      # db:seed runs the TypeScript seed builder with tsx, so this job needs the workspace.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ARB-010's clause: `pnpm db:reset` recreates the Postgres service with an empty
+      # volume, applies every migration and seeds (D-038).
+      - name: Reset the database, applying every migration and the seed (ARB-010)
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
         run: |
-          sh scripts/db-migrate.sh
+          pnpm db:reset
           psql "$DATABASE_URL" -X -A -t -c "select count(*) || ' public tables' from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'"
           psql "$DATABASE_URL" -X -A -t -c "select 'pgsodium available: ' || count(*)::text from pg_available_extensions where name = 'pgsodium'"
+
+      # ARB-013's clause "seed idempotent": a second run changes nothing. The taxonomy is
+      # the spec's 22 categories and no price band is invented (D-14).
+      - name: Seed a second time and check nothing changed (ARB-013)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+        run: |
+          pnpm db:seed
+          categories=$(psql "$DATABASE_URL" -X -A -t -c "select count(*) from service_categories")
+          bands=$(psql "$DATABASE_URL" -X -A -t -c "select count(*) from market_price_bands")
+          echo "service_categories: $categories, market_price_bands: $bands"
+          test "$categories" = 22
+          test "$bands" = 0
 
       - name: Show the services, and the logs of any that did not come up
         if: ${{ always() }}
