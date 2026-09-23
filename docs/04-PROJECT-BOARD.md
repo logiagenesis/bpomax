@@ -2,7 +2,8 @@
 
 Document: LI-BOARD-ARB-0926 v1.0 — 22/09/2026
 Live board: Claude Code updates Status and SHA on every ticket and pushes.
-Status values: TODO / IN PROGRESS / BLOCKED / DONE.
+Status values: TODO / IN PROGRESS / BLOCKED / BUILT-PENDING-CREDENTIALS / DONE.
+BUILT-PENDING-CREDENTIALS: the feature is complete and tested against local stand-ins behind configuration; the clause still open needs something only the owner can supply (a credential, an account, a figure or a host). See D-036.
 Blocker references point to 02-BLOCKERS.md.
 
 ## Phase 0 — Repository and foundations
@@ -12,7 +13,7 @@ Blocker references point to 02-BLOCKERS.md.
 | ARB-001 | Create private repo `logiagenesis/arbitron`, push /docs to main | — | B-01, B-02 | Repo URL opens; /docs present on main; remote SHA = local HEAD | DONE | 05b9769 |
 | ARB-002 | Monorepo scaffold (pnpm workspaces, apps/*, packages/*), lint, typecheck, prettier | 001 | — | `pnpm install && pnpm lint && pnpm typecheck` pass on clean clone | DONE | 7ff144c |
 | ARB-003 | GitHub Actions CI: lint, typecheck, Vitest, Playwright on push and PR | 002 | — | Green check on main; failing test turns CI red (proved with a throwaway branch) | DONE (green: run 6 on main; red: run 5 on branch `ci-red-proof`) | 4dddeb8 |
-| ARB-004 | docker-compose for Redis and local Supabase; `.env.example` complete per 01 section J | 002 | — | `docker compose up` healthy; every variable in 01-J present in .env.example | BLOCKED (V-01: compose start unverified, no Docker daemon in build container; .env.example clause proven by test) | c194e1c |
+| ARB-004 | docker-compose for Redis and local Supabase; `.env.example` complete per 01 section J | 002 | — | `docker compose up` healthy; every variable in 01-J present in .env.example | IN PROGRESS (session …V4PPWs, claimed 23/09/2026 05:45 UTC) | c194e1c |
 | ARB-005 | README (setup, run, deploy, links section), DECISIONS.md created | 002 | — | Fresh machine can follow README to running app | DONE | e0f8c85 |
 
 ## Phase 1 — Find, qualify, price, bid, approve
