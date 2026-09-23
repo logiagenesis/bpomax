@@ -15,7 +15,7 @@ import {
   parseRandToMinor,
   showFieldErrors,
 } from './lib/forms.js';
-import { formatDate, formatDateTime } from './lib/format.js';
+import { formatDate, formatDateTime, formatMoney } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
 import { confirmAction, runAction } from './lib/ui.js';
 
@@ -709,6 +709,80 @@ scannerForm.addEventListener('submit', async (event) => {
   }
 });
 
+// ------------------------------------------------------ market price bands
+const bandsTable = byId('bands-table');
+const bandsRows = byId('bands-rows');
+const bandsEmpty = byId('bands-empty');
+const bandsCategories = byId('bands-categories');
+
+/** How each `price_band_source` reads on the page (0004). */
+const SOURCE_LABEL = /** @type {Record<string, string>} */ ({
+  seed: 'Seed',
+  marketplace_sample: 'Marketplace sample',
+  owner_csv: 'Owner CSV',
+  completed_projects: 'Completed projects',
+});
+
+/**
+ * @typedef {{ id: string, categorySlug: string, categoryName: string, currency: string,
+ *   p25Minor: string, p50Minor: string, p75Minor: string, sampleSize: number,
+ *   source: string, sampledAt: string }} Band
+ */
+
+/**
+ * Seed rows carry the dashed "Seed" badge (ARB-013): a seed figure is an estimate, and
+ * the page must never let it pass for an observed price.
+ * @param {Band} band
+ */
+function sourceBadge(band) {
+  const badge = document.createElement('span');
+  const seed = band.source === 'seed';
+  badge.className = `badge badge--${seed ? 'seed' : 'neutral'}`;
+  badge.textContent = SOURCE_LABEL[band.source] ?? band.source;
+  if (seed) badge.title = 'Seed figure, not observed data';
+  return badge;
+}
+
+/** @param {{ categories: number, bands: Band[] }} body */
+function renderBands(body) {
+  bandsCategories.textContent = `${body.categories} service categories.`;
+  bandsRows.replaceChildren(
+    ...body.bands.map((band) => {
+      const tr = document.createElement('tr');
+      /** @param {string | Node} content @param {string} [className] */
+      const cell = (content, className) => {
+        const td = document.createElement('td');
+        if (className) td.className = className;
+        td.append(content);
+        return td;
+      };
+      tr.append(
+        cell(band.categoryName),
+        cell(band.currency),
+        cell(formatMoney(BigInt(band.p25Minor), band.currency), 'num'),
+        cell(formatMoney(BigInt(band.p50Minor), band.currency), 'num'),
+        cell(formatMoney(BigInt(band.p75Minor), band.currency), 'num'),
+        cell(String(band.sampleSize), 'num'),
+        cell(sourceBadge(band)),
+        cell(formatDate(band.sampledAt)),
+      );
+      return tr;
+    }),
+  );
+  bandsTable.hidden = body.bands.length === 0;
+  bandsEmpty.hidden = body.bands.length !== 0;
+}
+
+async function loadBands() {
+  try {
+    renderBands(
+      /** @type {{ categories: number, bands: Band[] }} */ (await apiGet('/v1/price-bands')),
+    );
+  } catch (e) {
+    bail(e);
+  }
+}
+
 // ----------------------------------------------------------------- telegram
 const linkCode = /** @type {HTMLButtonElement} */ (byId('link-code'));
 const linkCodeOut = byId('link-code-out');
@@ -759,6 +833,7 @@ async function load() {
         linkCode.disabled = !canWrite(role);
         if (!canWrite(role)) linkCode.title = 'Your role cannot link Telegram.';
         await loadScanners();
+        await loadBands();
       } catch (e) {
         bail(e);
       }
