@@ -12,7 +12,7 @@ in `routes/threads.test.ts`): `GET /v1/threads`, `GET /v1/threads/:id`,
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×6, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Conversations | — | — | — | — | Yes | lists every conversation with where it stands, and every link goes somewhere | ✅ |
+| Link, nav links ×10, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Conversations | — | — | — | — | Yes | lists every conversation with where it stands, and every link goes somewhere | ✅ |
 | Select | Status | Restrict to open / awaiting the client / awaiting you / closed | Sends `status=` to the API; address bar updated | — | — | — | Never | Yes | the status filter sends exactly that status… | ✅ |
 | Button (submit) | Apply filter | Load the list with the filter | `GET /v1/threads?status=&limit=50&offset=0` | Spinner, aria-busy, disabled | "Loaded N conversations." / "No conversations match this filter." | "Not signed in…" / "Could not reach the API…" / the API's message | While busy | Yes | the status filter sends exactly that status… | ✅ |
 | Button | Refresh | Ask again with the same filter | Same request | as Apply | as Apply | as Apply | While busy | Yes | the status filter sends exactly that status…; refresh asks again | ✅ |

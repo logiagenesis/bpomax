@@ -14,6 +14,7 @@ const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/suppliers.html', /^Loaded \d+ suppliers?\.$/, true],
   ['/sourcing.html', /^Loaded \d+ sourcing requests?\.$/, true],
   ['/pipeline.html', /^Loaded \d+ jobs? in the pipeline\.$/, true],
+  ['/analytics.html', /^Counted \d+ bids? by category\.$|^No bids sent yet\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
   ['/audit-log.html', /^Loaded \d+ events?\.$/, false],

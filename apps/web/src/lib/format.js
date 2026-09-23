@@ -141,3 +141,17 @@ export function parseDateSast(text, options = {}) {
   const dayMs = 24 * 60 * 60 * 1000;
   return new Date(utcMidnight - SAST_OFFSET_MS + (options.endOfDay ? dayMs : 0)).toISOString();
 }
+
+/**
+ * Model spend in nano-US-dollars (D-021) as US dollars, to the millionth rounded half up,
+ * with the decimal comma and trailing zeros dropped to two: 2 250 000 is `USD 0,00225`.
+ * A model call costs a fraction of a cent, so cents alone would show nothing.
+ * @param {string | bigint} nano
+ */
+export function formatNanoUsd(nano) {
+  const micro = (BigInt(nano) + 500n) / 1000n;
+  const text = micro.toString().padStart(7, '0');
+  const whole = text.slice(0, -6).replace(/\B(?=(\d{3})+(?!\d))/g, GROUP);
+  const fraction = text.slice(-6).replace(/0+$/, '').padEnd(2, '0');
+  return `USD ${whole},${fraction}`;
+}
