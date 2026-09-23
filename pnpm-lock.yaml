@@ -127,6 +127,22 @@ importers:
         specifier: ^26.6.2
         version: 26.6.2
 
+  packages/freelancer:
+    dependencies:
+      '@arbitron/core':
+        specifier: workspace:*
+        version: link:../core
+      '@arbitron/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
+
   packages/llm:
     dependencies:
       '@anthropic-ai/sdk':

@@ -1,0 +1,23 @@
+{
+  "name": "@arbitron/freelancer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Freelancer.com API client (OAuth, users) and an in-process stand-in of it for tests and local development",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fake": "./src/fake.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "fake": "tsx scripts/fake-server.ts"
+  },
+  "dependencies": {
+    "@arbitron/core": "workspace:*",
+    "@arbitron/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^26.6.2"
+  }
+}
