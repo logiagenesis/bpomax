@@ -139,6 +139,13 @@ jobs:
           test "$categories" = 22
           test "$bands" = 0
 
+      # ARB-020 and V-02: the test suites use a Vault shim that does not encrypt; this runs
+      # the token functions against the real Vault extension in the Supabase image (D-041).
+      - name: Prove marketplace tokens are encrypted at rest by Vault (ARB-020)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+        run: psql "$DATABASE_URL" -X -q -f scripts/db-verify-vault.sql
+
       - name: Show the services, and the logs of any that did not come up
         if: ${{ always() }}
         run: |

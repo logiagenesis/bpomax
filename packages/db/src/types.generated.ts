@@ -1267,9 +1267,10 @@ export type Database = {
       };
       platform_accounts: {
         Row: {
-          access_token_encrypted: string | null;
+          access_token_secret_id: string | null;
           created_at: string;
           external_user_id: string;
+          external_username: string | null;
           id: string;
           last_sync_at: string | null;
           monthly_bid_allowance: number | null;
@@ -1277,16 +1278,17 @@ export type Database = {
           plan_name: string | null;
           plan_recorded_on: string | null;
           platform: Database['public']['Enums']['platform'];
-          refresh_token_encrypted: string | null;
+          refresh_token_secret_id: string | null;
           scopes: string[];
           status: Database['public']['Enums']['platform_account_status'];
           token_expires_at: string | null;
           updated_at: string;
         };
         Insert: {
-          access_token_encrypted?: string | null;
+          access_token_secret_id?: string | null;
           created_at?: string;
           external_user_id: string;
+          external_username?: string | null;
           id?: string;
           last_sync_at?: string | null;
           monthly_bid_allowance?: number | null;
@@ -1294,16 +1296,17 @@ export type Database = {
           plan_name?: string | null;
           plan_recorded_on?: string | null;
           platform: Database['public']['Enums']['platform'];
-          refresh_token_encrypted?: string | null;
+          refresh_token_secret_id?: string | null;
           scopes?: string[];
           status?: Database['public']['Enums']['platform_account_status'];
           token_expires_at?: string | null;
           updated_at?: string;
         };
         Update: {
-          access_token_encrypted?: string | null;
+          access_token_secret_id?: string | null;
           created_at?: string;
           external_user_id?: string;
+          external_username?: string | null;
           id?: string;
           last_sync_at?: string | null;
           monthly_bid_allowance?: number | null;
@@ -1311,7 +1314,7 @@ export type Database = {
           plan_name?: string | null;
           plan_recorded_on?: string | null;
           platform?: Database['public']['Enums']['platform'];
-          refresh_token_encrypted?: string | null;
+          refresh_token_secret_id?: string | null;
           scopes?: string[];
           status?: Database['public']['Enums']['platform_account_status'];
           token_expires_at?: string | null;
@@ -1323,6 +1326,54 @@ export type Database = {
             columns: ['org_id'];
             isOneToOne: false;
             referencedRelation: 'orgs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      platform_connect_attempts: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          id: string;
+          org_id: string;
+          platform: Database['public']['Enums']['platform'];
+          updated_at: string;
+          used_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          org_id: string;
+          platform: Database['public']['Enums']['platform'];
+          updated_at?: string;
+          used_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          org_id?: string;
+          platform?: Database['public']['Enums']['platform'];
+          updated_at?: string;
+          used_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'platform_connect_attempts_org_id_fkey';
+            columns: ['org_id'];
+            isOneToOne: false;
+            referencedRelation: 'orgs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'platform_connect_attempts_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
@@ -2382,7 +2433,7 @@ export type Database = {
         | 'paid'
         | 'lost';
       platform: 'freelancer' | 'upwork' | 'fiverr';
-      platform_account_status: 'connected' | 'expired' | 'revoked' | 'error';
+      platform_account_status: 'connected' | 'expired' | 'revoked' | 'error' | 'disconnected';
       portfolio_kind: 'own_work' | 'labelled_demo';
       price_band_source: 'seed' | 'marketplace_sample' | 'owner_csv' | 'completed_projects';
       proposal_status: 'draft' | 'queued' | 'approved' | 'rejected' | 'submitted' | 'failed';
@@ -2440,7 +2491,7 @@ export const Constants = {
         'lost',
       ],
       platform: ['freelancer', 'upwork', 'fiverr'],
-      platform_account_status: ['connected', 'expired', 'revoked', 'error'],
+      platform_account_status: ['connected', 'expired', 'revoked', 'error', 'disconnected'],
       portfolio_kind: ['own_work', 'labelled_demo'],
       price_band_source: ['seed', 'marketplace_sample', 'owner_csv', 'completed_projects'],
       proposal_status: ['draft', 'queued', 'approved', 'rejected', 'submitted', 'failed'],

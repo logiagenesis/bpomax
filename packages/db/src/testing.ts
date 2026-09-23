@@ -3,13 +3,13 @@ import { loadMigrations } from './migrations.js';
 
 /**
  * What a real Supabase project supplies and PGlite does not: the `auth` schema, the
- * `auth.uid()` the policies are written against, and the three roles PostgREST switches
- * into when it serves a request. The definitions mirror Supabase's own, so the policies
+ * `auth.uid()` the policies are written against, the three roles PostgREST switches
+ * into when it serves a request, and Vault's interface (without its encryption). The definitions mirror Supabase's own, so the policies
  * under test are the same ones that will run in production.
  *
- * This shim is test scaffolding and is never applied to a real database. pgsodium is
- * still absent (docs/BLOCKERS.md V-02), so token encryption stays unexercised until the
- * Supabase project exists.
+ * This shim is test scaffolding and is never applied to a real database. Token
+ * encryption is proven against the real Vault extension in CI's compose job instead
+ * (D-041).
  */
 export const SUPABASE_SHIM_SQL = `
 create role anon nologin;
@@ -34,6 +34,46 @@ create table auth.users (
   email text unique,
   created_at timestamptz not null default now()
 );
+
+-- Supabase Vault's interface (https://supabase.com/docs/guides/database/vault): the same
+-- table, view and two functions, with the same signatures. It does NOT encrypt: the
+-- secret is stored as given. Encryption is the real extension's job, and CI proves it
+-- on the supabase/postgres image (scripts/db-verify-vault.sql, D-041).
+create schema vault;
+create table vault.secrets (
+  id uuid primary key default gen_random_uuid(),
+  name text unique,
+  description text not null default '',
+  secret text not null,
+  key_id uuid,
+  nonce bytea,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create view vault.decrypted_secrets as
+  select id, name, description, secret, secret as decrypted_secret, key_id, nonce,
+         created_at, updated_at
+  from vault.secrets;
+create function vault.create_secret(
+  new_secret text, new_name text default null, new_description text default '',
+  new_key_id uuid default null
+) returns uuid language sql as $$
+  insert into vault.secrets (secret, name, description, key_id)
+  values (new_secret, new_name, coalesce(new_description, ''), new_key_id)
+  returning id;
+$$;
+create function vault.update_secret(
+  secret_id uuid, new_secret text default null, new_name text default null,
+  new_description text default null, new_key_id uuid default null
+) returns void language sql as $$
+  update vault.secrets
+     set secret = coalesce(new_secret, secret),
+         name = coalesce(new_name, name),
+         description = coalesce(new_description, description),
+         key_id = coalesce(new_key_id, key_id),
+         updated_at = now()
+   where id = secret_id;
+$$;
 `;
 
 /** A fresh in-memory Postgres with the shim and every migration applied. */
