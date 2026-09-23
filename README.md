@@ -19,8 +19,9 @@ is built and what is not.
 Phase 0 is complete. Phase 1 is in progress: the data model, its tenancy, the role
 split, the audit log, the retention job, the scoring, estimating, margin, drafting and
 submit workers, the Telegram bot and the web pages (login, dashboard, feed, approvals,
-settings, audit log) are built and tested. Nothing is deployed and no marketplace call is
-live. `LIVE_MODE` defaults to `false`, which blocks every outbound marketplace call and
+settings, audit log) are built and tested. The web app is deployed to Vercel in demo mode
+(<https://bpomax.vercel.app>); the API, workers and bot are not deployed, and no marketplace
+call is live. `LIVE_MODE` defaults to `false`, which blocks every outbound marketplace call and
 logs what would have been sent.
 
 `docs/04-PROJECT-BOARD.md` is the live board — status and closing SHA per ticket, and
@@ -124,11 +125,23 @@ e2e/             Playwright end-to-end tests
 
 ## Deploy
 
-Not yet deployed. Hosting is ARB-070 and is held up by blockers B-11 (front-end host) and
-B-12 (back-end host) in `docs/02-BLOCKERS.md`; neither account exists yet.
+The web app deploys to Vercel from `main` on every push (project `bpomax`, ARB-070):
+<https://bpomax.vercel.app>. Each deployment also gets its own address, listed in the
+Vercel project.
+
+- **Build.** `vercel.json` runs `scripts/build-web-vercel.sh`. With `SUPABASE_URL`,
+  `SUPABASE_ANON_KEY` and `API_URL` set in the Vercel project's environment, it builds the
+  real app. With any of them missing, it builds **demo mode** (DECISIONS.md D-043). Every
+  page is then viewable with sample data answered inside the browser, and a banner on
+  every page says so. Nothing is saved or sent. To switch to the real app, add the three
+  variables in Vercel and redeploy.
+- **Branches.** Pushes to `claude/*` branches are not deployed. They are proven by CI and
+  reach Vercel only once merged into `main` (D-042).
+- **Back end.** The API, workers and Telegram bot are not deployed yet. They need a host
+  for long-running Node processes (docs/02 B-12).
 
 Per `docs/01` section K, a phase is not done without a live preview URL, and localhost is
-never an acceptable substitute. The table below stays honest about that.
+never an acceptable substitute.
 
 ## Links
 
@@ -136,8 +149,8 @@ never an acceptable substitute. The table below stays honest about that.
 | ----------- | ---------------------------------------------- |
 | Repository  | https://github.com/logiagenesis/bpomax         |
 | CI          | https://github.com/logiagenesis/bpomax/actions |
-| Phase 1 tag | NOT DONE — Phase 1 has not started             |
-| Web preview | NOT DONE — blocked on B-11                     |
+| Phase 1 tag | NOT DONE — Phase 1 is not complete             |
+| Web app     | https://bpomax.vercel.app (demo mode, D-043)   |
 | API health  | NOT DONE — blocked on B-12                     |
 
 ## How tenancy works

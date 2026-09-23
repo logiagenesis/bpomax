@@ -20,7 +20,7 @@ Mark each item done by writing the answer or "DONE dd/mm/yyyy" in the Answer col
 | B-08 | Anthropic API key with billing enabled | HARD | ARB-031 | https://console.anthropic.com | |
 | B-09 | Telegram bot token | HARD | ARB-050 | Create via @BotFather in Telegram; send the token to your `.env` only | |
 | B-10 | FX rates provider and key | HARD | ARB-040 | Choose one (e.g. an FX API you trust); record URL and plan limits | |
-| B-11 | Front-end hosting account (Vercel or Cloudflare Pages) linked to GitHub | HARD | Phase preview links | Connect the repo after it is created | |
+| B-11 | Front-end hosting account (Vercel or Cloudflare Pages) linked to GitHub | HARD | Phase preview links | Connect the repo after it is created | Vercel, on the owner's instruction of 23/09/2026: project `bpomax` in the Logi-Ink Vercel account, linked to logiagenesis/bpomax, production from `main`, https://bpomax.vercel.app (recorded by Claude Code, ARB-070) |
 | B-12 | Back-end hosting account for API, workers, bot (e.g. Render, Fly.io, a VPS) | HARD | Phase 1 tag | Choose and create | |
 | B-13 | Email sending provider (for alerts and later billing emails) | SOFT | ARB-410 | Choose provider, verify sending domain | |
 | B-14 | Upwork API key application | HARD for Phase 3 | ARB-300 | Apply via Upwork developer portal now; approval time is outside our control | |
