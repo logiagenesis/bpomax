@@ -12,6 +12,7 @@ import {
   type FreelancerConfig,
 } from '@arbitron/freelancer';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { enqueueReprice } from './reprice.js';
 
 /**
  * The sourcing worker's marketplace half (ARB-203, docs/01 section E: "after approval
@@ -44,6 +45,8 @@ export interface SourcingDeps {
   readonly config: FreelancerConfig | null;
   readonly fetch?: Fetch;
   readonly now?: () => Date;
+  /** Where a new or changed quote goes to be priced (ARB-204). Absent, bids are stored only. */
+  readonly repriceQueue?: Queue;
 }
 
 export type PostResult =
@@ -398,6 +401,11 @@ export async function collectSourcingBids(
     for (const bid of page.bids) {
       const name = bid.bidderUsername ?? `Freelancer.com bidder ${bid.bidderId}`;
       const price = String(toMinor(bid.amount, post.currency));
+      const previous = await db.query<{ quoted_price_minor: string | null }>(
+        `select quoted_price_minor::text as quoted_price_minor from supplier_candidates
+          where sourcing_request_id = $1 and external_bid_id = $2`,
+        [post.sourcing_request_id, bid.id],
+      );
       const { rows } = await db.query<{ id: string; inserted: boolean }>(
         `insert into supplier_candidates (org_id, sourcing_request_id, sourcing_post_id, external_bid_id, display_name,
                                           country_code, quoted_price_minor, currency, turnaround_days)
@@ -439,6 +447,14 @@ export async function collectSourcingBids(
           },
         });
       } else updated += 1;
+      // A new bid, or a bidder who changed their price, is priced against the job (ARB-204).
+      if (deps.repriceQueue && (row.inserted || previous.rows[0]?.quoted_price_minor !== price)) {
+        await enqueueReprice(deps.repriceQueue, {
+          candidateId: row.id,
+          quoteMinor: price,
+          ...(requestId ? { requestId } : {}),
+        });
+      }
     }
     if (page.bids.length < 100) break;
     offset += 100;

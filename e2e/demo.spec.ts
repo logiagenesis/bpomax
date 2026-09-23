@@ -142,6 +142,65 @@ test('the sample sourcing request is ranked by the real rule, and a shortlist is
   await expect(page.locator('#rows tr').first()).toContainText('sourcing.shortlisted');
 });
 
+test('Reprice in the demo judges the quote by the real rule: with the rules unset it is blocked and names them', async ({
+  page,
+}) => {
+  await page.goto('/sourcing.html');
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild (sample)' })
+    .click();
+  const row = page.locator('#candidate-rows tr').first();
+  await expect(row.locator('[data-margin]')).toHaveText('Not priced yet');
+  await page
+    .getByRole('button', { name: 'Reprice the bid with Thandi Web (sample)’s quote' })
+    .click();
+  await expect(row.locator('[data-margin]')).toHaveText('Not priced: a margin rule is not set');
+  await expect(row).toContainText('fee_table (docs/02 T-02)');
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('margin.repriced');
+});
+
+test('with rules set in the tab, Reprice works the margin with the real engine', async ({
+  page,
+}) => {
+  await page.goto('/sourcing.html');
+  // The rules and the fee table are this test's data (docs/02 D-02, D-03, T-02 are open).
+  const answers = await page.evaluate(async () => {
+    const send = (body: unknown) =>
+      fetch('https://demo-api.invalid/v1/settings', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => r.status);
+    return [
+      await send({ minMarginPct: 20, minMarginZarMinor: 50000, fxBufferPct: 3 }),
+      await send({
+        feeTable: [
+          {
+            platform: 'freelancer',
+            project_type: 'fixed',
+            side: 'freelancer',
+            percent: 10,
+            source_url: 'https://example.test/fees',
+            read_on: '2026-09-22',
+          },
+        ],
+      }),
+    ];
+  });
+  expect(answers).toEqual([200, 200]);
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild (sample)' })
+    .click();
+  await page
+    .getByRole('button', { name: 'Reprice the bid with Thandi Web (sample)’s quote' })
+    .click();
+  // Hand-worked: R12 000,00 − 10% fee R1 200,00 − quote R1 500,00 = R9 300,00, 77,5%.
+  const figure = page.locator('#candidate-rows tr').first().locator('[data-margin]');
+  await expect(figure).toHaveText('R9 300,00 (77,5%)');
+  await expect(figure).toHaveAttribute('data-margin', 'ok');
+});
+
 test('a sourcing post drafted in the demo carries the scope and not the client, and an edit naming them is refused', async ({
   page,
 }) => {

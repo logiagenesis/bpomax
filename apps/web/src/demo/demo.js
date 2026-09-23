@@ -25,6 +25,9 @@ import {
   discoveryCompleteness,
   liveModeBlockers,
   nextDiscoveryBatch,
+  evaluateMargin,
+  feeOn,
+  findFeeRule,
   parseFeeTable,
   rankSuppliers,
   renderDiscoveryBatch,
@@ -673,6 +676,106 @@ function logEvent(store, type, partial = {}) {
   );
 }
 
+/**
+ * ARB-204 in the demo: what the reprice worker would record for a candidate's quote,
+ * worked in the tab by core's margin engine with the tab's rules. A missing rule blocks
+ * and is named, as it is on the server (D-029); the demo has no FX provider, so a deal
+ * that needs a rate blocks as B-10 does.
+ * @param {Row} settings @param {Row} j @param {Row} c
+ * @returns {{ margin: Row | null, reprice: Row }}
+ */
+function demoReprice(settings, j, c) {
+  const at = new Date().toISOString();
+  const kept = c.margin ?? null;
+  /** @param {string} reason @param {string[]} detail */
+  const blocked = (reason, detail) => ({
+    margin: kept,
+    reprice: { outcome: 'blocked', reason, message: null, detail, at },
+  });
+  const budget = j.budget_max_minor ?? j.budget_min_minor;
+  if (budget === null || !j.currency) {
+    return {
+      margin: kept,
+      reprice: {
+        outcome: 'skipped',
+        reason: 'no_budget',
+        message: 'The job states no budget, so no margin can be worked out.',
+        detail: [],
+        at,
+      },
+    };
+  }
+  if (c.currency !== j.currency) {
+    return blocked('currency_mismatch', [
+      `the estimate is in ${String(c.currency)} but the job is in ${String(j.currency)}`,
+    ]);
+  }
+  const missing = [];
+  if (settings.minMarginPct === null) missing.push('min_margin_pct (docs/02 D-02)');
+  if (settings.minMarginZarMinor === null) missing.push('min_margin_zar_minor (docs/02 D-02)');
+  if (settings.fxBufferPct === null) missing.push('fx_buffer_pct (docs/02 D-03)');
+  if (!Array.isArray(settings.feeTable) || settings.feeTable.length === 0) {
+    missing.push('fee_table (docs/02 T-02)');
+  }
+  if (missing.length > 0) return blocked('rules_missing', missing);
+  const table = parseFeeTable(settings.feeTable);
+  if (!table.ok) {
+    return blocked(
+      'fee_table_invalid',
+      table.errors.map((e) => `fee_table${e.field} ${e.message}`),
+    );
+  }
+  const projectType = j.hourly ? 'hourly' : 'fixed';
+  const fee = findFeeRule(table.value, 'freelancer', projectType, 'freelancer');
+  if (!fee) {
+    return blocked('fee_rule_missing', [
+      `no fee rule for freelancer ${projectType} projects on the freelancer side (docs/02 T-02)`,
+    ]);
+  }
+  if (j.currency !== 'ZAR' || (fee.minCurrency !== null && fee.minCurrency !== j.currency)) {
+    return blocked('fx_unavailable', ['the demo has no FX provider (docs/02 B-10)']);
+  }
+  // A bid on our own Freelancer.com project also pays the employer's fee, as on the server.
+  let cost = Number(c.quotedPriceMinor);
+  if (c.source === 'bid') {
+    const employer = findFeeRule(table.value, 'freelancer', 'fixed', 'employer');
+    if (!employer) {
+      return blocked('fee_rule_missing', [
+        'no fee rule for freelancer fixed projects on the employer side, which a bid on our own project pays (docs/02 T-02)',
+      ]);
+    }
+    if (employer.minCurrency !== null && employer.minCurrency !== j.currency) {
+      return blocked('fx_unavailable', ['the demo has no FX provider (docs/02 B-10)']);
+    }
+    cost += feeOn(cost, employer, employer.minMinor).feeMinor;
+  }
+  const e = evaluateMargin({
+    currency: j.currency,
+    hourly: Boolean(j.hourly),
+    clientBudgetMinor: Number(budget),
+    supplierCostMinor: cost,
+    toolCostMinor: 0,
+    fee,
+    feeMinimumMinor: fee.minMinor,
+    fxBufferPercent: Number(settings.fxBufferPct),
+    minMarginPercent: Number(settings.minMarginPct),
+    minMarginHomeMinor: Number(settings.minMarginZarMinor),
+    fxToHome: null,
+  });
+  return {
+    margin: {
+      evaluationId: uuid(),
+      currency: e.currency,
+      marginMinor: String(e.marginMinor),
+      marginPct: e.marginPercent,
+      passed: e.passed,
+      reason: e.reason,
+      at,
+    },
+    reprice: { outcome: 'ok', reason: null, message: null, detail: [], at },
+  };
+}
+
 /** @param {string} date */
 function sast(date) {
   const d = new Date(new Date(date).getTime() + 2 * 3_600_000);
@@ -1097,6 +1200,48 @@ function api(method, url, body) {
       payload: { via: 'web', sourcing_request_id: row.id, shortlisted: body.shortlisted },
     });
     return respond(200, { request: describeSourcing(row, true) });
+  }
+
+  if (
+    method === 'POST' &&
+    /^\/v1\/sourcing-requests\/[^/]+\/candidates\/[^/]+\/reprice$/.test(path)
+  ) {
+    const row = sourcing.find((r) => r.id === idIn('/v1/sourcing-requests/'));
+    if (!row) return respond(404, { error: 'no such sourcing request' });
+    const candidateId = path.split('/').at(-2);
+    const candidate = row.candidates.find((/** @type {Row} */ c) => c.id === candidateId);
+    if (!candidate) return respond(404, { error: 'no such candidate on this request' });
+    if (candidate.quotedPriceMinor === null) {
+      return respond(409, {
+        error: 'This candidate has no quote yet, so there is nothing to reprice with.',
+      });
+    }
+    const t = (store.threads ?? []).find((x) => x.id === row.threadId);
+    const j = t?.jobId ? store.jobs.find((x) => x.id === t.jobId) : undefined;
+    if (!j) {
+      return respond(409, {
+        error:
+          'The conversation behind this brief has no job, so there is no bid margin to reprice.',
+      });
+    }
+    const { margin, reprice } = demoReprice(store.settings, j, candidate);
+    candidate.margin = margin;
+    candidate.reprice = reprice;
+    store.events.unshift(
+      event('margin.repriced', {
+        subject_table: 'supplier_candidates',
+        subject_id: candidate.id,
+        outcome: reprice.outcome,
+        payload: {
+          candidate: candidate.name,
+          sourcing_request_id: row.id,
+          ...(reprice.outcome === 'ok'
+            ? { quote_minor: candidate.quotedPriceMinor, after: margin }
+            : { reason: reprice.reason, detail: reprice.detail, message: reprice.message }),
+        },
+      }),
+    );
+    return respond(202, { queued: true });
   }
 
   // ARB-202 in the demo: sourcing post drafts, checked by the same rules as the API.

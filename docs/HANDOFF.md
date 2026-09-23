@@ -1,4 +1,4 @@
-# HANDOFF — 23/09/2026, 15:30 UTC (17:30 SAST)
+# HANDOFF — 23/09/2026, 15:00 UTC (17:00 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 29 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203); 18 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
+- **Board:** 30 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203); 17 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `bd35d1c` (PR #17, ARB-202, merged). The ARB-203 PR is open
+- **CI:** green on `main` at `af004c9` (PR #18, ARB-203, merged). The ARB-204 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-203 merges, **ARB-204** (reprice with a real candidate quote,
-  update the margin, alert below the rule). See section 6.
+- **Next ticket:** after ARB-204 merges, **ARB-210** (the sourcing and suppliers pages
+  audit, and sourcing posts on the approvals page). See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `bd35d1c` = PR #17, ARB-202 sourcing post drafts                                       |
-| Open PR                | ARB-203 sourcing projects and bids, from `claude/beautiful-tesla-b6goej`               |
-| Local checks at ARB-203 | lint, format, typecheck green; 882 unit tests (78 files) green; 168 + 20 Playwright tests green |
+| Last merge             | `af004c9` = PR #18, ARB-203 sourcing projects and bids                                 |
+| Open PR                | ARB-204 reprice with a candidate's quote, from `claude/beautiful-tesla-b6goej`         |
+| Local checks at ARB-204 | lint, format, typecheck green; 894 unit tests (80 files) green; 173 + 22 Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 29    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202 |
+| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204 |
 | BUILT-PENDING-CREDENTIALS | 8     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12) |
-| TODO                      | 18    | 099, then the rest of Phases 2–4 (204 to 499)               |
+| TODO                      | 17    | 099, then the rest of Phases 2–4 (210 to 499)               |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -60,6 +60,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-201 | Sourcing: deterministic ranking in core with a sentence per part, request from a locked brief (0023), the sourcing page with the shortlist, Start sourcing on conversations, demo, 13 + 2 Playwright tests | D-053 |
 | ARB-202 | Sourcing post drafts: scope-only builder and client-identity check in core, title column (0024), draft/edit/approve/close/record-posted API, posts panel, demo, 9 + 1 Playwright tests | D-054 |
 | ARB-203 | Sourcing projects on Freelancer.com: the documented employer calls and stand-in endpoints, a sender behind the live gate, bids collected as candidates (0025), budget rule on approval, Collect bids now, 3 Playwright tests (BUILT-PENDING-CREDENTIALS, C-02) | D-055 |
+| ARB-204 | Reprice: a candidate's quote as a `candidate_quote` estimate judged by the ARB-041 engine, the employer fee on our own project's bids, `margin.repriced` events, the Telegram breach card, a reprice per new or changed bid, the Reprice button and Margin column, demo, 5 + 2 Playwright tests | D-056 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -99,36 +100,32 @@ ticket it unblocks:
 | B-06 Supabase project (SUPABASE_URL, anon key, service role key, DATABASE_URL); D-05 region | ARB-010 hosted half, ARB-012 and ARB-061 real sign-in, ARB-070 out of demo mode |
 | B-07 hosted Redis URL                                                                       | ARB-030 and ARB-022 in production                                        |
 | B-08 Anthropic API key                                                                      | ARB-031, ARB-032 with a real model (V-04)                                |
-| B-09 Telegram bot token                                                                     | ARB-050                                                                  |
+| B-09 Telegram bot token | ARB-050, and the ARB-120 and ARB-204 alerts |
 | B-10 FX rate provider                                                                       | ARB-041, ARB-311                                                         |
 | B-12 a host for the API, workers and bot                                                    | ARB-070 (the API half), ARB-099                                          |
-| T-01 API terms; T-02 fee table; T-03 allowance; T-06 privacy period and wording             | ARB-044 go-live; ARB-041; ARB-042; ARB-015                               |
-| D-02, D-03 margin rules; D-04, D-14 categories and bands; D-06 searches; D-07, D-10 content | ARB-041; ARB-040; ARB-021 seed; ARB-043                                  |
+| T-01 API terms; T-02 fee table (the freelancer and the employer side); T-03 allowance; T-06 privacy period and wording | ARB-044 go-live; ARB-041 and ARB-204; ARB-042; ARB-015 |
+| D-02, D-03 margin rules; D-04, D-14 categories and bands; D-06 searches; D-07, D-10 content | ARB-041 and ARB-204; ARB-040; ARB-021 seed; ARB-043                                  |
 | D-08 auto-reply wording; D-09 the supplier list (through the template on the Suppliers page) | ARB-121 in use; ARB-200 and ARB-201 with real suppliers                  |
 
 ## 6. The exact next ticket
 
-**ARB-204 — reprice with a real candidate quote; update the margin; alert if below the
-rule.** Claim it on the board first. Acceptance: "Margin recalculated and change logged;
-alert fires on breach". Depends on ARB-203 and ARB-041. The margin engine is
-`packages/core/src/margin.ts` (D-029) and the margin worker `apps/workers/src/margin.ts`:
-read both before writing anything. Build: a `reprice` worker (the queue exists) that takes
-a candidate with a quote, finds the job behind the request (request → brief → thread →
-job) and its latest margin evaluation, and re-runs the engine with the candidate's quote as
-the supplier cost, writing a new `delivery_estimates` row with method `candidate_quote`
-and a new `margin_evaluations` row; an event `margin.repriced` with the old and new margin
-and the candidate; a Telegram alert (the ARB-050 bot's send, behind its token) when the
-new margin fails the org's rule; enqueue a reprice when a bid is collected (ARB-203) and
-from a Reprice button on the sourcing page's candidate row. While T-02, D-02 or D-03 are
-unanswered the engine records `blocked` naming the rule, as it does today (D-029): the
-reprice records that too and never invents a figure. Then **ARB-210**, the sourcing and
-suppliers pages audit, which also lists sourcing posts on the approvals page (D-054).
+**ARB-210 — sourcing and suppliers pages.** Claim it on the board first. Acceptance:
+"Every button audited; Playwright coverage". Depends on ARB-204 and ARB-060. Both pages
+exist and are audited (docs/audit/sourcing.md, docs/audit/suppliers.md): re-walk every
+control against docs/05 section 1, close any gap, and add the one loose end D-054 left:
+sourcing posts listed on the approvals page beside bids and replies (docs/01 section I:
+all pending outbound items), approved there through the same `POST /v1/sourcing-posts/:id/approve`.
+Keep the demo in step. Then ARB-299 (the Phase 2 audit, which like ARB-099 waits on the
+Phase 2 tickets that are BUILT-PENDING-CREDENTIALS) and Phase 3 from ARB-310.
 
 ## 7. Loose ends
 
 - Sourcing posts are approved on the sourcing page, not yet listed on the approvals page
   beside bids and replies (docs/01 section I says all pending outbound items). ARB-210
   is the place for it (D-054).
+- The workers have no production entry point yet (B-12): each processor, the reprice one
+  included (`createRepriceProcessor`, with `repriceAlert` from apps/telegram as its
+  `alert`), is wired and tested, and the host's start script binds them.
 
 - The stand-in of Freelancer.com covers OAuth, `users/0.1/self` and the project search.
   Each later ticket adds the endpoints it calls, in the documented shapes.

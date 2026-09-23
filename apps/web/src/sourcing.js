@@ -1,7 +1,7 @@
 // @ts-check
 import { canApprove, canWrite } from '@arbitron/core';
 import { apiGet, apiSend } from './lib/api.js';
-import { formatDateTime, formatMoney } from './lib/format.js';
+import { formatDateTime, formatMoney, formatPercent } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
 import { runAction } from './lib/ui.js';
 import { loadPosts, setPostRoles } from './sourcing-posts.js';
@@ -13,7 +13,8 @@ import { loadPosts, setPostRoles } from './sourcing-posts.js';
  * reason for each, and the suppliers left out with why; the shortlist is
  * `PATCH /v1/sourcing-requests/:id/candidates/:candidateId`. A request starts from a
  * locked brief on the conversations page. Posts and the marketplace half are ARB-202
- * and ARB-203; nothing here leaves the database.
+ * and ARB-203; nothing here leaves the database. Reprice (ARB-204) asks the worker to
+ * judge the bid's margin with a candidate's quote as the supplier cost.
  */
 
 /**
@@ -33,6 +34,8 @@ import { loadPosts, setPostRoles } from './sourcing-posts.js';
  * @property {string[]} reasons
  * @property {boolean} shortlisted
  * @property {'ranking' | 'bid'} [source]
+ * @property {{ evaluationId: string, currency: string | null, marginMinor: string | null, marginPct: string | null, passed: boolean | null, reason: string | null, at: string | null } | null} [margin]
+ * @property {{ outcome: string, reason: string | null, message: string | null, detail: string[], at: string | null } | null} [reprice]
  */
 
 /**
@@ -110,6 +113,40 @@ const CHANNEL_WORDS = /** @type {Record<string, string>} */ ({
 function rateText(c) {
   if (c.quotedPriceMinor === null || c.currency === null) return 'No rate';
   return `${formatMoney(BigInt(c.quotedPriceMinor), c.currency)}${c.priced === 'hourly' ? ' an hour' : ' fixed'}`;
+}
+
+/** Why a reprice judged nothing (the margin worker's block reasons, D-029). */
+const BLOCK_WORDS = /** @type {Record<string, string>} */ ({
+  rules_missing: 'a margin rule is not set',
+  fee_table_invalid: 'the fee table is not valid',
+  fee_rule_missing: 'the fee table has no rule for this job',
+  fx_unavailable: 'no exchange rate is available',
+  currency_mismatch: 'the quote and the job are in different currencies',
+});
+
+/**
+ * The bid's margin with this candidate's quote as the supplier cost, or why there is none.
+ * @param {Candidate} c
+ * @returns {{ text: string, hint: string, tone: 'ok' | 'bad' | 'none' }}
+ */
+function marginText(c) {
+  const m = c.margin;
+  const last = c.reprice;
+  if (last && last.outcome === 'blocked')
+    return {
+      text: `Not priced: ${BLOCK_WORDS[last.reason ?? ''] ?? last.reason ?? 'blocked'}`,
+      hint: last.detail.join('; '),
+      tone: 'none',
+    };
+  if (last && last.outcome === 'skipped' && !m)
+    return { text: 'Not priced', hint: last.message ?? '', tone: 'none' };
+  if (m && m.marginMinor !== null && m.currency && m.marginPct !== null)
+    return {
+      text: `${formatMoney(BigInt(m.marginMinor), m.currency)} (${formatPercent(Number(m.marginPct) / 100)})`,
+      hint: m.passed ? 'Clears the margin rule.' : 'Below the margin rule.',
+      tone: m.passed ? 'ok' : 'bad',
+    };
+  return { text: 'Not priced yet', hint: '', tone: 'none' };
 }
 
 /** @param {number | null} score */
@@ -261,7 +298,38 @@ function renderRequest(r) {
     button.addEventListener('click', () => void toggleShortlist(button, c));
     action.append(button);
 
-    tr.append(rank, who, rate, turnaround, score, why, action);
+    const margin = document.createElement('td');
+    const judged = marginText(c);
+    const figure = document.createElement('div');
+    figure.className =
+      judged.tone === 'none' ? '' : `badge badge--${judged.tone === 'ok' ? 'go' : 'skip'}`;
+    figure.textContent = judged.text;
+    figure.dataset.margin = judged.tone;
+    margin.append(figure);
+    if (judged.hint) {
+      const why = document.createElement('div');
+      why.className = 'field__hint';
+      why.textContent = judged.hint;
+      margin.append(why);
+    }
+    const reprice = document.createElement('button');
+    reprice.type = 'button';
+    reprice.className = 'btn btn--secondary';
+    reprice.textContent = 'Reprice';
+    reprice.setAttribute('aria-label', `Reprice the bid with ${c.name}’s quote`);
+    const cannot = !mayWrite
+      ? ROLE_REASON
+      : c.quotedPriceMinor === null
+        ? 'This candidate has no quote yet, so there is nothing to reprice with.'
+        : '';
+    if (cannot) {
+      reprice.disabled = true;
+      reprice.title = cannot;
+    }
+    reprice.addEventListener('click', () => void repriceCandidate(reprice, c));
+    margin.append(reprice);
+
+    tr.append(rank, who, rate, turnaround, score, margin, why, action);
     candidateRows.append(tr);
   });
   candidatesEmpty.hidden = candidates.length !== 0;
@@ -380,6 +448,42 @@ async function toggleShortlist(button, c) {
     renderRequest(outcome.request);
     try {
       await fetchList();
+    } catch (error) {
+      if (backToLoginOn401(error)) return;
+    }
+  }
+}
+
+/**
+ * Asks the reprice worker to judge the bid's margin with this candidate's quote.
+ * @param {HTMLButtonElement} button
+ * @param {Candidate} c
+ */
+async function repriceCandidate(button, c) {
+  if (!current) return;
+  const request = current;
+  const outcome = await runAction(
+    button,
+    requestStatus,
+    async () => {
+      try {
+        return await apiSend(
+          'POST',
+          `/v1/sourcing-requests/${request.id}/candidates/${c.id}/reprice`,
+        );
+      } catch (error) {
+        if (backToLoginOn401(error)) return undefined;
+        throw error;
+      }
+    },
+    {
+      success: () =>
+        `Asked for the bid to be priced with ${c.name}’s quote. The margin shows in the row once the worker has run; reopen the request to see it.`,
+    },
+  );
+  if (outcome) {
+    try {
+      await loadRequest(request.id);
     } catch (error) {
       if (backToLoginOn401(error)) return;
     }

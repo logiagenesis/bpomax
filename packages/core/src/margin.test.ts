@@ -4,6 +4,7 @@ import {
   convertMinor,
   divRoundHalfUp,
   evaluateMargin,
+  feeOn,
   findFeeRule,
   parseDecimal,
   parseFeeTable,
@@ -72,6 +73,16 @@ describe('the arithmetic', () => {
     expect(percentOf(1, 0.001)).toBe(0);
     expect(percentOf(100, 0)).toBe(0);
     expect(() => percentOf(1.5, 10)).toThrow(/whole minor units/);
+  });
+
+  it('takes a fee as the percentage or the minimum, whichever is more (ARB-204)', () => {
+    // 3% of R900,00 is R27,00, above a R10,00 minimum; 3% of R200,00 is R6,00, below it.
+    expect(feeOn(90_000, { percent: 3 }, 1_000)).toEqual({
+      feeMinor: 2_700,
+      minimumApplied: false,
+    });
+    expect(feeOn(20_000, { percent: 3 }, 1_000)).toEqual({ feeMinor: 1_000, minimumApplied: true });
+    expect(feeOn(20_000, { percent: 3 }, null)).toEqual({ feeMinor: 600, minimumApplied: false });
   });
 
   it('parses a decimal exactly, and refuses more decimals than the scale keeps', () => {

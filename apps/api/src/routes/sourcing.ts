@@ -58,6 +58,16 @@ interface CandidateRow {
   readonly supplier_time_zone: string | null;
   readonly external_bid_id: string | null;
   readonly sourcing_post_id: string | null;
+  readonly margin_evaluation_id: string | null;
+  readonly margin_minor: string | null;
+  readonly margin_pct: string | null;
+  readonly margin_currency: string | null;
+  readonly margin_passed: boolean | null;
+  readonly margin_reason: string | null;
+  readonly margin_at: string | null;
+  readonly reprice_outcome: string | null;
+  readonly reprice_payload: Record<string, unknown> | null;
+  readonly reprice_at: string | null;
 }
 
 const REQUEST_SQL = `
@@ -75,9 +85,25 @@ const CANDIDATES_SQL = `
   select c.id, c.supplier_id, c.display_name, c.country_code, c.quoted_price_minor::text as quoted_price_minor,
          c.currency::text as currency, c.turnaround_days, c.score::text as score, c.shortlisted, c.ranking,
          s.channel::text as supplier_channel, s.time_zone as supplier_time_zone,
-         c.external_bid_id, c.sourcing_post_id
+         c.external_bid_id, c.sourcing_post_id,
+         m.id as margin_evaluation_id, m.margin_minor::text as margin_minor, m.margin_pct::text as margin_pct,
+         m.currency::text as margin_currency, m.passed as margin_passed, m.reason as margin_reason,
+         m.created_at as margin_at,
+         ev.outcome::text as reprice_outcome, ev.payload as reprice_payload, ev.created_at as reprice_at
     from supplier_candidates c
     left join suppliers s on s.id = c.supplier_id
+    -- ARB-204: the margin the candidate's latest priced quote gives, and the last reprice's outcome.
+    left join lateral (
+      select e.id, e.margin_minor, e.margin_pct, e.currency, e.passed, e.reason, e.created_at
+        from delivery_estimates d join margin_evaluations e on e.delivery_estimate_id = d.id
+       where d.supplier_candidate_id = c.id
+       order by e.created_at desc limit 1
+    ) m on true
+    left join lateral (
+      select v.outcome, v.payload, v.created_at from events v
+       where v.type = 'margin.repriced' and v.subject_table = 'supplier_candidates' and v.subject_id = c.id
+       order by v.created_at desc limit 1
+    ) ev on true
    where c.sourcing_request_id = $1
    order by c.score desc nulls last, c.display_name, c.id`;
 
@@ -101,6 +127,30 @@ function describeCandidate(row: CandidateRow) {
     source: row.external_bid_id ? ('bid' as const) : ('ranking' as const),
     externalBidId: row.external_bid_id,
     sourcingPostId: row.sourcing_post_id,
+    /** ARB-204: the margin with this candidate's quote as the supplier cost, once priced. */
+    margin:
+      row.margin_evaluation_id === null
+        ? null
+        : {
+            evaluationId: row.margin_evaluation_id,
+            currency: row.margin_currency?.trim() ?? null,
+            marginMinor: row.margin_minor,
+            marginPct: row.margin_pct,
+            passed: row.margin_passed,
+            reason: row.margin_reason,
+            at: row.margin_at,
+          },
+    /** The last reprice's outcome: 'ok', or 'blocked' or 'skipped' with the reason. */
+    reprice:
+      row.reprice_outcome === null
+        ? null
+        : {
+            outcome: row.reprice_outcome,
+            reason: (row.reprice_payload?.reason as string | undefined) ?? null,
+            message: (row.reprice_payload?.message as string | undefined) ?? null,
+            detail: (row.reprice_payload?.detail as string[] | undefined) ?? [],
+            at: row.reprice_at,
+          },
   };
 }
 
@@ -410,6 +460,60 @@ export function registerSourcingRoutes(app: FastifyInstance, options: ServerOpti
         return { row: await loadRequest(tx, id), candidates: await loadCandidates(tx, id) };
       });
       return reply.send({ request: describeRequest(result.row, result.candidates) });
+    } catch (error) {
+      return reply.code(statusOf(error)).send({ error: messageOf(error) });
+    }
+  });
+
+  /**
+   * ARB-204: price the bid again with this candidate's quote as the supplier cost. The
+   * reprice worker does the work, with the margin engine's rules (D-029); this only asks.
+   */
+  app.post('/v1/sourcing-requests/:id/candidates/:candidateId/reprice', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const { id, candidateId } = request.params as { id: string; candidateId: string };
+    if (!UUID.test(id) || !UUID.test(candidateId))
+      return reply.code(400).send({ error: 'id is not a uuid' });
+    try {
+      const candidate = await withUser(options.db, authUserId, async (tx) => {
+        await writer(tx);
+        const { rows } = await tx.query<{
+          quoted_price_minor: string | null;
+          job_id: string | null;
+        }>(
+          `select c.quoted_price_minor::text as quoted_price_minor, t.job_id
+               from supplier_candidates c
+               join sourcing_requests r on r.id = c.sourcing_request_id
+               join briefs b on b.id = r.brief_id
+               join threads t on t.id = b.thread_id
+              where c.id = $2 and c.sourcing_request_id = $1`,
+          [id, candidateId],
+        );
+        const row = rows[0];
+        if (!row) throw refuse(404, 'no such candidate on this request');
+        return row;
+      });
+      if (candidate.quoted_price_minor === null)
+        return reply
+          .code(409)
+          .send({ error: 'This candidate has no quote yet, so there is nothing to reprice with.' });
+      if (candidate.job_id === null)
+        return reply.code(409).send({
+          error:
+            'The conversation behind this brief has no job, so there is no bid margin to reprice.',
+        });
+      if (!options.enqueue?.reprice)
+        return reply.code(503).send({
+          error:
+            'The workers are not running here, so the quote cannot be priced now (docs/02 B-12).',
+        });
+      await options.enqueue.reprice({
+        candidateId,
+        quoteMinor: candidate.quoted_price_minor,
+        requestId: request.id,
+      });
+      return reply.code(202).send({ queued: true });
     } catch (error) {
       return reply.code(statusOf(error)).send({ error: messageOf(error) });
     }
