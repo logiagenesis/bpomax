@@ -4,6 +4,7 @@ import {
   canWrite,
   checkAutoSendGuardrails,
   parseFeeTable,
+  validateAutoReply,
   validateMarginRules,
   validatePlanRecord,
   validateScanner,
@@ -892,6 +893,70 @@ linkCode.addEventListener('click', () => {
   );
 });
 
+// --------------------------------------------------------------- auto-reply
+const autoReplyForm = /** @type {HTMLFormElement} */ (byId('auto-reply-form'));
+const autoReplySave = /** @type {HTMLButtonElement} */ (byId('auto-reply-save'));
+const autoReplyState = byId('auto-reply-state');
+const autoReplyBody = /** @type {HTMLTextAreaElement} */ (byId('autoReply-body'));
+const autoReplyMinutes = /** @type {HTMLInputElement} */ (byId('autoReply-offlineAfterMinutes'));
+const autoReplyActive = /** @type {HTMLInputElement} */ (byId('autoReply-active'));
+
+/**
+ * ARB-121: the once-per-thread reply. Checked with `validateAutoReply`, the API's own
+ * rule. An owner or operator may set it (D-013, 0008); a viewer sees it.
+ * @param {{ body: string, active: boolean, offlineAfterMinutes: number } | null} autoReply
+ */
+function renderAutoReply(autoReply) {
+  autoReplyBody.value = autoReply?.body ?? '';
+  autoReplyMinutes.value = String(autoReply?.offlineAfterMinutes ?? 30);
+  autoReplyActive.checked = autoReply?.active ?? false;
+  autoReplyState.textContent = !autoReply
+    ? 'Not set up yet.'
+    : autoReply.active
+      ? `On. Sent once per thread after ${String(autoReply.offlineAfterMinutes)} minutes without a reply.`
+      : 'Off. Nothing is sent automatically.';
+  const allowed = canWrite(role);
+  for (const control of [autoReplyBody, autoReplyMinutes, autoReplyActive, autoReplySave]) {
+    control.disabled = !allowed;
+    control.title = allowed ? '' : 'Your role cannot change the auto-reply.';
+  }
+}
+
+autoReplyForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const input = {
+    body: autoReplyBody.value,
+    active: autoReplyActive.checked,
+    offlineAfterMinutes: autoReplyMinutes.value.trim(),
+  };
+  const validated = validateAutoReply(input);
+  if (!validated.ok) {
+    showFieldErrors(autoReplyForm, validated.errors, 'autoReply-');
+    status.className = 'alert alert--error';
+    status.textContent = 'Some fields need attention. The first one has been selected.';
+    return;
+  }
+  clearFieldErrors(autoReplyForm);
+  await runAction(
+    autoReplySave,
+    status,
+    async () => {
+      try {
+        const body = /** @type {{ autoReply: any }} */ (
+          await apiSend('PUT', '/v1/auto-reply', input)
+        );
+        renderAutoReply(body.autoReply);
+      } catch (e) {
+        if (e instanceof Error && 'errors' in e && Array.isArray(e.errors) && e.errors.length > 0) {
+          showFieldErrors(autoReplyForm, e.errors, 'autoReply-');
+        }
+        bail(e);
+      }
+    },
+    { success: 'Auto-reply saved.' },
+  );
+});
+
 // --------------------------------------------------------------------- load
 async function load() {
   await runAction(
@@ -917,6 +982,8 @@ async function load() {
           : 'Your Telegram chat is not linked yet. Create a code and send it to the bot as /start <code>.';
         linkCode.disabled = !canWrite(role);
         if (!canWrite(role)) linkCode.title = 'Your role cannot link Telegram.';
+        const autoReply = /** @type {{ autoReply: any }} */ (await apiGet('/v1/auto-reply'));
+        renderAutoReply(autoReply.autoReply);
         await loadScanners();
         await loadBands();
       } catch (e) {

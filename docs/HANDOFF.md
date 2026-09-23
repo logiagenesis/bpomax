@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 21 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120); 27 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
+- **Board:** 22 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120); 26 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `162d421` (PR #8, ARB-022, merged). The ARB-120 PR is open
+- **CI:** green on `main` at `5e41fcc` (PR #9, ARB-120, merged). The ARB-121 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-120 merges, **ARB-121** (auto-reply once per thread, D-08)
-  and **ARB-122** (outbound messages need approval; LIVE_MODE gate). See section 6.
+- **Next ticket:** after ARB-121 merges, **ARB-122** (outbound messages need approval;
+  LIVE_MODE gate). See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `162d421` = PR #8, ARB-022 ingest worker                                               |
-| Open PR                | ARB-120 inbox sync, from `claude/beautiful-tesla-b6goej`                                |
-| Local checks at ARB-120 | lint, format, typecheck green; 761 unit tests (57 files) green with Redis and Postgres up |
+| Last merge             | `5e41fcc` = PR #9, ARB-120 inbox sync                                                  |
+| Open PR                | ARB-121 auto-reply, from `claude/beautiful-tesla-b6goej`                               |
+| Local checks at ARB-121 | lint, format, typecheck green; 775 unit tests (60 files), 112 Playwright and 13 demo Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 21    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062 |
+| DONE                      | 22    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121 |
 | BUILT-PENDING-CREDENTIALS | 7     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022 and 120 (C-02), 070 (B-12) |
-| TODO                      | 27    | 099, then the rest of Phases 2–4 (121 to 499)               |
+| TODO                      | 26    | 099, then the rest of Phases 2–4 (122 to 499)               |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -51,6 +51,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-022 | Ingest worker: one schedule per scanner, the documented project search, per-org upserts (0018), events, score jobs | D-045          |
 | ARB-070 | Web app on Vercel from `main`; demo mode build; `claude/**` branches not deployed                              | D-042, D-043   |
 | ARB-120 | Inbox sync: the documented thread and message lists per connected account, stored once, Telegram card per client message | D-046 |
+| ARB-121 | Auto-reply once per thread while the operator is offline: rule, settings control, worker with the live gate | D-047 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -98,17 +99,18 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-121 — auto-reply once per thread when the operator is offline** (docs/02 D-08 is
-the wording and the "offline" rule; the mechanism is built without it, D-036). Claim it
-on the board first. The `auto_replies` table (0006) holds the org's configured reply;
-the `auto-reply` queue is wired in `apps/workers/src/queues.ts`. Trigger it from the
-inbox sync's inbound path (an `auto-reply` job per new inbound message), send through
-`POST /messages/0.1/threads/{thread_id}/messages/` (cited on the threads docs page) in
-`packages/freelancer`, and gate it exactly as the submit worker gates a bid (D-032):
-LIVE_MODE off records `external.blocked_by_live_mode` with the text that would have
-gone. "Once per thread" is a unique key on the send record. Then **ARB-122**: outbound
-messages from the app need an approval event and the same gate; the `messages.origin =
-'app'` rows and 0003's constraint are the guard.
+**ARB-122 — outbound messages require approval; LIVE_MODE gate.** Claim it on the board
+first. Acceptance: "No message leaves without approval event (test)". The pieces are in
+place: `messages.origin = 'app'` rows with `sent_at` null are drafts; 0003's constraint
+refuses a sent app message without `approved_by` and `approved_via`; `postThreadMessage`
+in `packages/freelancer` sends; the auto-reply worker (`apps/workers/src/auto-reply.ts`)
+shows the live gate and the undo-on-failure pattern. Build: an API to draft a reply on a
+thread and to approve or reject it (on the proposals routes' pattern, with
+`message.approved` and `message.sent` events), a `send-message` job on the pattern of
+the submit worker (gate, then the documented call, then `sent_at` and the external id),
+and the pending messages on the approvals page beside the bids (docs/01 section I:
+"approvals (all pending outbound items)"). Then **ARB-130** (discovery sessions) and
+**ARB-131** (brief builder), which are LLM work on `packages/llm`'s pattern.
 
 ## 7. Loose ends
 

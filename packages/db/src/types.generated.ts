@@ -98,6 +98,7 @@ export type Database = {
       auto_replies: {
         Row: {
           active: boolean;
+          approved_by: string | null;
           body: string;
           created_at: string;
           id: string;
@@ -108,6 +109,7 @@ export type Database = {
         };
         Insert: {
           active?: boolean;
+          approved_by?: string | null;
           body: string;
           created_at?: string;
           id?: string;
@@ -118,6 +120,7 @@ export type Database = {
         };
         Update: {
           active?: boolean;
+          approved_by?: string | null;
           body?: string;
           created_at?: string;
           id?: string;
@@ -127,6 +130,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'auto_replies_approved_by_fkey';
+            columns: ['approved_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'auto_replies_org_id_fkey';
             columns: ['org_id'];

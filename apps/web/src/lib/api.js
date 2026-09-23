@@ -97,7 +97,7 @@ async function request(path, query = {}, options = {}) {
 /**
  * Sends JSON and reads JSON back. A 204 reads as `undefined`.
  * @template T
- * @param {'POST' | 'PATCH' | 'DELETE'} method
+ * @param {'POST' | 'PUT' | 'PATCH' | 'DELETE'} method
  * @param {string} path
  * @param {unknown} [body]
  * @returns {Promise<T>}

@@ -451,6 +451,48 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
         return;
       }
 
+      const postMessage = /^\/api\/messages\/0\.1\/threads\/(\d+)\/messages\/$/.exec(url.pathname);
+      if (request.method === 'POST' && postMessage) {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        const threadId = Number(postMessage[1]);
+        const thread = threads.find((t) => t.id === threadId && t.members.includes(user.id));
+        if (!thread) {
+          apiError(response, 404, 'Thread not found', 'MessagesExceptionCodes.THREAD_NOT_FOUND');
+          return;
+        }
+        // The walkthrough passes `message` on the URL; a form body is read as well.
+        const text = query.message ?? form.message ?? '';
+        const now = Math.floor(Date.now() / 1000);
+        const id = 90_000 + messages.length + 1;
+        const sent: FakeMessage = {
+          id,
+          thread_id: threadId,
+          from_user: user.id,
+          message: text,
+          time_created: now,
+        };
+        messages.push(sent);
+        threads = threads.map((t) => (t.id === threadId ? { ...t, time_updated: now } : t));
+        json(response, 200, {
+          status: 'success',
+          result: {
+            message_source: 'default_msg',
+            attachments: null,
+            client_message_id: null,
+            parent_id: null,
+            time_created: now,
+            thread_id: threadId,
+            remove_reason: null,
+            from_user: user.id,
+            message: text,
+            id,
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
       apiError(response, 404, `The fake has no ${url.pathname}`, 'RestExceptionCodes.NOT_FOUND');
     })();
   });

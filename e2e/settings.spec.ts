@@ -44,6 +44,7 @@ interface Options {
   environmentLiveMode?: boolean;
   bands?: Record<string, unknown>[];
   freelancer?: { configured: boolean; environment: string | null; reason: string | null };
+  autoReply?: Record<string, unknown> | null;
 }
 
 /** Two bands as `GET /v1/price-bands` returns them: one seed figure, one observed. */
@@ -126,6 +127,7 @@ async function open(page: Page, options: Options = {}) {
     },
   ];
   const role = options.role ?? 'owner';
+  let autoReply: Record<string, unknown> | null = options.autoReply ?? null;
   const toNumeric = (value: unknown) =>
     value === null || value === '' ? null : Number(value).toFixed(3);
 
@@ -145,6 +147,19 @@ async function open(page: Page, options: Options = {}) {
             ...(options.freelancer ? { freelancer: options.freelancer } : {}),
           },
         }),
+      'GET /v1/auto-reply': (_request, route) => route.fulfill({ json: { autoReply } }),
+      'PUT /v1/auto-reply': (request, route) => {
+        const body = request.body as Record<string, unknown>;
+        autoReply = {
+          id: 'aaaaaaaa-0000-4000-8000-000000000026',
+          body: String(body.body).trim(),
+          active: body.active === true,
+          offlineAfterMinutes: Number(body.offlineAfterMinutes),
+          approvedBy: 'aaaaaaaa-0000-4000-8000-000000000002',
+          updatedAt: '2026-09-22T10:00:00Z',
+        };
+        return route.fulfill({ json: { autoReply } });
+      },
       'POST /v1/platform-accounts/freelancer/connect': (_request, route) =>
         route.fulfill({
           status: 201,
@@ -493,6 +508,7 @@ test('the API’s own refusal of a scanner lands on the field', async ({ page })
           role: 'owner',
         },
       }),
+    'GET /v1/auto-reply': (_request, route) => route.fulfill({ json: { autoReply: null } }),
     'GET /v1/scanners': (_request, route) => route.fulfill({ json: { scanners: [] } }),
     'GET /v1/price-bands': (_request, route) =>
       route.fulfill({ json: { categories: 22, bands: [] } }),
@@ -540,6 +556,7 @@ test('an operator can manage scanners and accounts but not the rules, fees or li
   await expect(page.getByRole('button', { name: 'Add scanner' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Save plan for freelancer' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Create link code' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Save auto-reply' })).toBeEnabled();
 });
 
 test('a viewer can read everything and change nothing', async ({ page }) => {
@@ -551,6 +568,7 @@ test('a viewer can read everything and change nothing', async ({ page }) => {
     'Add scanner',
     'Save plan for freelancer',
     'Create link code',
+    'Save auto-reply',
     'Edit ZA web builds',
     'Delete ZA web builds',
   ]) {
@@ -654,6 +672,48 @@ test('Disconnect asks first; cancelling sends nothing; confirming disconnects th
   expect(posts(requests, 'POST', /\/disconnect$/)).toHaveLength(1);
   await expect(page.locator('#accounts')).toContainText('Status disconnected');
   await expect(page.getByRole('button', { name: 'Disconnect freelancer' })).toHaveCount(0);
+});
+
+test('the auto-reply is checked before it is sent, then saved and shown as on', async ({
+  page,
+}) => {
+  const requests = await open(page);
+  await expect(page.locator('#auto-reply-state')).toHaveText('Not set up yet.');
+  await page.getByLabel('Reply text').fill('  ');
+  await page.getByLabel('Send after nobody has replied for (minutes)').fill('soon');
+  await page.getByLabel('Auto-reply on').check();
+  await page.getByRole('button', { name: 'Save auto-reply' }).click();
+  await expect(page.locator('#autoReply-body-error')).toHaveText(
+    'Must not be empty while the auto-reply is on.',
+  );
+  await expect(page.locator('#autoReply-offlineAfterMinutes-error')).toHaveText(
+    'Must be a whole number of minutes.',
+  );
+  await expect(page.getByLabel('Reply text')).toBeFocused();
+  expect(posts(requests, 'PUT', '/v1/auto-reply')).toHaveLength(0);
+
+  await page.getByLabel('Reply text').fill('Thanks for your message. I will reply within a day.');
+  await page.getByLabel('Send after nobody has replied for (minutes)').fill('20');
+  await page.getByRole('button', { name: 'Save auto-reply' }).click();
+  await expectStatus(page, 'Auto-reply saved.');
+  expect(posts(requests, 'PUT', '/v1/auto-reply')[0]?.body).toEqual({
+    body: 'Thanks for your message. I will reply within a day.',
+    active: true,
+    offlineAfterMinutes: '20',
+  });
+  await expect(page.locator('#auto-reply-state')).toHaveText(
+    'On. Sent once per thread after 20 minutes without a reply.',
+  );
+});
+
+test('a saved auto-reply is shown as it is, off or on', async ({ page }) => {
+  await open(page, {
+    autoReply: { id: 'x', body: 'Back soon.', active: false, offlineAfterMinutes: 45 },
+  });
+  await expect(page.getByLabel('Reply text')).toHaveValue('Back soon.');
+  await expect(page.getByLabel('Send after nobody has replied for (minutes)')).toHaveValue('45');
+  await expect(page.getByLabel('Auto-reply on')).not.toBeChecked();
+  await expect(page.locator('#auto-reply-state')).toHaveText('Off. Nothing is sent automatically.');
 });
 
 test('reload asks again', async ({ page }) => {

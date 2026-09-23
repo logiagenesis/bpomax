@@ -14,10 +14,12 @@
  *   ARB-043  draft rules: price, timeline, milestones, citations (drafting.ts)
  *   ARB-044  submission rules: approval, live gate, payload (submitting.ts)
  *   ARB-061  settings, plan and approval form rules      (settings.ts)
+ *   ARB-121  auto-reply rule and the offline test       (auto-reply.ts)
  *   ARB-131  brief schema
  */
 export * from './allowance.js';
 export * from './auth.js';
+export * from './auto-reply.js';
 export * from './drafting.js';
 export * from './estimating.js';
 export * from './events.js';

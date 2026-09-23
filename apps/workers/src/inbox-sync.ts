@@ -12,6 +12,7 @@ import {
   type FreelancerUserDetail,
 } from '@arbitron/freelancer';
 import type { Job, Queue } from 'bullmq';
+import { enqueueAutoReply } from './auto-reply.js';
 
 /**
  * The inbox-sync worker (ARB-120, docs/01 section E): "interval — pulls new client
@@ -78,6 +79,8 @@ export interface InboxDeps {
   readonly now?: () => Date;
   /** Tells the operator; the Telegram bot's `notifyInbound`, wired by the process. */
   readonly alert?: (alert: InboundAlert) => Promise<unknown>;
+  /** Where each new inbound message goes next: the auto-reply worker (ARB-121). */
+  readonly autoReplyQueue?: Queue;
 }
 
 export interface InboxSync {
@@ -463,9 +466,16 @@ export async function pollInbox(
     });
   });
 
-  // 4. After the commit, so the operator's link opens a stored message.
-  if (deps.alert) {
-    for (const alert of alerts) await deps.alert(alert);
+  // 4. After the commit, so the operator's link opens a stored message and the auto-reply
+  //    worker finds the row.
+  for (const alert of alerts) {
+    if (deps.autoReplyQueue) {
+      await enqueueAutoReply(deps.autoReplyQueue, {
+        messageId: alert.messageId,
+        ...(requestId ? { requestId } : {}),
+      });
+    }
+    if (deps.alert) await deps.alert(alert);
   }
 
   return {
