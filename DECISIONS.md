@@ -1012,3 +1012,63 @@ Reason:
 - The migrations apply cleanly to the `supabase/postgres` image in CI (run 55, compose
   job). `db:reset` itself has not yet run in CI; docs/HANDOFF.md names that as the next
   step.
+
+## D-039 — This session works on a branch with a draft pull request; its claims are on that branch
+
+Date: 23/09/2026
+Decided by: Claude Code (session …tJv8)
+
+Context:
+
+- Every earlier session pushed straight to `main`, and the board's IN PROGRESS claim on
+  `main` is the lock between sessions (D-034). This session's environment allows pushes
+  to `claude/beautiful-tesla-b6goej` only, and no one has given permission to push to
+  `main`.
+
+Decision:
+
+- Work lands on `claude/beautiful-tesla-b6goej`, one commit series per ticket, with
+  draft pull request #4 open against `main`. The branch's copy of the board carries this
+  session's claims, and the pull request lists them.
+- Before each ticket, `main` is merged into the branch, and any ticket claimed or closed
+  on `main` since is skipped.
+- On a non-main branch CI cancels a superseded run (D-008). So the run that proves a
+  ticket can be the one on a later commit, as long as that commit contains the ticket.
+  The board names the run and the commit.
+
+Reason:
+
+- The environment's rule is explicit. The owner can merge #4, or allow pushes to `main`,
+  and nothing here needs to change for either.
+
+## D-040 — Retention runs daily at 02:00 SAST from one BullMQ scheduler; the privacy notice is the owner's file, pending or approved
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-015, session …tJv8)
+
+Decision:
+
+- The workers get a `retention` queue. It is not one of docs/01 section E's workers, but
+  ARB-015 asks for a scheduled job. `scheduleRetention` upserts one BullMQ job scheduler
+  with the fixed id `retention-daily` and the pattern `0 0 * * *`: 00:00 UTC, which is
+  02:00 SAST all year (D-024). Every worker process may call it, and there is still one
+  schedule. The processor runs `purgeAll` (D-017) and returns the counts. Each org's
+  outcome is also an event.
+- The privacy notice's wording is not written by the build (docs/01 rule 6, T-06). It is
+  published as `apps/web/src/public/privacy-notice.json`, which the page fetches. The file
+  is either `{"status":"pending"}` with no wording, or `approved` with `approvedBy`,
+  `approvedOn`, `version` and sections. `parsePrivacyNotice` in `@arbitron/core` refuses
+  a pending file that carries text, and an approved one without its approval. So a draft
+  cannot be published by accident, and the page shows nothing from a file that breaks
+  the rule. A unit test checks the committed file.
+- `docs/privacy-data-inventory.md` lists, from the migrations, the personal information
+  stored and what the retention job does to it. It ends with the questions the job
+  cannot answer: whether briefs and the client fields on jobs are redacted too. They are
+  not, today.
+
+Reason:
+
+- A fixed UTC pattern needs no time-zone database on the host, and a quiet hour keeps the
+  run away from the working day.
+- Keeping the wording in a file the owner edits means T-06's answer is a content change
+  with no code change. The page is static, so it works on any host (C-03).

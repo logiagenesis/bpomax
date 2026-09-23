@@ -5,6 +5,7 @@
  *   ARB-012  roles and what each may do          (auth.ts)
  *   ARB-013  service category taxonomy
  *   ARB-014  audit log vocabulary                 (events.ts)
+ *   ARB-015  privacy notice shape                  (privacy.ts)
  *   ARB-021  scanner validation                    (scanners.ts)
  *   ARB-032  job scoring schema and red-flag rules (scoring.ts)
  *   ARB-040  estimate method order and classification (estimating.ts)
@@ -22,6 +23,7 @@ export * from './estimating.js';
 export * from './events.js';
 export * from './margin.js';
 export * from './money.js';
+export * from './privacy.js';
 export * from './scanners.js';
 export * from './scoring.js';
 export * from './settings.js';

@@ -42,7 +42,36 @@ interface Options {
   role?: Role;
   complete?: boolean;
   environmentLiveMode?: boolean;
+  bands?: Record<string, unknown>[];
 }
+
+/** Two bands as `GET /v1/price-bands` returns them: one seed figure, one observed. */
+const BANDS = [
+  {
+    id: 'aaaaaaaa-0000-4000-8000-000000000031',
+    categorySlug: 'website-build',
+    categoryName: 'Website build',
+    currency: 'ZAR',
+    p25Minor: '150000',
+    p50Minor: '300000',
+    p75Minor: '600000',
+    sampleSize: 0,
+    source: 'seed',
+    sampledAt: '2026-09-20T08:00:00Z',
+  },
+  {
+    id: 'aaaaaaaa-0000-4000-8000-000000000032',
+    categorySlug: 'seo',
+    categoryName: 'SEO',
+    currency: 'USD',
+    p25Minor: '30000',
+    p50Minor: '60000',
+    p75Minor: '90000',
+    sampleSize: 14,
+    source: 'owner_csv',
+    sampledAt: '2026-09-21T08:00:00Z',
+  },
+];
 
 async function open(page: Page, options: Options = {}) {
   const settings: Record<string, unknown> = options.complete
@@ -150,6 +179,8 @@ async function open(page: Page, options: Options = {}) {
         return route.fulfill({ json: { account } });
       },
       'GET /v1/scanners': (_request, route) => route.fulfill({ json: { scanners } }),
+      'GET /v1/price-bands': (_request, route) =>
+        route.fulfill({ json: { categories: 22, bands: options.bands ?? [] } }),
       'POST /v1/scanners': (request, route) => {
         const body = request.body as Record<string, unknown>;
         const row = {
@@ -448,6 +479,8 @@ test('the API’s own refusal of a scanner lands on the field', async ({ page })
         },
       }),
     'GET /v1/scanners': (_request, route) => route.fulfill({ json: { scanners: [] } }),
+    'GET /v1/price-bands': (_request, route) =>
+      route.fulfill({ json: { categories: 22, bands: [] } }),
     'POST /v1/scanners': (_request, route) =>
       route.fulfill({
         status: 409,
@@ -515,16 +548,52 @@ test('a viewer can read everything and change nothing', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Reload' })).toBeEnabled();
 });
 
+test('with no market price band the section says none is invented, and why', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('#bands-table')).toBeHidden();
+  await expect(page.locator('#bands-empty')).toBeVisible();
+  await expect(page.locator('#bands-empty')).toContainText('None is invented');
+  await expect(page.locator('#bands-empty')).toContainText('D-14');
+  await expect(page.locator('#bands-categories')).toHaveText('22 service categories.');
+});
+
+test('seed bands are labelled Seed; observed bands are labelled by their source', async ({
+  page,
+}) => {
+  await open(page, { bands: BANDS });
+  await expect(page.locator('#bands-empty')).toBeHidden();
+  const rows = page.locator('#bands-rows tr');
+  await expect(rows).toHaveCount(2);
+  const seed = rows.nth(0);
+  await expect(seed.locator('td').nth(0)).toHaveText('Website build');
+  // R1 500,00 / R3 000,00 / R6 000,00 with no-break spaces (D-024).
+  await expect(seed.locator('td').nth(2)).toHaveText('R1\u00a0500,00');
+  await expect(seed.locator('td').nth(3)).toHaveText('R3\u00a0000,00');
+  await expect(seed.locator('td').nth(4)).toHaveText('R6\u00a0000,00');
+  await expect(seed.locator('.badge--seed')).toHaveText('Seed');
+  await expect(seed.locator('.badge--seed')).toHaveAttribute(
+    'title',
+    'Seed figure, not observed data',
+  );
+  await expect(seed.locator('td').nth(7)).toHaveText('20/09/2026');
+  const observed = rows.nth(1);
+  await expect(observed.locator('td').nth(3)).toHaveText('USD 600,00');
+  await expect(observed.locator('.badge--seed')).toHaveCount(0);
+  await expect(observed.locator('.badge')).toHaveText('Owner CSV');
+  await expect(observed.locator('td').nth(5)).toHaveText('14');
+});
+
 test('reload asks again', async ({ page }) => {
   const requests = await open(page);
   const before = requests.filter((r) => r.path === '/v1/settings').length;
   await page.getByRole('button', { name: 'Reload' }).click();
   await expectStatus(page, 'Settings loaded.');
   expect(requests.filter((r) => r.path === '/v1/settings').length).toBe(before + 1);
+  expect(requests.filter((r) => r.path === '/v1/price-bands').length).toBe(before + 1);
 });
 
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
-  await open(page, { complete: true });
+  await open(page, { complete: true, bands: BANDS });
   await expectNoSidewaysScroll(page);
 });

@@ -9,6 +9,7 @@ export * from './client.js';
 export * from './events.js';
 export * from './llm-calls.js';
 export * from './migrations.js';
+export * from './platform-tokens.js';
 export * from './retention.js';
 export * from './seed.js';
 

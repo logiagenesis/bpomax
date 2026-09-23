@@ -21,6 +21,8 @@ export const QUEUE_NAMES = [
   'reprice',
   'price-refresh',
   'rollup',
+  // Not in section E: the scheduled retention run ARB-015 asks for (D-039).
+  'retention',
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];

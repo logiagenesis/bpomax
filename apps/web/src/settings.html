@@ -298,6 +298,40 @@
         </form>
       </section>
 
+      <section class="card stack" aria-labelledby="bands-heading">
+        <h2 id="bands-heading">Market price bands</h2>
+        <p class="section-note">
+          What a category usually sells for, per currency. The estimate worker prices from the
+          middle figure (p50) when there is no rate card. Rows marked Seed are seed figures, not
+          observed prices.
+        </p>
+        <p id="bands-categories" class="section-note"></p>
+        <div class="table-wrap" id="bands-table" hidden>
+          <table class="table">
+            <caption class="visually-hidden">
+              Market price bands
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Category</th>
+                <th scope="col">Currency</th>
+                <th scope="col" class="num">p25</th>
+                <th scope="col" class="num">p50</th>
+                <th scope="col" class="num">p75</th>
+                <th scope="col" class="num">Sample</th>
+                <th scope="col">Source</th>
+                <th scope="col">Sampled on</th>
+              </tr>
+            </thead>
+            <tbody id="bands-rows"></tbody>
+          </table>
+        </div>
+        <p id="bands-empty" class="section-note" hidden>
+          No market price bands yet. None is invented: the figures are the owner's to supply
+          (docs/BLOCKERS.md D-14). Until then the estimate worker skips this method and says so.
+        </p>
+      </section>
+
       <section class="card stack" aria-labelledby="telegram-heading">
         <h2 id="telegram-heading">Telegram</h2>
         <p id="telegram-state"></p>
