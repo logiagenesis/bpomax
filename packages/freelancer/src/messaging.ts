@@ -38,6 +38,25 @@ import {
  */
 export const MESSAGING_MAX_LIMIT = 100;
 
+/**
+ * `POST /messages/0.1/threads/{thread_id}/messages/` — "Adds a new message to an existing
+ * thread" (https://developers.freelancer.com/docs/messaging/threads, "Create a Message";
+ * scopes `basic` and `fln:messaging`). The reference page does not show the request
+ * body; the walkthrough sends `message` as a URL parameter
+ * (`POST …/threads/80000624/messages/?message=Hey there how are you?`,
+ * https://developers.freelancer.com/docs/use-cases/messaging, "Making the Message
+ * Request") and answers `{ status: "success", result: { id, thread_id, from_user,
+ * message, time_created, … } }`. That is what is sent and read here; the sandbox run is
+ * where the form is confirmed (C-02).
+ */
+export interface SentMessage {
+  readonly id: string;
+  readonly threadId: string;
+  readonly timeCreated: Date | null;
+  readonly requestId: string | null;
+  readonly rateLimit: RateLimit;
+}
+
 export type ThreadContextType = 'project' | 'contest' | 'general';
 
 export interface ThreadQuery {
@@ -265,6 +284,48 @@ export async function listMessages(
     messages: list
       .map((item) => parseMessage(record(item)))
       .filter((message): message is FreelancerMessage => message !== null),
+    requestId: str(body.request_id),
+    rateLimit,
+  };
+}
+
+export async function postThreadMessage(
+  config: FreelancerConfig,
+  accessToken: string,
+  threadId: string,
+  message: string,
+  deps: { readonly fetch?: Fetch } = {},
+): Promise<SentMessage> {
+  const what = 'sending the message';
+  const params = new URLSearchParams({ message });
+  const response = await send(
+    deps.fetch ?? fetch,
+    `${config.apiUrl}/messages/0.1/threads/${encodeURIComponent(threadId)}/messages/?${params.toString()}`,
+    { method: 'POST', headers: { 'freelancer-oauth-v1': accessToken } },
+    what,
+  );
+  const rateLimit = readRateLimit(response.headers);
+  let body: Record<string, unknown>;
+  try {
+    body = await readJson(response, what);
+  } catch (error) {
+    if (error instanceof FreelancerError) error.rateLimit = rateLimit;
+    throw error;
+  }
+  const result = record(body.result);
+  const id = idText(result.id);
+  if (id === null) {
+    throw new FreelancerError(
+      'Freelancer.com answered the message without an id',
+      response.status,
+      null,
+      str(body.request_id),
+    );
+  }
+  return {
+    id,
+    threadId: idText(result.thread_id) ?? threadId,
+    timeCreated: seconds(result.time_created),
     requestId: str(body.request_id),
     rateLimit,
   };

@@ -18,6 +18,7 @@ import {
   checkAutoSendGuardrails,
   liveModeBlockers,
   parseFeeTable,
+  validateAutoReply,
   validateMarginRules,
   validatePlanRecord,
   validateScanner,
@@ -33,7 +34,7 @@ const SESSION_KEY = 'arbitron.session';
 /**
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
- *   events: Row[], connectPending?: boolean }} Store
+ *   events: Row[], connectPending?: boolean, autoReply?: Row | null }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -543,6 +544,27 @@ function api(method, url, body) {
     row.approved_via = null;
     logEvent(store, 'proposal.edited', { subject_table: 'proposals', subject_id: row.id });
     return respond(200, { proposal: row });
+  }
+
+  // ARB-121 in the demo: the auto-reply is kept in the tab; nothing is ever sent.
+  if (key === 'GET /v1/auto-reply') return respond(200, { autoReply: store.autoReply ?? null });
+  if (key === 'PUT /v1/auto-reply') {
+    const value = /** @type {Record<string, any>} */ (body ?? {});
+    const validated = validateAutoReply(value);
+    if (!validated.ok)
+      return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+    store.autoReply = {
+      id: 'd0d0d0d0-0000-4000-8000-000000000026',
+      ...validated.value,
+      approvedBy: USER,
+      updatedAt: new Date().toISOString(),
+    };
+    logEvent(store, 'settings.changed', {
+      subject_table: 'auto_replies',
+      subject_id: store.autoReply.id,
+      payload: { via: 'web', changed: ['autoReply'] },
+    });
+    return respond(200, { autoReply: store.autoReply });
   }
 
   if (key === 'GET /v1/settings') {

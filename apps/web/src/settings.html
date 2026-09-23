@@ -344,9 +344,49 @@
       <section class="card stack" aria-labelledby="auto-reply-heading">
         <h2 id="auto-reply-heading">Auto-reply</h2>
         <p class="section-note">
-          The once-per-thread auto-reply for when nobody is online arrives with the inbox (ARB-121).
-          There is nothing to set yet.
+          Sent once per thread, to the first client message that arrives while nobody has replied
+          for the period below. The wording is yours (docs/02 D-08). While live mode is off nothing
+          is sent, and what would have gone is in the audit log.
         </p>
+        <form id="auto-reply-form" class="stack" novalidate>
+          <div class="field">
+            <label class="field__label" for="autoReply-body">Reply text</label>
+            <textarea
+              class="textarea"
+              id="autoReply-body"
+              name="body"
+              rows="4"
+              aria-describedby="autoReply-body-hint autoReply-body-error"
+            ></textarea>
+            <p class="field__hint" id="autoReply-body-hint">Up to 2 000 characters.</p>
+            <p class="field__error" id="autoReply-body-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="autoReply-offlineAfterMinutes"
+              >Send after nobody has replied for (minutes)</label
+            >
+            <input
+              class="input"
+              id="autoReply-offlineAfterMinutes"
+              name="offlineAfterMinutes"
+              inputmode="numeric"
+              aria-describedby="autoReply-offlineAfterMinutes-error"
+            />
+            <p class="field__error" id="autoReply-offlineAfterMinutes-error" hidden></p>
+          </div>
+          <div class="cluster">
+            <label class="check"
+              ><input type="checkbox" id="autoReply-active" name="active" /> Auto-reply on</label
+            >
+          </div>
+          <p class="field__error" id="autoReply-active-error" hidden></p>
+          <div class="cluster">
+            <button type="submit" class="btn btn--primary" id="auto-reply-save">
+              Save auto-reply
+            </button>
+            <span class="section-note" id="auto-reply-state"></span>
+          </div>
+        </form>
       </section>
     </main>
   </body>

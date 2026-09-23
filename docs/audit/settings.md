@@ -1,11 +1,12 @@
-# Control audit — settings.html (ARB-061, ARB-013, ARB-020)
+# Control audit — settings.html (ARB-061, ARB-013, ARB-020, ARB-121)
 
 Per docs/05 section 1. Every control on the page, and the Playwright test (in
 `e2e/settings.spec.ts`) that exercises it. The API is an in-memory copy, at the network
 edge, of `apps/api/src/routes/settings.ts`, `routes/scanners.ts` and
-`routes/telegram.ts` and `routes/platform-accounts.ts` (each tested against real Postgres). Every form is checked before it
+`routes/telegram.ts`, `routes/platform-accounts.ts` and `routes/auto-reply.ts` (each tested against real Postgres). Every form is checked before it
 sends with the same `@arbitron/core` functions the API runs (`validateMarginRules`,
-`parseFeeTable`, `validatePlanRecord`, `validateScanner`, `checkAutoSendGuardrails`), so
+`parseFeeTable`, `validatePlanRecord`, `validateScanner`, `checkAutoSendGuardrails`,
+`validateAutoReply`), so
 the client and server rules are one piece of code (docs/05 section 1.5).
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
@@ -29,6 +30,8 @@ the client and server rules are one piece of code (docs/05 section 1.5).
 | Button (per scanner) | Edit <name> | Load it into the form | Form filled, heading "Edit “<name>”", Name focused | — | — | — | Unless the person may write (title says so) | Yes | a scanner can be added, edited and deleted… | ✅ |
 | Button (per scanner) | Delete <name> | Confirm, then delete | Modal (danger); cancel sends nothing; `DELETE /v1/scanners/:id`; logged as `scanner.deleted` | Spinner, aria-busy, disabled | "Deleted “<name>”." | API message | as Edit; while busy | Yes | a scanner can be added, edited and deleted… | ✅ |
 | Table (read only, no controls) | Market price bands | Show each band the estimate worker may price from (ARB-013) | `GET /v1/price-bands` (`apps/api/src/routes/price-bands.ts`, tested against real Postgres with the real seed): category, currency, p25/p50/p75 as money (D-024), sample size, source and the day sampled. A `source='seed'` row carries the dashed `badge--seed` "Seed" with the title "Seed figure, not observed data"; any other source reads as a plain badge ("Owner CSV" and so on). With no band, the table is hidden and the note says none is invented and names D-14 | — | — | The API message in the page status | — (nothing to change here; bands are written by the seed, a CSV import or the price-refresh worker) | Not applicable | with no market price band the section says none is invented, and why; seed bands are labelled Seed; observed bands are labelled by their source | ✅ |
+| Inputs ×3 | Reply text, Send after nobody has replied for (minutes), Auto-reply on | The org's auto-reply (docs/02 D-08 is the wording) | Checked with `validateAutoReply`, the API's own rule: text up to 2 000 characters and not empty while on; minutes a whole number from 1 to 1 440 | — | — | Per field, e.g. "Must not be empty while the auto-reply is on.", "Must be a whole number of minutes."; first invalid focused | Unless the person may write (owner or operator; title says so) | Yes | the auto-reply is checked before it is sent, then saved and shown as on; a saved auto-reply is shown as it is, off or on | ✅ |
+| Button (submit) | Save auto-reply | Save it | `PUT /v1/auto-reply` (`apps/api/src/routes/auto-reply.ts`, tested against real Postgres); the person saving is recorded as its approver; logged as `settings.changed` on `auto_replies`; the state line says on, with the period, or off | Spinner, aria-busy, disabled | "Auto-reply saved." | API message; 422 field errors attached | as above; while busy | Yes | the auto-reply is checked before it is sent, then saved and shown as on | ✅ |
 | Button | Create link code | Issue a one-time Telegram link code | `POST /v1/telegram/link-codes`; code and expiry shown in an `<output>` | Spinner, aria-busy, disabled | "Link code created. It works once and expires in ten minutes." | API message | Unless the person may write | Yes | a Telegram link code is created and shown with its expiry | ✅ |
 
 Roles (D-013): an operator can manage scanners, accounts and the Telegram link but not
@@ -37,8 +40,10 @@ carries its reason in its title. RLS is what actually refuses a write; the greyi
 courtesy (tests "an operator can manage scanners…", "a viewer can read everything and
 change nothing").
 
-Auto-reply: there is nothing to set until the inbox lands (ARB-121); the section says so
-and offers no control.
+Auto-reply (ARB-121): the once-per-thread reply the `auto-reply` worker sends to the
+first client message that arrives while nobody has replied for the period set. The
+worker's rules (once per thread by 0006's unique key, the offline period, the live gate
+that keeps it unsent while LIVE_MODE is off) are tested in `apps/workers/src/auto-reply.test.ts`.
 
 Destructive actions (docs/05 section 1.3): going live asks for confirmation and is
 logged; deleting a scanner asks and is logged; disconnecting an account asks and is

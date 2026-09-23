@@ -1291,3 +1291,38 @@ Reason:
   section E requires of every worker, and needs no per-thread cursor.
 - Marking observed messages as such keeps the approval constraint honest without
   fabricating an approval for a message nobody in the app approved.
+
+## D-047 — The auto-reply is one per org, saved with its approver; it goes to the first client message on a thread nobody has answered while no message has left the org for the period; live-gated like a bid
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-121, session …tJv8)
+
+Decision:
+
+- One auto-reply per org ("First reply", `auto_replies`), set on the settings page by an
+  owner or operator (0008 lets an operator write the table). The person who saves it is
+  recorded as its approver (`approved_by`, 0020), and every reply the worker writes
+  carries that approval as `messages.approved_by` with `approved_via = 'auto'`, so
+  0003's rule that nothing outbound leaves without an approval record holds. The wording
+  is the owner's (docs/02 D-08); the build ships none.
+- The `auto-reply` worker takes one job per new inbound message, queued by the inbox
+  sync. It sends only when, in order: the message is inbound on an open thread; an
+  active, approved auto-reply exists; the thread has had no auto-reply (0006's unique
+  key on the thread is the guarantee) and no reply of any kind; and the operator is
+  offline, meaning no message has left the org, from the app or from the marketplace,
+  for `offline_after_minutes` (`operatorIsOffline` in `@arbitron/core`).
+- The record comes first: the outbound message row and the `auto_reply_sends` row are
+  written before the live gate is checked, so a thread is marked done with its one reply
+  whether or not the reply could leave. With either switch off (D-032) the row stays
+  unsent and `external.blocked_by_live_mode` carries the text and the thread. Live, the
+  reply is posted with `POST /messages/0.1/threads/{thread_id}/messages/`, `message` on
+  the URL as the docs' walkthrough sends it; a platform failure undoes both rows and
+  throws, so the queue's backoff tries again, and a refused token is final.
+- Each run is an `auto_reply.sent` event with its outcome and reason.
+
+Reason:
+
+- Recording before sending is what makes "once per thread" true under retries and
+  concurrent workers; undoing on failure is what keeps a failed send from counting.
+- "Offline" as "nothing has left the org for the period" needs no presence tracking
+  and reads the same rows the inbox sync already keeps.

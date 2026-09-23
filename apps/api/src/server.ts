@@ -1,6 +1,7 @@
 import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { ServerOptions } from './context.js';
+import { registerAutoReplyRoutes } from './routes/auto-reply.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerJobRoutes } from './routes/jobs.js';
@@ -41,6 +42,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerJobRoutes(app, options);
   registerProposalRoutes(app, options);
   registerSettingsRoutes(app, options);
+  registerAutoReplyRoutes(app, options);
   registerPriceBandRoutes(app, options);
   registerPlatformAccountRoutes(app, options);
   registerEventRoutes(app, options);

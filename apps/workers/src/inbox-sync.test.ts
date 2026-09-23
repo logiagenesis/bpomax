@@ -148,6 +148,7 @@ beforeAll(async () => {
   deps = {
     db,
     queue: queues['inbox-sync'],
+    autoReplyQueue: queues['auto-reply'],
     config,
     now: () => NOW,
     alert: (alert) => {
@@ -283,6 +284,16 @@ describe('a poll', () => {
     });
     expect(alerts).toHaveLength(1);
     expect(alerts[0]).toMatchObject({ orgId: ORG_A, threadId: threads.rows[0]!.id });
+    // The inbound message is handed to the auto-reply worker (ARB-121), the outbound one is not.
+    const queued = await queues['auto-reply'].getJobs([
+      'waiting',
+      'delayed',
+      'active',
+      'completed',
+    ]);
+    expect(queued.map((job) => (job.data as { messageId: string }).messageId)).toEqual([
+      alerts[0]!.messageId,
+    ]);
     const synced = await listEvents(db, { type: 'inbox.synced' });
     expect(synced[0]?.payload).toMatchObject({ new_inbound: 1, new_outbound: 1, new_threads: 1 });
     const external = await listEvents(db, { type: 'external.call' });
