@@ -10,6 +10,7 @@ import {
   reconcileMilestones,
   transitionBlockers,
   validateDeliveryOrderEdit,
+  validateRetainer,
   type DeliveryMilestone,
   type DeliveryStatus,
   type HandoverItem,
@@ -239,27 +240,114 @@ export function registerDeliveryRoutes(app: FastifyInstance, options: ServerOpti
     }
   });
 
-  /** Moves an item on the board by hand. */
+  /**
+   * Moves an item on the board by hand, and sets or clears its retainer (ARB-312: the
+   * pipeline's "retainer toggle"). Either or both may be sent; each is checked and logged.
+   */
   app.patch('/v1/pipeline-items/:id', async (request, reply) => {
     const authUserId = await options.authenticate(request);
     if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
     const { id } = request.params as { id: string };
     if (!UUID.test(id)) return reply.code(400).send({ error: 'id is not a uuid' });
-    const stage = (request.body as { stage?: unknown } | null)?.stage;
-    if (typeof stage !== 'string' || !(PIPELINE_STAGES as readonly string[]).includes(stage))
+    const body = (request.body ?? {}) as {
+      stage?: unknown;
+      retainer?: unknown;
+      retainerMonthlyMinor?: unknown;
+      currency?: unknown;
+    };
+    const stage = body.stage;
+    if (stage === undefined && body.retainer === undefined)
+      return reply
+        .code(422)
+        .send(invalid([{ field: 'stage', message: 'send a stage, a retainer, or both' }]));
+    if (
+      stage !== undefined &&
+      (typeof stage !== 'string' || !(PIPELINE_STAGES as readonly string[]).includes(stage))
+    )
       return reply
         .code(422)
         .send(
           invalid([{ field: 'stage', message: `must be one of ${PIPELINE_STAGES.join(', ')}` }]),
         );
+    const retainer = body.retainer === undefined ? null : validateRetainer(body);
+    if (retainer && !retainer.ok) return reply.code(422).send(invalid(retainer.errors));
+    const currency =
+      typeof body.currency === 'string' && /^[A-Za-z]{3}$/.test(body.currency.trim())
+        ? body.currency.trim().toUpperCase()
+        : null;
     try {
-      await withUser(options.db, authUserId, async (tx) => {
+      const item = await withUser(options.db, authUserId, async (tx) => {
         const me = await writer(tx);
-        const found = await tx.query('select 1 from pipeline_items where id = $1', [id]);
-        if (!found.rows[0]) throw refuse(404, 'no such pipeline item');
-        await moveStage(tx, me, id, stage, request.id, 'web');
+        const found = await tx.query<{
+          retainer: boolean;
+          retainer_monthly_minor: string | null;
+          currency: string | null;
+        }>(
+          `select retainer, retainer_monthly_minor::text as retainer_monthly_minor, currency::text as currency
+             from pipeline_items where id = $1`,
+          [id],
+        );
+        const before = found.rows[0];
+        if (!before) throw refuse(404, 'no such pipeline item');
+        if (retainer?.ok) {
+          const value = retainer.value;
+          const itemCurrency = before.currency?.trim() ?? currency;
+          if (value.retainer && !itemCurrency)
+            throw Object.assign(refuse(422, 'the request was not accepted'), {
+              errors: [
+                {
+                  field: 'currency',
+                  message: 'the job has no currency recorded; send the retainer’s currency with it',
+                },
+              ],
+            });
+          await tx.query(
+            `update pipeline_items set retainer = $2, retainer_monthly_minor = $3,
+                    currency = coalesce(currency, $4) where id = $1`,
+            [id, value.retainer, value.retainerMonthlyMinor, itemCurrency],
+          );
+          await recordEvent(tx, {
+            orgId: me.orgId,
+            type: 'pipeline.retainer_changed',
+            actorUserId: me.userId,
+            subjectTable: 'pipeline_items',
+            subjectId: id,
+            requestId: request.id,
+            payload: {
+              via: 'web',
+              from: {
+                retainer: before.retainer,
+                monthly_minor: before.retainer_monthly_minor,
+              },
+              to: {
+                retainer: value.retainer,
+                monthly_minor:
+                  value.retainerMonthlyMinor === null ? null : String(value.retainerMonthlyMinor),
+              },
+              currency: itemCurrency,
+            },
+          });
+        }
+        if (typeof stage === 'string') await moveStage(tx, me, id, stage, request.id, 'web');
+        const after = await tx.query<{
+          stage: string;
+          retainer: boolean;
+          retainer_monthly_minor: string | null;
+          currency: string | null;
+        }>(
+          `select stage::text as stage, retainer, retainer_monthly_minor::text as retainer_monthly_minor,
+                  currency::text as currency from pipeline_items where id = $1`,
+          [id],
+        );
+        return after.rows[0]!;
       });
-      return reply.send({ id, stage });
+      return reply.send({
+        id,
+        stage: item.stage,
+        retainer: item.retainer,
+        retainerMonthlyMinor: item.retainer_monthly_minor,
+        currency: item.currency?.trim() ?? null,
+      });
     } catch (error) {
       return send(reply, error);
     }

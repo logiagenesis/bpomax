@@ -6,6 +6,7 @@ import {
   reconcileMilestones,
   transitionBlockers,
   validateDeliveryOrderEdit,
+  validateRetainer,
   type DeliveryMilestone,
   type TransitionState,
 } from './delivery.js';
@@ -228,5 +229,29 @@ describe('moving an order', () => {
     expect(pipelineStageFor('in_progress')).toBe('in_delivery');
     expect(pipelineStageFor('delivered')).toBe('delivered');
     expect(pipelineStageFor('assigned')).toBeNull();
+  });
+});
+
+describe('a retainer', () => {
+  it('has a monthly amount above zero, and a job that is not one has none', () => {
+    // R4 500,00 a month.
+    expect(validateRetainer({ retainer: true, retainerMonthlyMinor: 450_000 })).toEqual({
+      ok: true,
+      value: { retainer: true, retainerMonthlyMinor: 450_000 },
+    });
+    expect(validateRetainer({ retainer: false, retainerMonthlyMinor: 450_000 })).toEqual({
+      ok: true,
+      value: { retainer: false, retainerMonthlyMinor: null },
+    });
+    for (const amount of [0, -1, 12.5, null, '450000']) {
+      expect(validateRetainer({ retainer: true, retainerMonthlyMinor: amount })).toMatchObject({
+        ok: false,
+        errors: [{ field: 'retainerMonthlyMinor' }],
+      });
+    }
+    expect(validateRetainer({ retainer: 'yes' })).toMatchObject({
+      ok: false,
+      errors: [{ field: 'retainer' }],
+    });
   });
 });

@@ -305,6 +305,24 @@ test('a payment recorded in the demo is worked into realised margin by the real 
   );
 });
 
+test('the dashboard’s retainer total follows the pipeline’s retainer toggle', async ({ page }) => {
+  await page.goto('/dashboard.html');
+  await expect(page.locator('#retainers')).toHaveText('R4 500,00');
+  await page.goto('/pipeline.html');
+  await page.getByLabel('Retainer for Shopify store rebuild (sample)', { exact: true }).check();
+  await page.getByLabel('Monthly amount for Shopify store rebuild (sample)').fill('1000.00');
+  await page
+    .getByRole('button', { name: 'Save the retainer for Shopify store rebuild (sample)' })
+    .click();
+  await expect(page.locator('#status')).toHaveText(
+    'Shopify store rebuild (sample) is a retainer of R1 000,00 a month.',
+  );
+  // R4 500,00 + R1 000,00 = R5 500,00 over two active retainers.
+  await page.goto('/dashboard.html');
+  await expect(page.locator('#retainers')).toHaveText('R5 500,00');
+  await expect(page.locator('#retainers-note')).toHaveText('2 active retainers, monthly total.');
+});
+
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({
   page,
 }) => {

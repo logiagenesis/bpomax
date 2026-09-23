@@ -242,8 +242,20 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
       },
       'PATCH /v1/pipeline-items/:id': (req, route) => {
         const item = board.find((i) => req.path.endsWith(i.id))!;
-        item.stage = (req.body as { stage: string }).stage;
-        return route.fulfill({ json: { id: item.id, stage: item.stage } });
+        const b = req.body as {
+          stage?: string;
+          retainer?: boolean;
+          retainerMonthlyMinor?: number | null;
+        };
+        if (b.stage) item.stage = b.stage;
+        if (b.retainer !== undefined) {
+          item.retainer = b.retainer;
+          item.retainerMonthlyMinor =
+            b.retainerMonthlyMinor === null || b.retainerMonthlyMinor === undefined
+              ? null
+              : (String(b.retainerMonthlyMinor) as never);
+        }
+        return route.fulfill({ json: { ...item } });
       },
       'GET /v1/delivery-orders/:id': (req, route) =>
         req.path.endsWith(ORDER)
@@ -675,6 +687,42 @@ test('a viewer sees the payments and the margin but has no form', async ({ page 
   await openPayments(page, { role: 'viewer' });
   await expect(page.locator('#margin-figures')).toContainText('R13 625,00');
   await expect(page.locator('#payment-form')).toBeHidden();
+});
+
+test('the retainer toggle takes a monthly amount, checked with the API’s rule, and the board shows it', async ({
+  page,
+}) => {
+  const requests = await open(page);
+  await page.getByLabel('Retainer for Landing page', { exact: true }).check();
+  await page.getByRole('button', { name: 'Save the retainer for Landing page' }).click();
+  await expect(page.locator(`#retainer-${APPLIED}-retainerMonthlyMinor-error`)).toHaveText(
+    'Must be the monthly amount, such as 4500.00.',
+  );
+  expect(requests.filter((r) => r.method === 'PATCH')).toHaveLength(0);
+  await page.getByLabel('Monthly amount for Landing page').fill('4500.00');
+  await page.getByRole('button', { name: 'Save the retainer for Landing page' }).click();
+  await expectStatus(page, 'Landing page is a retainer of R4 500,00 a month.');
+  expect(requests.filter((r) => r.method === 'PATCH').map((r) => r.body)).toEqual([
+    { retainer: true, retainerMonthlyMinor: 450000 },
+  ]);
+  await expect(page.locator(`#board article[data-id="${APPLIED}"]`)).toContainText(
+    'retainer R4 500,00 a month',
+  );
+  await page.getByLabel('Retainer for Landing page', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Save the retainer for Landing page' }).click();
+  await expectStatus(page, 'Landing page is no longer a retainer.');
+  expect(requests.filter((r) => r.method === 'PATCH').at(-1)?.body).toEqual({
+    retainer: false,
+    retainerMonthlyMinor: null,
+  });
+});
+
+test('a viewer cannot change a retainer, and is told why', async ({ page }) => {
+  await open(page, { role: 'viewer' });
+  await expect(page.getByLabel('Retainer for Landing page', { exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Save the retainer for Landing page' }),
+  ).toHaveAttribute('title', 'Your role can view the pipeline but not change it.');
 });
 
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {

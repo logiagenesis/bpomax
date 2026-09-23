@@ -33,6 +33,7 @@ export const EVENT_TYPES = [
   'proposal.rejected',
   'proposal.submitted',
   'pipeline.stage_changed',
+  'pipeline.retainer_changed',
   // conversation
   'message.received',
   'message.drafted',

@@ -7,6 +7,7 @@ import {
   sastDay,
   validateDeliveryOrderEdit,
   validatePaymentInput,
+  validateRetainer,
 } from '@arbitron/core';
 import { ApiError, apiGet, apiSend } from './lib/api.js';
 import { formatDate, formatDateTime, formatMoney } from './lib/format.js';
@@ -233,7 +234,9 @@ function itemCard(item) {
     item.valueMinor && item.currency
       ? formatMoney(BigInt(item.valueMinor), item.currency)
       : 'No value recorded',
-    item.retainer ? 'retainer' : null,
+    item.retainer && item.retainerMonthlyMinor && item.currency
+      ? `retainer ${formatMoney(BigInt(item.retainerMonthlyMinor), item.currency)} a month`
+      : null,
     `since ${formatDate(item.stageChangedAt)}`,
     item.deliveryStatus
       ? `delivery ${ORDER_WORDS[item.deliveryStatus]?.toLowerCase() ?? item.deliveryStatus}`
@@ -287,8 +290,141 @@ function itemCard(item) {
     open.addEventListener('click', () => void openOrder(open, orderId));
     controls.append(open);
   }
-  article.append(heading, facts, controls);
+  article.append(heading, facts, controls, retainerControls(item));
   return article;
+}
+
+/**
+ * The retainer toggle (ARB-312): a checkbox, the monthly amount, and the currency when the
+ * job has none recorded. Checked with `validateRetainer`, the API's rule.
+ * @param {PipelineItem} item
+ */
+function retainerControls(item) {
+  const form = document.createElement('form');
+  form.className = 'cluster';
+  form.noValidate = true;
+  const prefix = `retainer-${item.id}-`;
+  const check = document.createElement('label');
+  check.className = 'check';
+  const box = document.createElement('input');
+  box.type = 'checkbox';
+  box.id = `${prefix}retainer`;
+  box.checked = item.retainer;
+  check.append(box, ` Retainer for ${item.jobTitle}`);
+  const amountWrap = document.createElement('div');
+  amountWrap.className = 'field';
+  const amountLabel = document.createElement('label');
+  amountLabel.className = 'field__label';
+  amountLabel.htmlFor = `${prefix}retainerMonthlyMinor`;
+  amountLabel.textContent = `Monthly amount for ${item.jobTitle}`;
+  const amount = document.createElement('input');
+  amount.className = 'input';
+  amount.id = `${prefix}retainerMonthlyMinor`;
+  amount.inputMode = 'decimal';
+  amount.value =
+    item.retainerMonthlyMinor && item.currency
+      ? minorToCsvAmount(item.retainerMonthlyMinor, item.currency)
+      : '';
+  amount.setAttribute('aria-describedby', `${prefix}retainerMonthlyMinor-error`);
+  const amountError = document.createElement('p');
+  amountError.className = 'field__error';
+  amountError.id = `${prefix}retainerMonthlyMinor-error`;
+  amountError.hidden = true;
+  amountWrap.append(amountLabel, amount, amountError);
+  /** @type {HTMLInputElement | null} */
+  let currency = null;
+  const parts = [check, amountWrap];
+  if (!item.currency) {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const label = document.createElement('label');
+    label.className = 'field__label';
+    label.htmlFor = `${prefix}currency`;
+    label.textContent = `Currency for ${item.jobTitle}`;
+    currency = document.createElement('input');
+    currency.className = 'input';
+    currency.id = `${prefix}currency`;
+    currency.maxLength = 3;
+    currency.setAttribute('aria-describedby', `${prefix}currency-error`);
+    const error = document.createElement('p');
+    error.className = 'field__error';
+    error.id = `${prefix}currency-error`;
+    error.hidden = true;
+    wrap.append(label, currency, error);
+    parts.push(wrap);
+  }
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.className = 'btn btn--secondary';
+  save.textContent = 'Save retainer';
+  save.setAttribute('aria-label', `Save the retainer for ${item.jobTitle}`);
+  if (!mayWrite) {
+    box.disabled = true;
+    amount.disabled = true;
+    if (currency) currency.disabled = true;
+    gate(save, ROLE_REASON);
+  }
+  form.append(...parts, save);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearFieldErrors(form);
+    const code = (currency?.value ?? item.currency ?? '').trim().toUpperCase();
+    const minor = box.checked
+      ? parseAmountText(amount.value, /^[A-Z]{3}$/.test(code) ? code : 'ZAR')
+      : null;
+    /** @type {{ field: string, message: string }[]} */
+    const problems = [];
+    if (box.checked && minor === null)
+      problems.push({
+        field: 'retainerMonthlyMinor',
+        message: 'must be the monthly amount, such as 4500.00',
+      });
+    const payload = {
+      retainer: box.checked,
+      retainerMonthlyMinor: minor === null ? null : Number(minor),
+      ...(currency ? { currency: code } : {}),
+    };
+    if (problems.length === 0) {
+      const validated = validateRetainer(payload);
+      if (!validated.ok) problems.push(...validated.errors);
+      if (box.checked && currency && !/^[A-Z]{3}$/.test(code))
+        problems.push({ field: 'currency', message: 'must be a three-letter currency code' });
+    }
+    if (problems.length > 0) {
+      showFieldErrors(form, problems, prefix);
+      status.className = 'alert alert--error';
+      status.textContent = 'Some fields need attention. The first one has been selected.';
+      return;
+    }
+    const done = await runAction(
+      save,
+      status,
+      async () => {
+        try {
+          return await apiSend('PATCH', `/v1/pipeline-items/${item.id}`, payload);
+        } catch (error) {
+          if (backToLoginOn401(error)) return undefined;
+          if (error instanceof ApiError && error.errors.length > 0) {
+            showFieldErrors(form, error.errors, prefix);
+            throw new Error('Some fields need attention. The first one has been selected.');
+          }
+          throw error;
+        }
+      },
+      {
+        success: box.checked
+          ? `${item.jobTitle} is a retainer of ${formatMoney(BigInt(/** @type {string} */ (minor)), code)} a month.`
+          : `${item.jobTitle} is no longer a retainer.`,
+      },
+    );
+    if (done) {
+      const text = status.textContent;
+      await fetchBoard().catch(() => undefined);
+      status.className = 'alert alert--success';
+      status.textContent = text;
+    }
+  });
+  return form;
 }
 
 /** @param {PipelineItem[]} items */
