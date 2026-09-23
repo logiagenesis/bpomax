@@ -16,6 +16,7 @@ import {
 } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { BRIEF_BUILD_THRESHOLD, enqueueBriefBuild } from './brief-build.js';
 
 /**
  * The discovery worker (ARB-130, docs/01 section E): "client replied — drafts the next
@@ -38,6 +39,8 @@ export interface DiscoveryDeps {
   readonly transport: LlmTransport;
   readonly model: string;
   readonly now?: () => Date;
+  /** Where a thread goes once discovery is far enough along (ARB-131): the brief builder. */
+  readonly briefQueue?: Queue;
 }
 
 export type DiscoveryResult =
@@ -150,7 +153,7 @@ export async function runDiscovery(
   }
 
   const accepted = acceptedDiscoveryAnswers(result.value, session.answers);
-  return inTransaction(db, async () => {
+  const updated = await inTransaction(db, async () => {
     await recordLlmCall(db, {
       orgId: message.org_id,
       purpose: 'discovery',
@@ -199,7 +202,7 @@ export async function runDiscovery(
       });
     }
     return {
-      status: 'updated',
+      status: 'updated' as const,
       sessionId: session.id,
       completeness: Number(captured.session.completeness),
       captured: captured.captured,
@@ -207,6 +210,14 @@ export async function runDiscovery(
       draftedKeys: draft?.keys ?? [],
     };
   });
+  // After the commit: the brief builder reads the session, and drafts nothing twice.
+  if (deps.briefQueue && updated.completeness >= BRIEF_BUILD_THRESHOLD) {
+    await enqueueBriefBuild(deps.briefQueue, {
+      threadId: message.thread_id,
+      ...(requestId ? { requestId } : {}),
+    });
+  }
+  return updated;
 }
 
 export function createDiscoveryProcessor(deps: DiscoveryDeps) {

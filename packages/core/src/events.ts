@@ -42,6 +42,8 @@ export const EVENT_TYPES = [
   'message.sent',
   'auto_reply.sent',
   'discovery.updated',
+  'brief.drafted',
+  'brief.updated',
   'brief.locked',
   // sourcing and delivery
   'sourcing.requested',

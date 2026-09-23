@@ -1401,3 +1401,37 @@ Reason:
   inventing questions; the operator still edits the draft before it goes.
 - A confidence floor and "never overwrite" make a wrong reading cost at most a re-ask,
   never a lost answer.
+
+## D-050 — The brief: section F's schema validated in core, drafted by hand from the answers or by the model at 70 % completeness, locked only when complete, and never edited after; a change is a new version
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-131, session …tJv8)
+
+Decision:
+
+- `validateBrief` in `@arbitron/core` is section F's schema: title and outcome required,
+  every list a list of short text, money as minor units with a currency whenever an
+  amount is given, the deadline ISO `YYYY-MM-DD` on the wire, the category a slug the API
+  checks against `service_categories`, the delivery route one of the four. The same
+  function checks a person's edit and the model's draft.
+- A lock needs a category, a delivery route, at least one must-have and at least one
+  acceptance criterion: `briefLockBlockers` names them in words, and 0003's
+  `locked_brief_is_complete` refuses the lock in the database whatever asked. A locked
+  version is never changed; a change starts version n+1 from it, and every version is
+  kept and listed. A new version cannot start while the current one is unlocked.
+- Version 1 comes from the discovery answers. By hand (`POST /v1/threads/:id/brief`,
+  `briefFromDiscovery`): each answer lands in the field its question is about, as the
+  client's words; amounts and dates are not read from free text. By the model
+  (`brief-build` worker): when a client's reply takes completeness to 70 % or more and
+  the thread has no brief, the model structures the answers against `BRIEF_BUILD_SCHEMA`
+  (one retry), amounts in the currency's major units become minor units only with a
+  currency, and the result is validated as a person's is, falling back to the hand
+  draft field by field where it fails. The worker never writes over an existing brief.
+- 70 % is this product's threshold (seven of the ten questions): enough to structure,
+  early enough that the operator sees a draft while the client is still replying.
+
+Reason:
+
+- One validator for every path keeps a model's draft to the same rule as a person's.
+- Immutable locked versions are what "versions preserved" means; sourcing and pricing
+  read a locked brief and must never find it changed under them.

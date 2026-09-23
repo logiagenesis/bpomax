@@ -11,6 +11,7 @@ export * from './inbox-sync.js';
 export * from './auto-reply.js';
 export * from './send-message.js';
 export * from './discovery.js';
+export * from './brief-build.js';
 export * from './score.js';
 export * from './estimate.js';
 export * from './margin.js';
