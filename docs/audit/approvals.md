@@ -10,7 +10,7 @@ edge, of `apps/api/src/routes/proposals.ts` (tested against real Postgres in
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×10, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Approvals | — | — | — | — | Yes | shows each waiting bid… | ✅ |
+| Link, nav links ×11, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Approvals | — | — | — | — | Yes | shows each waiting bid… | ✅ |
 | Select | Show | Waiting / approved / sent / rejected / failed / everything | Sends `status=`; address bar updated | — | — | — | Never | Yes | the filter shows other states… | ✅ |
 | Button (submit) | Apply filter | Load the list | `GET /v1/proposals?status=`, `GET /v1/outbound-messages?status=` (`submitted` asked for as `sent`) and `GET /v1/sourcing-posts?status=` (waiting → `draft`, sent → `posted`, rejected → `closed`) | Spinner, aria-busy, disabled | "Loaded N bids." / "Loaded N bids and M replies." / "Loaded N bids, M replies and K sourcing posts." / "Nothing is waiting for approval." | API message | While busy | Yes | the filter shows other states…; a waiting reply is shown beside the bids…; Close asks first and closes the post; the Rejected filter shows closed posts | ✅ |
 | Button | Refresh | Ask again | Same request | as Apply | as Apply | as Apply | While busy | Yes | refresh asks again | ✅ |

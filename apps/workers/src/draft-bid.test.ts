@@ -101,7 +101,7 @@ async function insertEvaluation(
 async function insertTemplate(
   name: string,
   categorySlug: string | null,
-  variants: { label: string; body: string; sends?: number; replies?: number }[],
+  variants: { label: string; body: string }[],
 ): Promise<string[]> {
   const template = await db.query<{ id: string }>(
     `insert into templates (org_id, name, category_slug) values ($1, $2, $3) returning id`,
@@ -110,16 +110,9 @@ async function insertTemplate(
   const ids: string[] = [];
   for (const variant of variants) {
     const { rows } = await db.query<{ id: string }>(
-      `insert into template_variants (org_id, template_id, label, body, sends, replies)
-       values ($1, $2, $3, $4, $5, $6) returning id`,
-      [
-        ORG,
-        template.rows[0]!.id,
-        variant.label,
-        variant.body,
-        variant.sends ?? 0,
-        variant.replies ?? 0,
-      ],
+      `insert into template_variants (org_id, template_id, label, body)
+       values ($1, $2, $3, $4) returning id`,
+      [ORG, template.rows[0]!.id, variant.label, variant.body],
     );
     ids.push(rows[0]!.id);
   }
@@ -352,19 +345,26 @@ describe('templates', () => {
     expect(events.rows).toEqual([{ outcome: 'blocked' }]);
   });
 
-  it('prefers the category s template to a general one, and the variant with the best reply rate', async () => {
+  it('prefers the category s template to a general one, and splits its bids evenly across the variants', async () => {
     await deactivateTemplates();
-    await insertTemplate('General', null, [
-      { label: 'G', body: 'General.', sends: 100, replies: 90 },
+    await insertTemplate('General', null, [{ label: 'G', body: 'General.' }]);
+    const [a, b] = await insertTemplate('Web rebuild', 'web-design', [
+      { label: 'A', body: 'Version A.' },
+      { label: 'B', body: 'Version B.' },
     ]);
-    const [weak, strong] = await insertTemplate('Web rebuild', 'web-design', [
-      { label: 'Weak', body: 'Weak.', sends: 10, replies: 1 },
-      { label: 'Strong', body: 'Strong.', sends: 10, replies: 5 },
-    ]);
-    const { jobId, evaluationId } = await readyJob('pick');
+    const picked: (string | null | undefined)[] = [];
+    for (const key of ['pick-1', 'pick-2', 'pick-3']) {
+      const { jobId, evaluationId } = await readyJob(key);
+      await draftBid({ db, transport: new ScriptedTransport([reply()]), model: MODEL }, { jobId });
+      picked.push((await proposalFor(evaluationId))[0]?.template_variant_id);
+    }
+    // Both start at none written: A by label, then B (fewer), then A again.
+    expect(picked).toEqual([a, b, a]);
+    // A variant switched off is not written from, however few bids it has.
+    await db.query('update template_variants set active = false where id = $1', [b]);
+    const { jobId, evaluationId } = await readyJob('pick-4');
     await draftBid({ db, transport: new ScriptedTransport([reply()]), model: MODEL }, { jobId });
-    expect((await proposalFor(evaluationId))[0]?.template_variant_id).toBe(strong);
-    expect(weak).not.toBe(strong);
+    expect((await proposalFor(evaluationId))[0]?.template_variant_id).toBe(a);
   });
 
   it('falls back to a general template for a job with no category', async () => {

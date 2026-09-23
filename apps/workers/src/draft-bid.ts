@@ -118,9 +118,11 @@ async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<
 }
 
 /**
- * The template for the job's category, else a general one (no category), and its best
- * variant: the highest reply rate first, then the most sent, then by label. Only
- * active rows; a template the owner switched off is not written from.
+ * The template for the job's category, else a general one (no category), and of its
+ * variants the one fewest bids have been written from, then by label: an even A/B split
+ * (D-064). The owner reads each variant's reply rate on the templates page and switches
+ * off the one that loses; nothing here picks a winner on a handful of sends. Only active
+ * rows; a template or variant the owner switched off is not written from.
  */
 async function pickVariant(db: Queryable, orgId: string, categorySlug: string | null) {
   const { rows } = await db.query<VariantRow>(
@@ -130,8 +132,8 @@ async function pickVariant(db: Queryable, orgId: string, categorySlug: string | 
      where t.org_id = $1 and t.active and v.active
        and (t.category_slug = $2 or t.category_slug is null)
      order by (t.category_slug is not null) desc,
-              case when v.sends > 0 then v.replies::numeric / v.sends else 0 end desc,
-              v.sends desc, v.label
+              (select count(*) from proposals p where p.template_variant_id = v.id),
+              v.label
      limit 1`,
     [orgId, categorySlug],
   );

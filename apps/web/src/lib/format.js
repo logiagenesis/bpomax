@@ -155,3 +155,13 @@ export function formatNanoUsd(nano) {
   const fraction = text.slice(-6).replace(/0+$/, '').padEnd(2, '0');
   return `USD ${whole},${fraction}`;
 }
+
+/**
+ * A rate as the API worked it (`ratio` in core): "66,7 % (2 of 3)", or "No data (0 of 0)"
+ * when there is nothing under it, never 0 %.
+ * @param {{ numerator: number, denominator: number, percent: string | null }} r
+ */
+export function formatRatio(r) {
+  const of = `(${String(r.numerator)} of ${String(r.denominator)})`;
+  return r.percent === null ? `No data ${of}` : `${r.percent.replace('.', ',')} % ${of}`;
+}

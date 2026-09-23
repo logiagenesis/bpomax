@@ -4,6 +4,7 @@ import {
   formatDateTime,
   formatMoney,
   formatPercent,
+  formatRatio,
   formatTime,
   parseDateSast,
 } from './format.js';
@@ -61,6 +62,13 @@ describe('money from minor units', () => {
 
   it('refuses something that is not a currency code', () => {
     expect(() => formatMoney(100, 'rand')).toThrow(/currency code/);
+  });
+});
+
+describe('rates', () => {
+  it('writes a rate with its numerator and denominator, and no data rather than 0 %', () => {
+    expect(formatRatio({ numerator: 2, denominator: 3, percent: '66.7' })).toBe('66,7 % (2 of 3)');
+    expect(formatRatio({ numerator: 0, denominator: 0, percent: null })).toBe('No data (0 of 0)');
   });
 });
 

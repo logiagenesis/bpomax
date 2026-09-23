@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Templates — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./templates.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./suppliers.html">Suppliers</a></li>
+            <li><a href="./sourcing.html">Sourcing</a></li>
+            <li><a href="./pipeline.html">Pipeline</a></li>
+            <li><a href="./templates.html">Templates</a></li>
+            <li><a href="./analytics.html">Analytics</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Templates</h1>
+        <p>
+          The templates bids are drafted from, and each one's variants side by side. New bids are
+          written from a template's switched-on variants in turn, so each gets an even share. A
+          variant's reply rate is the bids sent from it that had a client message after them, of the
+          bids sent from it, counted from the stored bids and messages. Once a variant has been
+          sent, its words stay as they are, so its rate keeps measuring them: to try new words, add
+          a variant, and switch off the one that does worse.
+        </p>
+      </div>
+
+      <div class="card cluster">
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <form id="new-template" class="card stack" novalidate aria-labelledby="new-heading">
+        <h2 id="new-heading">New template</h2>
+        <div class="field">
+          <label class="field__label" for="new-name">Name</label>
+          <input class="input" id="new-name" name="name" aria-describedby="new-name-error" />
+          <p class="field__error" id="new-name-error" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="new-categorySlug">Category</label>
+          <select
+            class="select"
+            id="new-categorySlug"
+            name="categorySlug"
+            aria-describedby="new-categorySlug-hint new-categorySlug-error"
+          >
+            <option value="">General (any category)</option>
+          </select>
+          <p class="field__hint" id="new-categorySlug-hint">
+            A job is drafted from its category's template first, and from a general one if its
+            category has none.
+          </p>
+          <p class="field__error" id="new-categorySlug-error" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="new-description">Description (optional)</label>
+          <textarea
+            class="textarea"
+            id="new-description"
+            name="description"
+            rows="2"
+            aria-describedby="new-description-error"
+          ></textarea>
+          <p class="field__error" id="new-description-error" hidden></p>
+        </div>
+        <div class="row-actions">
+          <button type="submit" class="btn btn--primary" id="create">Create the template</button>
+        </div>
+      </form>
+
+      <div class="stack" id="templates"></div>
+      <div class="empty" id="empty" hidden>
+        <p>
+          No templates yet. A bid is drafted only from a template, so create one above and give it a
+          variant.
+        </p>
+      </div>
+      <p id="count" class="field__hint"></p>
+    </main>
+  </body>
+</html>

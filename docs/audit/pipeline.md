@@ -13,7 +13,7 @@ sourcing page (Choose, audited in `sourcing.md`).
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×10, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Pipeline | — | — | — | — | Yes | the board lists the jobs by stage with their value, and every link goes somewhere | ✅ |
+| Link, nav links ×11, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Pipeline | — | — | — | — | Yes | the board lists the jobs by stage with their value, and every link goes somewhere | ✅ |
 | Button | Refresh | Read the board again | `GET /v1/pipeline` | Spinner, aria-busy, disabled | "Loaded N jobs in the pipeline." / "No jobs in the pipeline yet." | The API's message | While busy | Yes | the board lists the jobs…; an empty board says how a job joins it | ✅ |
 | Select (per job) | Stage for <job> | Choose the stage to move the job to | Held until Move | — | — | — | For a viewer | Yes | Move asks the API and the board follows…; a viewer sees the board… | ✅ |
 | Button (per job) | Move (aria-label "Move <job> to the chosen stage") | Move the job; Lost asks first | Lost: confirmation (danger), cancel sends nothing; `PATCH /v1/pipeline-items/:id {stage}`; `pipeline.stage_changed` logged; the board re-read | Spinner, aria-busy, disabled | "Moved <job> to <stage>." / "<job> is already at <stage>." | The API's message | For a viewer (title says so) | Yes | Move asks the API and the board follows; Lost asks first, and cancelling sends nothing | ✅ |

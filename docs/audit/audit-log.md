@@ -11,7 +11,7 @@ signed-in organisation by row-level security.
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Link | Arbitron | Go to the dashboard | Goes to dashboard.html | — | — | — | Never | Yes | every link goes somewhere | ✅ |
-| Nav links ×10 | Dashboard, Feed, Approvals, Conversations, Suppliers, Sourcing, Pipeline, Analytics, Settings, Audit log | Go to that page; current page marked | Go there; `aria-current="page"` on Audit log | — | — | — | Never | Yes | every link goes somewhere | ✅ |
+| Nav links ×11 | Dashboard, Feed, Approvals, Conversations, Suppliers, Sourcing, Pipeline, Analytics, Settings, Audit log | Go to that page; current page marked | Go there; `aria-current="page"` on Audit log | — | — | — | Never | Yes | every link goes somewhere | ✅ |
 | Select | Type | Restrict to one event type | Sends `type=` to the API; address bar updated | — | — | — | Never | Yes | filters by type…; offers every event type… | ✅ |
 | Date input | From | Start of that South African day | Sends `from=` as 00:00 SAST in UTC | — | — | "Enter a date." | Never | Yes | filters by date as whole South African days | ✅ |
 | Date input | To | End of that day, inclusive | Sends `to=` as the next midnight SAST | — | — | "Enter a date." / "Must not be before the From date." | Never | Yes | filters by date…; refuses a bad filter… | ✅ |

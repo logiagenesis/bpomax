@@ -1,6 +1,6 @@
 // @ts-check
 import { apiGet } from './lib/api.js';
-import { formatMoney, formatNanoUsd } from './lib/format.js';
+import { formatMoney, formatNanoUsd, formatRatio } from './lib/format.js';
 import { clearFieldErrors, showFieldErrors } from './lib/forms.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
 import { runAction } from './lib/ui.js';
@@ -55,12 +55,6 @@ const GROUP_WORDS = /** @type {Record<string, string>} */ ({
   scanner: 'Scanner',
 });
 
-/** @param {Ratio} r */
-function rateText(r) {
-  const of = `(${String(r.numerator)} of ${String(r.denominator)})`;
-  return r.percent === null ? `No data ${of}` : `${r.percent.replace('.', ',')} % ${of}`;
-}
-
 /**
  * @param {Row} row
  * @param {'td' | 'th'} first
@@ -70,8 +64,8 @@ function tableRow(row, first) {
   const cells = [
     row.label,
     String(row.bids),
-    rateText(row.replyRate),
-    rateText(row.winRate),
+    formatRatio(row.replyRate),
+    formatRatio(row.winRate),
     formatMoney(BigInt(row.realisedMarginZarMinor), 'ZAR'),
     row.costPerReplyNanoUsd === null ? 'No replies' : formatNanoUsd(row.costPerReplyNanoUsd),
   ];
