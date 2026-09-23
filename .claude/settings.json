@@ -1,6 +1,38 @@
 {
   "permissions": {
-    "allow": ["Bash(git push origin main)", "Bash(git push -u origin *)"],
-    "deny": ["Bash(git push --force*)", "Bash(git push -f*)"]
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "Bash(*)",
+      "mcp__Vercel",
+      "mcp__Vercel__*",
+      "mcp__github",
+      "mcp__github__*",
+      "mcp__Supabase",
+      "mcp__Supabase__*",
+      "mcp__Firecrawl",
+      "mcp__Firecrawl__*"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf /*)",
+      "Read(./.env)",
+      "mcp__Vercel__pause_project",
+      "mcp__Vercel__buy_addon",
+      "mcp__Vercel__buy_credits",
+      "mcp__Vercel__buy_credits_endpoint",
+      "mcp__Vercel__buy_domain",
+      "mcp__Vercel__buy_domains",
+      "mcp__Vercel__buy_pro",
+      "mcp__Vercel__buy_single_domain",
+      "mcp__Supabase__delete_branch",
+      "mcp__Supabase__pause_project"
+    ]
   }
 }

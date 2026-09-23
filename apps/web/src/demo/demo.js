@@ -29,10 +29,21 @@ const AUTH_ORIGIN = new URL(env.VITE_SUPABASE_URL || 'https://demo.supabase.inva
 const STORE_KEY = 'arbitron.demo';
 const SESSION_KEY = 'arbitron.session';
 
+/** @typedef {Record<string, any>} Row */
+/**
+ * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
+ *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
+ *   events: Row[] }} Store
+ */
+
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
 const USER = 'd0d0d0d0-0000-4000-8000-000000000002';
 
-/** Days before now, as an ISO string. */
+/**
+ * Days before now, as an ISO string.
+ * @param {number} days
+ * @param {number} [hours]
+ */
 function ago(days, hours = 0) {
   return new Date(Date.now() - (days * 24 + hours) * 3_600_000).toISOString();
 }
@@ -42,6 +53,7 @@ function uuid() {
 }
 
 // --------------------------------------------------------------------- sample data
+/** @param {string} title @param {Row} partial @returns {Row} */
 function job(title, partial) {
   return {
     id: uuid(),
@@ -76,6 +88,7 @@ function job(title, partial) {
   };
 }
 
+/** @param {Row} j @param {Row} partial @returns {Row} */
 function proposalFor(j, partial) {
   return {
     id: uuid(),
@@ -109,6 +122,7 @@ function proposalFor(j, partial) {
   };
 }
 
+/** @param {string} type @param {Row} [partial] @returns {Row} */
 function event(type, partial = {}) {
   return {
     id: uuid(),
@@ -126,6 +140,7 @@ function event(type, partial = {}) {
   };
 }
 
+/** @returns {Store} */
 function initialStore() {
   const shop = job('Shopify store rebuild (sample)', {
     score: 82,
@@ -288,7 +303,7 @@ function initialStore() {
   };
 }
 
-/** @returns {ReturnType<typeof initialStore>} */
+/** @returns {Store} */
 function load() {
   try {
     const raw = sessionStorage.getItem(STORE_KEY);
@@ -301,7 +316,7 @@ function load() {
   return store;
 }
 
-/** @param {ReturnType<typeof initialStore>} store */
+/** @param {Store} store */
 function save(store) {
   try {
     sessionStorage.setItem(STORE_KEY, JSON.stringify(store));
@@ -311,6 +326,7 @@ function save(store) {
 }
 
 // ----------------------------------------------------------------- responses
+/** @param {number} status @param {unknown} body @param {Record<string, string>} [headers] */
 function json(status, body, headers = {}) {
   return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
@@ -318,6 +334,7 @@ function json(status, body, headers = {}) {
   });
 }
 
+/** @param {Store} store */
 function me(store) {
   return {
     user: {
@@ -331,6 +348,7 @@ function me(store) {
   };
 }
 
+/** @param {Row} settings */
 function blockersOf(settings) {
   return liveModeBlockers({
     minMarginPct: settings.minMarginPct,
@@ -341,24 +359,28 @@ function blockersOf(settings) {
   });
 }
 
+/** @param {Store} store @param {string} type @param {Row} [partial] */
 function logEvent(store, type, partial = {}) {
   store.events.unshift(
     event(type, { actor_kind: 'user', actor_user_id: USER, payload: { via: 'web' }, ...partial }),
   );
 }
 
+/** @param {string} date */
 function sast(date) {
   const d = new Date(new Date(date).getTime() + 2 * 3_600_000);
-  const pad = (n) => String(n).padStart(2, '0');
+  const pad = (/** @type {number} */ n) => String(n).padStart(2, '0');
   return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
+/** @param {unknown} value */
 function csvCell(value) {
   let text = value === null || value === undefined ? '' : String(value);
   if (/^[=+\-@]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
+/** @param {Store} store @param {URL} url @returns {Row[]} */
 function filteredEvents(store, url) {
   const type = url.searchParams.get('type');
   const actor = url.searchParams.get('actor');
@@ -389,8 +411,9 @@ function api(method, url, body) {
   const store = load();
   const path = url.pathname;
   const key = `${method} ${path}`;
-  const idIn = (prefix) => path.slice(prefix.length).split('/')[0];
+  const idIn = (/** @type {string} */ prefix) => path.slice(prefix.length).split('/')[0];
 
+  /** @param {number} status @param {unknown} payload @param {Record<string, string>} [headers] */
   const respond = (status, payload, headers) => {
     save(store);
     return json(status, payload, headers);
@@ -462,6 +485,7 @@ function api(method, url, body) {
       biddingPaused: store.biddingPaused,
     });
   }
+  /** @param {Row} row @param {string} action @param {string} [reason] */
   const decide = (row, action, reason) => {
     if (row.status !== 'queued') return `This bid is ${row.status}.`;
     row.status = action === 'approve' ? 'approved' : 'rejected';
@@ -483,7 +507,7 @@ function api(method, url, body) {
     return null;
   };
   if (key === 'POST /v1/proposals/bulk') {
-    const results = (body?.ids ?? []).map((id) => {
+    const results = /** @type {string[]} */ (body?.ids ?? []).map((id) => {
       const row = store.proposals.find((p) => p.id === id);
       if (!row) return { id, ok: false, error: 'no such bid' };
       const error = decide(row, body.action, body.reason);
@@ -543,7 +567,8 @@ function api(method, url, body) {
       }
       store.settings.feeTable = body.feeTable;
     }
-    const fixed = (v) => (v === null || v === undefined ? null : Number(v).toFixed(3));
+    const fixed = (/** @type {unknown} */ v) =>
+      v === null || v === undefined ? null : Number(v).toFixed(3);
     const value = /** @type {Record<string, unknown>} */ (validated.value);
     if ('minMarginPct' in value) store.settings.minMarginPct = fixed(value.minMarginPct);
     if ('minMarginZarMinor' in value)
@@ -642,7 +667,7 @@ function api(method, url, body) {
   if (method === 'DELETE' && path.startsWith('/v1/scanners/')) {
     const index = store.scanners.findIndex((s) => s.id === idIn('/v1/scanners/'));
     if (index < 0) return respond(404, { error: 'no such scanner' });
-    const [gone] = store.scanners.splice(index, 1);
+    const gone = /** @type {Row} */ (store.scanners.splice(index, 1)[0]);
     logEvent(store, 'scanner.deleted', { subject_table: 'scanners', subject_id: gone.id });
     return respond(204, null);
   }
@@ -702,6 +727,7 @@ function api(method, url, body) {
 }
 
 /** Supabase Auth, as far as the pages use it: the password grant, the user, sign-out. */
+/** @param {string} method @param {URL} url @param {any} body */
 function auth(method, url, body) {
   if (method === 'POST' && url.pathname === '/auth/v1/token') {
     if (!body?.email || !body?.password) {
