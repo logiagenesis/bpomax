@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => {
           dashboard: 'src/dashboard.html',
           feed: 'src/feed.html',
           approvals: 'src/approvals.html',
+          conversations: 'src/conversations.html',
           settings: 'src/settings.html',
           'style-guide': 'src/style-guide.html',
           'audit-log': 'src/audit-log.html',

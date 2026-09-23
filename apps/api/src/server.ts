@@ -15,6 +15,7 @@ import { registerProposalRoutes } from './routes/proposals.js';
 import { registerScannerRoutes } from './routes/scanners.js';
 import { registerSettingsRoutes } from './routes/settings.js';
 import { registerTelegramRoutes } from './routes/telegram.js';
+import { registerThreadRoutes } from './routes/threads.js';
 
 /**
  * The Arbitron API.
@@ -45,6 +46,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerJobRoutes(app, options);
   registerProposalRoutes(app, options);
   registerMessageRoutes(app, options);
+  registerThreadRoutes(app, options);
   registerDiscoveryRoutes(app, options);
   registerBriefRoutes(app, options);
   registerSettingsRoutes(app, options);

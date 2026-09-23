@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Conversations — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./conversations.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Conversations</h1>
+        <p>
+          Every client thread, with its messages, the discovery questions and the brief. A reply
+          drafted here waits in Approvals; nothing is sent from this page.
+        </p>
+      </div>
+
+      <form id="filters" class="card cluster" novalidate aria-labelledby="filters-heading">
+        <h2 id="filters-heading" class="visually-hidden">Filter</h2>
+        <div class="field">
+          <label class="field__label" for="thread-status-filter">Status</label>
+          <select class="select" id="thread-status-filter" name="status">
+            <option value="">All conversations</option>
+            <option value="open">Open</option>
+            <option value="awaiting_client">Awaiting the client</option>
+            <option value="awaiting_operator">Awaiting you</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn--primary" id="apply">Apply filter</button>
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+      </form>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <div class="table-wrap" id="results" hidden>
+        <table class="table">
+          <caption class="visually-hidden">
+            Conversations
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Client</th>
+              <th scope="col">About</th>
+              <th scope="col">Status</th>
+              <th scope="col">Last message</th>
+              <th scope="col">Discovery</th>
+              <th scope="col">Brief</th>
+              <th scope="col">Waiting</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" hidden>
+        <p>No conversations match this filter.</p>
+      </div>
+
+      <section id="thread" class="stack" hidden aria-labelledby="thread-title">
+        <div>
+          <h2 id="thread-title"></h2>
+          <p class="field__hint" id="thread-meta"></p>
+        </div>
+        <div role="status" aria-live="polite" id="thread-status"></div>
+
+        <section class="card stack" aria-labelledby="messages-heading">
+          <h3 id="messages-heading">Messages</h3>
+          <ol class="stack" id="messages"></ol>
+          <p class="empty" id="messages-empty" hidden>No messages on this thread yet.</p>
+          <form id="reply-form" class="stack" novalidate>
+            <div class="field">
+              <label class="field__label" for="reply-body">Reply</label>
+              <textarea
+                class="textarea"
+                id="reply-body"
+                name="body"
+                rows="4"
+                maxlength="4000"
+                aria-describedby="reply-body-hint reply-body-error"
+              ></textarea>
+              <p class="field__hint" id="reply-body-hint">
+                Up to 4 000 characters. The reply waits for approval before anything is sent.
+              </p>
+              <p class="field__error" id="reply-body-error" hidden></p>
+            </div>
+            <div class="row-actions">
+              <button type="submit" class="btn btn--primary" id="reply-queue">Queue reply</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card stack" aria-labelledby="discovery-heading">
+          <div class="cluster">
+            <h3 id="discovery-heading">Discovery</h3>
+            <span class="badge badge--neutral" id="discovery-completeness"></span>
+          </div>
+          <p id="discovery-summary"></p>
+          <progress
+            id="discovery-progress"
+            max="100"
+            value="0"
+            aria-labelledby="discovery-heading"
+          ></progress>
+          <div class="row-actions">
+            <button type="button" class="btn btn--primary" id="discovery-start">
+              Start discovery
+            </button>
+            <button type="button" class="btn btn--secondary" id="discovery-next">
+              Ask the next questions
+            </button>
+          </div>
+          <form id="discovery-form" class="stack" novalidate hidden>
+            <div class="stack" id="discovery-questions"></div>
+            <div class="row-actions">
+              <button type="submit" class="btn btn--primary" id="discovery-save">
+                Save answers
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card stack" aria-labelledby="brief-heading">
+          <div class="cluster">
+            <h3 id="brief-heading">Brief</h3>
+            <span class="badge badge--neutral" id="brief-state"></span>
+          </div>
+          <p id="brief-summary"></p>
+          <div class="row-actions">
+            <button type="button" class="btn btn--primary" id="brief-draft">Draft brief</button>
+            <button type="button" class="btn btn--secondary" id="brief-lock">Lock brief</button>
+            <button type="button" class="btn btn--secondary" id="brief-new-version">
+              Start a new version
+            </button>
+          </div>
+          <ul class="cluster" id="brief-versions" aria-label="Brief versions"></ul>
+          <form id="brief-form" class="stack" novalidate hidden>
+            <div class="grid">
+              <div class="field">
+                <label class="field__label" for="brief-title">Title</label>
+                <input
+                  class="input"
+                  id="brief-title"
+                  name="title"
+                  maxlength="200"
+                  aria-describedby="brief-title-error"
+                />
+                <p class="field__error" id="brief-title-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-category">Category</label>
+                <select
+                  class="select"
+                  id="brief-category"
+                  name="category"
+                  aria-describedby="brief-category-error"
+                >
+                  <option value="">Not set</option>
+                </select>
+                <p class="field__error" id="brief-category-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-deliveryRoute">Delivery route</label>
+                <select
+                  class="select"
+                  id="brief-deliveryRoute"
+                  name="deliveryRoute"
+                  aria-describedby="brief-deliveryRoute-error"
+                >
+                  <option value="">Not set</option>
+                  <option value="in_house">In-house</option>
+                  <option value="ai_build">AI build</option>
+                  <option value="supplier">Existing supplier</option>
+                  <option value="source_new">Source a new supplier</option>
+                </select>
+                <p class="field__error" id="brief-deliveryRoute-error" hidden></p>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="brief-outcome">Outcome, in one sentence</label>
+              <textarea
+                class="textarea"
+                id="brief-outcome"
+                name="outcome"
+                rows="2"
+                maxlength="1000"
+                aria-describedby="brief-outcome-error"
+              ></textarea>
+              <p class="field__error" id="brief-outcome-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="brief-users">Who uses it</label>
+              <textarea
+                class="textarea"
+                id="brief-users"
+                name="users"
+                rows="2"
+                maxlength="1000"
+                aria-describedby="brief-users-error"
+              ></textarea>
+              <p class="field__error" id="brief-users-error" hidden></p>
+            </div>
+            <div class="grid">
+              <div class="field">
+                <label class="field__label" for="brief-mustHaves">Must-haves, one per line</label>
+                <textarea
+                  class="textarea"
+                  id="brief-mustHaves"
+                  name="mustHaves"
+                  rows="4"
+                  aria-describedby="brief-mustHaves-error"
+                ></textarea>
+                <p class="field__error" id="brief-mustHaves-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-later">Can wait, one per line</label>
+                <textarea
+                  class="textarea"
+                  id="brief-later"
+                  name="later"
+                  rows="4"
+                  aria-describedby="brief-later-error"
+                ></textarea>
+                <p class="field__error" id="brief-later-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-acceptanceCriteria"
+                  >Acceptance criteria, one per line</label
+                >
+                <textarea
+                  class="textarea"
+                  id="brief-acceptanceCriteria"
+                  name="acceptanceCriteria"
+                  rows="4"
+                  aria-describedby="brief-acceptanceCriteria-error"
+                ></textarea>
+                <p class="field__error" id="brief-acceptanceCriteria-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-references">References, one per line</label>
+                <textarea
+                  class="textarea"
+                  id="brief-references"
+                  name="references"
+                  rows="4"
+                  aria-describedby="brief-references-error"
+                ></textarea>
+                <p class="field__error" id="brief-references-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-assetsProvided"
+                  >Assets provided, one per line</label
+                >
+                <textarea
+                  class="textarea"
+                  id="brief-assetsProvided"
+                  name="assetsProvided"
+                  rows="4"
+                  aria-describedby="brief-assetsProvided-error"
+                ></textarea>
+                <p class="field__error" id="brief-assetsProvided-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-assetsMissing"
+                  >Assets missing, one per line</label
+                >
+                <textarea
+                  class="textarea"
+                  id="brief-assetsMissing"
+                  name="assetsMissing"
+                  rows="4"
+                  aria-describedby="brief-assetsMissing-error"
+                ></textarea>
+                <p class="field__error" id="brief-assetsMissing-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-techConstraints"
+                  >Technology constraints, one per line</label
+                >
+                <textarea
+                  class="textarea"
+                  id="brief-techConstraints"
+                  name="techConstraints"
+                  rows="4"
+                  aria-describedby="brief-techConstraints-error"
+                ></textarea>
+                <p class="field__error" id="brief-techConstraints-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-risks">Risks, one per line</label>
+                <textarea
+                  class="textarea"
+                  id="brief-risks"
+                  name="risks"
+                  rows="4"
+                  aria-describedby="brief-risks-error"
+                ></textarea>
+                <p class="field__error" id="brief-risks-error" hidden></p>
+              </div>
+            </div>
+            <div class="grid">
+              <div class="field">
+                <label class="field__label" for="brief-deadline">Deadline (DD/MM/YYYY)</label>
+                <input
+                  class="input"
+                  id="brief-deadline"
+                  name="deadline"
+                  inputmode="numeric"
+                  placeholder="31/12/2026"
+                  aria-describedby="brief-deadline-error"
+                />
+                <p class="field__error" id="brief-deadline-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-deadlineFixed">Is the deadline fixed?</label>
+                <select
+                  class="select"
+                  id="brief-deadlineFixed"
+                  name="deadlineFixed"
+                  aria-describedby="brief-deadlineFixed-error"
+                >
+                  <option value="">Not stated</option>
+                  <option value="true">Fixed</option>
+                  <option value="false">Flexible</option>
+                </select>
+                <p class="field__error" id="brief-deadlineFixed-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-budget-currency">Budget currency</label>
+                <input
+                  class="input"
+                  id="brief-budget-currency"
+                  name="budgetCurrency"
+                  maxlength="3"
+                  placeholder="ZAR"
+                  aria-describedby="brief-budget-currency-error"
+                />
+                <p class="field__error" id="brief-budget-currency-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-budget-minMinor">Budget from</label>
+                <input
+                  class="input"
+                  id="brief-budget-minMinor"
+                  name="budgetMin"
+                  inputmode="decimal"
+                  placeholder="1 500,00"
+                  aria-describedby="brief-budget-minMinor-error"
+                />
+                <p class="field__error" id="brief-budget-minMinor-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-budget-maxMinor">Budget to</label>
+                <input
+                  class="input"
+                  id="brief-budget-maxMinor"
+                  name="budgetMax"
+                  inputmode="decimal"
+                  placeholder="2 000,00"
+                  aria-describedby="brief-budget-maxMinor-error"
+                />
+                <p class="field__error" id="brief-budget-maxMinor-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-budget-type">Budget type</label>
+                <select
+                  class="select"
+                  id="brief-budget-type"
+                  name="budgetType"
+                  aria-describedby="brief-budget-type-error"
+                >
+                  <option value="">Not stated</option>
+                  <option value="fixed">Fixed price</option>
+                  <option value="hourly">Hourly</option>
+                </select>
+                <p class="field__error" id="brief-budget-type-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-signOff-name">Who signs off</label>
+                <input
+                  class="input"
+                  id="brief-signOff-name"
+                  name="signOffName"
+                  maxlength="500"
+                  aria-describedby="brief-signOff-name-error"
+                />
+                <p class="field__error" id="brief-signOff-name-error" hidden></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="brief-signOff-responseTime"
+                  >How fast they respond</label
+                >
+                <input
+                  class="input"
+                  id="brief-signOff-responseTime"
+                  name="signOffResponseTime"
+                  maxlength="500"
+                  aria-describedby="brief-signOff-responseTime-error"
+                />
+                <p class="field__error" id="brief-signOff-responseTime-error" hidden></p>
+              </div>
+            </div>
+            <p class="field__error" id="brief-lock-error" hidden></p>
+            <div class="row-actions">
+              <button type="submit" class="btn btn--primary" id="brief-save">Save brief</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

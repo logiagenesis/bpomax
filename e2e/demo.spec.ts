@@ -10,6 +10,7 @@ const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/dashboard.html', 'Figures are up to date.', true],
   ['/feed.html', /^Loaded \d+ jobs\.$/, true],
   ['/approvals.html', /^Loaded \d+ bids?( and \d+ repl(y|ies))?\.$/, true],
+  ['/conversations.html', /^Loaded \d+ conversations?\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
   ['/audit-log.html', /^Loaded \d+ events?\.$/, false],
@@ -70,6 +71,29 @@ test('an approval is kept for the tab and appears in the audit log; reset brings
   await expect(page.locator('#status')).toHaveText('Loaded 1 bid.');
   await page.getByRole('button', { name: 'Reset the sample data' }).click();
   await expect(page.locator('#status')).toHaveText('Loaded 2 bids and 1 reply.');
+});
+
+test('a reply queued from a sample conversation waits in Approvals and is in the audit log', async ({
+  page,
+}) => {
+  await page.goto('/conversations.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 2 conversations.');
+  await page.getByRole('button', { name: 'Open the conversation with acme-shop (sample)' }).click();
+  await expect(page.locator('#thread-status')).toHaveText(
+    'Opened the conversation with acme-shop (sample).',
+  );
+  await expect(page.locator('#messages li')).toHaveCount(3);
+  await expect(page.locator('#discovery-completeness')).toHaveText('30 %');
+  await page.getByLabel('Reply').fill('Monday at 09:00 works for us. (sample)');
+  await page.getByRole('button', { name: 'Queue reply' }).click();
+  await expect(page.locator('#thread-status')).toHaveText(
+    'Your reply to acme-shop (sample) is waiting for approval in Approvals.',
+  );
+  await expect(page.locator('#messages li')).toHaveCount(4);
+  await page.goto('/approvals.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 2 bids and 2 replies.');
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('message.drafted');
 });
 
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({

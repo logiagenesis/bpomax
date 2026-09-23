@@ -1435,3 +1435,37 @@ Reason:
 - One validator for every path keeps a model's draft to the same rule as a person's.
 - Immutable locked versions are what "versions preserved" means; sourcing and pricing
   read a locked brief and must never find it changed under them.
+
+## D-051 — The conversations page reads threads and messages through two new read-only routes and changes nothing except through the route that owns the change
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-140, session …tJv8)
+
+Decision:
+
+- `GET /v1/threads` and `GET /v1/threads/:id` (routes/threads.ts) are read-only. The
+  list carries where each thread stands: the last message, the count waiting for
+  approval, the discovery completeness and the brief's version and lock, each read from
+  the row that owns it. The detail is the messages in the order they happened, each
+  with a state: `received` for a client's message, `observed` for an outbound message the
+  inbox sync saw on the platform, and the approvals page's five states for an app draft.
+- The page writes only through the routes that already exist: a reply through ARB-122's
+  draft route, discovery through ARB-130's routes, the brief through ARB-131's. So every
+  approval rule, event and refusal is the one already tested there, and nothing is sent
+  from this page.
+- The seeded categories are read from `GET /v1/service-categories`, so the brief's
+  category field offers only what `service_categories` holds.
+- On the page, dates are typed DD/MM/YYYY and sent as ISO; amounts are typed in the
+  currency's units and sent as whole minor units, parsed as text (no float). The same
+  core validators run on the page before a request and in the API on receipt.
+- Locking a brief asks for confirmation. docs/05 section 1.3 does not list it, but a lock
+  cannot be undone (a change is a new version), so it is treated like the actions that
+  are listed.
+
+Why: docs/01 section I names the page ("conversations (threads, discovery progress,
+brief builder)"); section H says every outbound action needs approval. Reading through
+new routes and writing through the owning ones keeps one set of rules per action.
+
+Consequences: a later page (sourcing, pipeline) that needs a thread's state reads the
+same list route. If a thread needs a status change by hand (close it, reopen it), that is
+a new write route with its own event, not a field on this page.

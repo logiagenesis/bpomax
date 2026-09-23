@@ -1,0 +1,43 @@
+# Control audit — conversations.html (ARB-140)
+
+Per docs/05 section 1. Every control on the page, and the Playwright test (in
+`e2e/conversations.spec.ts`) that exercises it. The API is an in-memory copy, at the
+network edge, of `apps/api/src/routes/threads.ts` (ARB-140, tested against real Postgres
+in `routes/threads.test.ts`): `GET /v1/threads`, `GET /v1/threads/:id`,
+`GET /v1/service-categories`; of `routes/messages.ts` (ARB-122): `POST
+/v1/threads/:id/messages`; of `routes/discovery.ts` (ARB-130): `GET`/`POST
+/v1/threads/:id/discovery`, `PATCH …/discovery/answers`, `POST …/discovery/next`; and of
+`routes/briefs.ts` (ARB-131): `GET`/`POST /v1/threads/:id/brief`, `GET`/`PUT
+/v1/briefs/:id`, `POST …/lock`, `POST …/versions`.
+
+| Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Link, nav links ×6, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Conversations | — | — | — | — | Yes | lists every conversation with where it stands, and every link goes somewhere | ✅ |
+| Select | Status | Restrict to open / awaiting the client / awaiting you / closed | Sends `status=` to the API; address bar updated | — | — | — | Never | Yes | the status filter sends exactly that status… | ✅ |
+| Button (submit) | Apply filter | Load the list with the filter | `GET /v1/threads?status=&limit=50&offset=0` | Spinner, aria-busy, disabled | "Loaded N conversations." / "No conversations match this filter." | "Not signed in…" / "Could not reach the API…" / the API's message | While busy | Yes | the status filter sends exactly that status… | ✅ |
+| Button | Refresh | Ask again with the same filter | Same request | as Apply | as Apply | as Apply | While busy | Yes | the status filter sends exactly that status…; refresh asks again | ✅ |
+| Button (per row) | Open (aria-label "Open the conversation with <client>") | Show the thread: messages, discovery, brief | `GET /v1/threads/:id`, `…/discovery`, `…/brief`; row marked `aria-current`; `?thread=` in the address bar | Spinner, aria-busy, disabled | "Opened the conversation with <client>." | The API's message as it is ("…no such thread.") | While busy | Yes | Open shows the messages in order…; a linked view opens its conversation; a conversation the API cannot find says so | ✅ |
+| Textarea | Reply | The reply's text, up to 4 000 characters | Validated on the page with `validateMessageDraft`, the API's own rule | — | — | "Must not be empty." on the field | Read-only for a viewer | Yes | Queue reply drafts the reply… | ✅ |
+| Button (submit) | Queue reply | Draft the reply for approval; send nothing | `POST /v1/threads/:id/messages`; the draft appears in Approvals (ARB-122) and in the thread as "Waiting for approval"; field cleared | Spinner, aria-busy, disabled | "Your reply to <client> is waiting for approval in Approvals." | Field errors from a 422 land on the field; any other refusal as it is | For a viewer (title says so); while busy | Yes | Queue reply drafts the reply for approval and never sends it…; a viewer can read everything… | ✅ |
+| Button | Start discovery | Start the session and draft the first three questions for approval | `POST /v1/threads/:id/discovery` | Spinner, aria-busy, disabled | "Discovery started. The first 3 questions are drafted as a reply and wait for approval in Approvals." | The API's message as it is | Once a session exists (title says so); for a viewer; while busy | Yes | Start discovery drafts the first three questions…; Open shows…; a viewer… | ✅ |
+| Textarea (per question ×10) | The question's text | The answer, up to 2 000 characters, with when and how it was captured beneath | Validated on the page with `validateDiscoveryAnswers`, the API's own rule | — | — | The API's field error on the field | Read-only for a viewer | Yes | Open shows the messages in order…; Save answers sends only the answers that changed… | ✅ |
+| Button (submit) | Save answers | Capture by hand the answers that changed | `PATCH /v1/threads/:id/discovery/answers` with only the changed keys; completeness re-read | Spinner, aria-busy, disabled | "Saved N answers. Completeness is X %." / "Nothing changed: type or change an answer, then save." | Field errors on the fields; any other refusal as it is | Until a session exists; for a viewer; while busy | Yes | Save answers sends only the answers that changed, and the completeness follows | ✅ |
+| Button | Ask the next questions | Draft the next batch (at most three) for approval | `POST /v1/threads/:id/discovery/next` | Spinner, aria-busy, disabled | "The next 3 questions are drafted as a reply and wait for approval in Approvals." | The API's refusal as it is ("Every question has been answered; there is nothing left to ask.") | Until a session exists; when nothing is left to ask (title says so); for a viewer; while busy | Yes | Ask the next questions drafts a batch of three…; a refused batch shows the API's words… | ✅ |
+| Button | Draft brief | Version 1 from the discovery answers | `POST /v1/threads/:id/brief`; the form fills; what a lock still needs is said in words | Spinner, aria-busy, disabled | "Drafted version 1 of the brief from the discovery answers. To lock it, it still needs …" | The API's message as it is | Once a brief exists (title says so); for a viewer; while busy | Yes | Draft brief fills version 1 from the answers on a thread without a brief | ✅ |
+| Inputs, textareas, selects ×21 | Title … How fast they respond | Section F's fields; lists one per line; deadline DD/MM/YYYY; money in the currency's units; category from the seeded list | Read into the API's shape: ISO date, whole minor units (`parseRandToMinor`, no float), lists trimmed; validated on the page with `validateBrief`, the API's own rule | — | — | The page's own date and amount errors, and the API's 422 errors, on the fields | Read-only when the version is locked, when an older version is shown, or for a viewer | Yes | Save brief sends the deadline as ISO and the budget as whole cents…; the API's field errors on a save land on the fields; a locked brief is read-only… | ✅ |
+| Button (submit) | Save brief | Change the current, unlocked version | `PUT /v1/briefs/:id` | Spinner, aria-busy, disabled | "Saved version N of the brief. It has everything a lock needs." / "… To lock it, it still needs …" | Field errors on the fields; a 409 for a locked version as it is | When locked, when an older version is shown, for a viewer (each title says which); while busy | Yes | Save brief sends…; the API's field errors…; a locked brief is read-only… | ✅ |
+| Button | Lock brief | Lock the current version, after a confirmation | Dialog "Lock version N of the brief?" → `POST /v1/briefs/:id/lock` | Spinner, aria-busy, disabled | "Locked version N of the brief on <date>." | "The brief cannot lock without …" with the missing items under the form | When locked, when an older version is shown, for a viewer; while busy | Yes (Cancel has focus) | Lock brief asks first, is refused with the missing items named, and locks a complete brief | ✅ |
+| Button | Start a new version | Copy the locked version into version N+1, unlocked | `POST /v1/briefs/:id/versions` | Spinner, aria-busy, disabled | "Started version N+1 of the brief from version N." | The API's 409 as it is | While the current version is open (title says so); until a brief exists; for a viewer; while busy | Yes | a locked brief is read-only; a new version starts from it and every version stays listed | ✅ |
+| Button (per version) | Show version N of the brief | Show that version, read-only unless it is the current open one | `GET /v1/briefs/:id`; form filled; summary names the current version | Spinner, aria-busy, disabled | "Showing version N of the brief, locked." | The API's message as it is | For the version on screen (title says so) | Yes | an older version can be shown read-only beside the current one | ✅ |
+
+Figures (docs/05 section 3): completeness is the API's stored percentage, shown as
+`30 %` and as a progress bar; the budget is shown with `formatMoney` from the stored minor
+units; every date is DD/MM/YYYY in SAST. The page derives nothing.
+
+Confirmation (docs/05 section 1.3): locking a brief is not in the list of actions that
+need one, but it cannot be undone (a change is a new version), so it asks first. Nothing
+on this page sends anything: a reply, a batch of questions and every draft wait in
+Approvals, where the live gate and the approval record are (ARB-122, D-032).
+
+Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px;
+`?thread=` and `?status=` restore the view.
