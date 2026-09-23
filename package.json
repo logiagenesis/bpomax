@@ -19,6 +19,7 @@
     "db:reset": "sh scripts/db-reset.sh",
     "db:types": "UPDATE_TYPES=1 vitest run packages/db/src/typegen.test.ts",
     "build:web:e2e": "pnpm --filter @arbitron/web build:e2e",
+    "build:web:demo": "pnpm --filter @arbitron/web build:demo",
     "compose:up": "docker compose up -d --wait --wait-timeout 240",
     "compose:down": "docker compose down",
     "db:types:supabase": "pnpm --filter @arbitron/db db:types:supabase",

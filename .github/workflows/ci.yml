@@ -83,6 +83,21 @@ jobs:
       - name: Run Playwright tests
         run: pnpm exec playwright test --config e2e/playwright.config.ts
 
+      # D-043: demo mode must never reach a real build. The e2e build above is a real
+      # build with stand-in hosts, so the demo stand-in must be absent from it.
+      - name: Check that a non-demo build carries no demo code
+        run: |
+          if grep -rl "demo-access-token" apps/web/dist; then
+            echo "demo code found in a non-demo build" >&2
+            exit 1
+          fi
+
+      - name: Build the demo web app (what Vercel serves without credentials, D-043)
+        run: pnpm build:web:demo
+
+      - name: Run the demo Playwright tests
+        run: pnpm exec playwright test --config e2e/playwright.demo.config.ts
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

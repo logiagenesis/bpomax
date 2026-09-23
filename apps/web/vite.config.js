@@ -12,8 +12,28 @@ export default defineConfig(({ mode }) => {
   // .env is exposed. The e2e build (`--mode e2e`) reads the stand-ins in /.env.e2e.
   const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
   const env = { ...loadEnv(mode, repoRoot, ''), ...process.env };
+  // Demo mode (D-043): only `--mode demo` puts the in-browser stand-in (src/demo/demo.js)
+  // ahead of each page's own script. Every other build leaves it out entirely, so a real
+  // deployment cannot fall back to sample data.
+  const demo = mode === 'demo';
   return {
     root: 'src',
+    plugins: demo
+      ? [
+          {
+            name: 'arbitron-demo',
+            // 'pre', so Vite then bundles the injected script like the page's own.
+            transformIndexHtml: {
+              order: 'pre',
+              handler: (html) =>
+                html.replace(
+                  '<head>',
+                  '<head>\n    <script type="module" src="./demo/demo.js"></script>',
+                ),
+            },
+          },
+        ]
+      : [],
     envPrefix: 'ARBITRON_NONE_',
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.SUPABASE_URL ?? ''),

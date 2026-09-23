@@ -1093,3 +1093,37 @@ Decision:
   so the hourly routine sees it (D-034 still applies).
 - The web app deploys to Vercel from `main` (ARB-070). Where a credential is missing it
   runs in demo mode, so every page can be viewed.
+
+## D-043 — Without its credentials the web app deploys in demo mode, answered inside the browser, and says so on every page
+
+Date: 23/09/2026
+Decided by: the owner's instruction of 23/09/2026 ("where real credentials are missing,
+run the app in its fake/demo mode so every page is viewable"), applied by Claude Code
+(ARB-070, session …tJv8)
+
+Decision:
+
+- `vite build --mode demo` (`pnpm build:web:demo`) injects `src/demo/demo.js` ahead of
+  every page's own script. It replaces `fetch` for two hosts only, the stand-in Supabase
+  and API hosts in `/.env.demo`. It answers them inside the browser:
+  - Supabase Auth: any email and password sign in, as the sample person "Demo Owner".
+  - The API: every route the pages call, in the shapes the real routes return, from
+    sample data kept in the tab's sessionStorage. The form rules are `@arbitron/core`'s,
+    the same ones the API runs, so live mode stays off until every rule is set, exactly
+    as in the real app.
+- Every sample row is marked "(sample)". A banner on every page says: "Demo mode: sample
+  data only. Nothing is saved to a server or sent to a marketplace, and no figure is a
+  real price, fee or client." It has a control to reset the sample data. Price bands stay
+  empty, as they are in the real app (D-14).
+- Only the demo build contains this code. CI checks that the e2e build, a real build with
+  stand-in hosts, carries none of it. D-036 holds: a real deployment cannot fall back to
+  sample data.
+- On Vercel, `scripts/build-web-vercel.sh` builds the real app when SUPABASE_URL,
+  SUPABASE_ANON_KEY and API_URL are set in the project's environment, and demo mode
+  otherwise. Adding the three variables and redeploying is the whole switch.
+
+Reason:
+
+- The owner wants every page viewable now, and the sign-in and API hosts do not exist yet
+  (B-06, B-12). A demo that runs in the browser needs no server that could be mistaken
+  for the product.
