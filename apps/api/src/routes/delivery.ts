@@ -19,6 +19,7 @@ import {
 import { briefInputOf, loadBrief, recordEvent, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
+  channelOf,
   currentMembership,
   invalid,
   UUID,
@@ -314,7 +315,7 @@ export function registerDeliveryRoutes(app: FastifyInstance, options: ServerOpti
             subjectId: id,
             requestId: request.id,
             payload: {
-              via: 'web',
+              via: channelOf(request),
               from: {
                 retainer: before.retainer,
                 monthly_minor: before.retainer_monthly_minor,
@@ -328,7 +329,8 @@ export function registerDeliveryRoutes(app: FastifyInstance, options: ServerOpti
             },
           });
         }
-        if (typeof stage === 'string') await moveStage(tx, me, id, stage, request.id, 'web');
+        if (typeof stage === 'string')
+          await moveStage(tx, me, id, stage, request.id, channelOf(request));
         const after = await tx.query<{
           stage: string;
           retainer: boolean;

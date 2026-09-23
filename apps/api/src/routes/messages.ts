@@ -9,6 +9,7 @@ import {
 import { recordEvent, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
+  channelOf,
   currentMembership,
   invalid,
   UUID,
@@ -203,10 +204,10 @@ export function registerMessageRoutes(app: FastifyInstance, options: ServerOptio
         const state = describeOutbound(before).state;
         if (state !== 'queued') cannot(state, 'approved');
         const { rows } = await tx.query<{ id: string }>(
-          `update messages set approved_by = $2, approved_via = 'web'
+          `update messages set approved_by = $2, approved_via = $3::approval_channel
             where id = $1 and approved_by is null and sent_at is null and rejected_at is null
             returning id`,
-          [id, me.userId],
+          [id, me.userId, channelOf(request)],
         );
         if (!rows[0])
           throw refuse(403, 'you do not have permission to approve messages in this org');
@@ -217,7 +218,11 @@ export function registerMessageRoutes(app: FastifyInstance, options: ServerOptio
           subjectTable: 'messages',
           subjectId: id,
           requestId: request.id,
-          payload: { via: 'web', thread_id: before.thread_id, bodyLength: before.body.length },
+          payload: {
+            via: channelOf(request),
+            thread_id: before.thread_id,
+            bodyLength: before.body.length,
+          },
         });
         return (await loadOutbound(tx, id))!;
       });

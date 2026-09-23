@@ -12,6 +12,7 @@ import {
 import { briefInputOf, loadBrief, recordEvent, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
+  channelOf,
   currentMembership,
   invalid,
   UUID,
@@ -261,7 +262,7 @@ export function registerSourcingPostRoutes(app: FastifyInstance, options: Server
           subjectTable: 'sourcing_posts',
           subjectId: postId,
           requestId: request.id,
-          payload: { via: 'web', sourcing_request_id: id, platform },
+          payload: { via: channelOf(request), sourcing_request_id: id, platform },
         });
         return loadPost(tx, postId);
       });
@@ -340,8 +341,8 @@ export function registerSourcingPostRoutes(app: FastifyInstance, options: Server
         );
         if (problems.length > 0) identityRefusal(problems);
         await tx.query(
-          `update sourcing_posts set status = 'approved', approved_by = $2, approved_via = 'web' where id = $1`,
-          [id, me.userId],
+          `update sourcing_posts set status = 'approved', approved_by = $2, approved_via = $3::approval_channel where id = $1`,
+          [id, me.userId, channelOf(request)],
         );
         await recordEvent(tx, {
           orgId: me.orgId,
@@ -350,7 +351,7 @@ export function registerSourcingPostRoutes(app: FastifyInstance, options: Server
           subjectTable: 'sourcing_posts',
           subjectId: id,
           requestId: request.id,
-          payload: { via: 'web', platform: before.platform },
+          payload: { via: channelOf(request), platform: before.platform },
         });
         return loadPost(tx, id);
       });

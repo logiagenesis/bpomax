@@ -88,6 +88,63 @@ Playwright test that exercises it (docs/05 section 1); the end-to-end build
 For the full local Supabase stack (Auth, Storage, Studio), use the Supabase CLI rather
 than compose — `supabase start`. See `DECISIONS.md` D-006.
 
+## MCP server
+
+`apps/mcp` (ARB-330) lets Claude Desktop or Claude Code work the pipeline through eleven
+tools: `search_jobs`, `score_job`, `estimate_delivery`, `draft_bid`, `approve_item`,
+`submit_bid`, `get_thread`, `build_brief`, `create_sourcing_post`, `list_suppliers` and
+`update_pipeline`. It speaks MCP over stdio and each tool is one call to the API with your
+own sign-in token, so the API decides exactly as it does on the web: your role, your
+organisation's rows only, the approval rules and the live gate. An approval made through
+it is recorded in your name with the channel `mcp`. Nothing is sent to a marketplace by the
+MCP server itself; an approved bid still goes through the submit worker and `LIVE_MODE`.
+
+It needs two settings, and refuses to start without them:
+
+| Setting                 | What it is                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `ARBITRON_API_URL`      | The API's address (https; http only for localhost)                            |
+| `ARBITRON_ACCESS_TOKEN` | Your Supabase access token from signing in (docs/02 B-06); it is never logged |
+
+The API has no hosted address yet (ARB-070), so until it has one the server is exercised by
+its test (`apps/mcp/src/server.test.ts`), which calls every tool against the real API and
+Postgres. A sign-in token expires; a tool that answers "not signed in" needs a fresh one
+(D-062).
+
+**Claude Code** — `claude mcp add` with `--env` for each setting and a transport between
+the settings and the name, as the Claude Code docs describe
+(<https://code.claude.com/docs/en/mcp>):
+
+```bash
+claude mcp add --env ARBITRON_API_URL=https://api.example.test \
+  --env ARBITRON_ACCESS_TOKEN=<your token> \
+  --transport stdio arbitron -- /path/to/bpomax/node_modules/.bin/tsx /path/to/bpomax/apps/mcp/src/main.ts
+```
+
+**Claude Desktop** — add an entry under `mcpServers` in `claude_desktop_config.json`
+(`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS,
+`%APPDATA%\Claude\claude_desktop_config.json` on Windows), with `command`, `args` and
+`env` as the MCP documentation shows
+(<https://modelcontextprotocol.io/docs/develop/connect-local-servers>), then restart
+Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "arbitron": {
+      "command": "/path/to/bpomax/node_modules/.bin/tsx",
+      "args": ["/path/to/bpomax/apps/mcp/src/main.ts"],
+      "env": {
+        "ARBITRON_API_URL": "https://api.example.test",
+        "ARBITRON_ACCESS_TOKEN": "<your token>"
+      }
+    }
+  }
+}
+```
+
+Replace `/path/to/bpomax` with where this repository is checked out, after `pnpm install`.
+
 ## Checks
 
 ```bash
@@ -111,7 +168,8 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome pnpm test:e2e
 
 ```
 apps/web         Vite static multi-page front end, vanilla JS ES modules
-apps/api         Fastify API and MCP server
+apps/api         Fastify API
+apps/mcp         MCP server: the operator's tools over the API (ARB-330)
 apps/workers     BullMQ workers
 apps/telegram    Telegram webhook bot
 packages/core    Margin maths, scoring schemas, taxonomy, brief schema

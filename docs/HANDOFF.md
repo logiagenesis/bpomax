@@ -1,4 +1,4 @@
-# HANDOFF — 23/09/2026, 15:00 UTC (17:00 SAST)
+# HANDOFF — 23/09/2026, 16:40 UTC (18:40 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 35 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203); 12 are TODO (099, 299, 300, 330, 340, 399, Phase 4). Nothing is BLOCKED
+- **Board:** 36 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203); 11 are TODO (099, 299, 300, 340, 399, Phase 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `1279e60` (PR #23, ARB-312, merged). The ARB-320 PR is open
+- **CI:** green on `main` at `c2302cd` (PR #24, ARB-320, merged). The ARB-330 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-320 merges, **ARB-330** (the MCP server). ARB-299 waits like
-  ARB-099. See section 6.
+- **Next:** after ARB-330 merges, the `withUser` concurrency fix (section 7, first
+  item), then **ARB-340** (templates page). ARB-299 waits like ARB-099. See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `1279e60` = PR #23, ARB-312 retainers                                                  |
-| Open PR                | ARB-320 analytics, from `claude/beautiful-tesla-b6goej`                                |
-| Local checks at ARB-320 | lint, format, typecheck green; 938 unit tests (87 files) green; 209 + 28 Playwright tests green |
+| Last merge             | `c2302cd` = PR #24, ARB-320 analytics                                                  |
+| Open PR                | ARB-330 MCP server, from `claude/beautiful-tesla-b6goej`                               |
+| Local checks at ARB-330 | lint, format, typecheck green; 967 unit tests (89 files) green; no web change (209 + 28 Playwright at ARB-320) |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320 |
+| DONE                      | 36    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330 |
 | BUILT-PENDING-CREDENTIALS | 8     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12) |
-| TODO                      | 12    | 099, 299, 300, 330, 340, 399, Phase 4                       |
+| TODO                      | 11    | 099, 299, 300, 340, 399, 400–440, 499                       |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -66,6 +66,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-311 | Payments: four kinds (0027), realised margin in core as docs/05 3.5 states it, the rate typed or from the FX provider (B-10) and never assumed, Paid when the client has paid the value, T-05's notice on a supplier abroad, the Payments panel on the pipeline page, demo; 6 + 1 Playwright tests | D-059 |
 | ARB-312 | Retainers: the pipeline's retainer toggle checked with `validateRetainer`, logged; the dashboard total tested against a hand sum and raw SQL; the demo dashboard sums the tab's retainers; 2 + 1 Playwright tests | D-060 |
 | ARB-320 | Analytics: the per-job view (0028, security_invoker), grouping in core, `GET /v1/analytics` verified against raw SQL, the analytics page, Analytics in the nav, demo; 7 Playwright tests | D-061 |
+| ARB-330 | MCP server (`apps/mcp`, SDK 1.30.1, stdio): the eleven tools over the API with the operator's token, approvals recorded as `mcp` (0029), `GET /v1/jobs/:id`, `POST /v1/jobs/:id/score`, `POST /v1/proposals/:id/submit`, `enqueueSubmit` re-runs a finished job, README setup for Claude Code and Claude Desktop; 24 tests | D-062 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -114,28 +115,34 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-330 — MCP server with the tools of docs/01 section I; README setup for Claude
-Desktop and Claude Code.** Claim it on the board first. Acceptance: "Each tool callable
-in an automated test". The tools are named in docs/01 section I: search_jobs, score_job,
-estimate_delivery, draft_bid, approve_item, submit_bid, get_thread, build_brief,
-create_sourcing_post, list_suppliers, update_pipeline. Build it as a new app
-(`apps/mcp`) on the official MCP TypeScript SDK (`@modelcontextprotocol/sdk`; read its
-README through Firecrawl and pin the version you read), speaking stdio, each tool a thin
-call to the existing API routes with the user's token (so RLS, roles and the live gate
-hold exactly as on the web): search_jobs → `GET /v1/jobs`, score_job → the score route,
-draft_bid → the draft route, approve_item → the approve routes (bids, replies, posts),
-submit_bid → approval only (the submit worker and the live gate send; LIVE_MODE stays
-false), get_thread → `GET /v1/threads/:id`, build_brief → the brief draft route,
-create_sourcing_post → `POST /v1/sourcing-requests/:id/posts`, list_suppliers →
-`GET /v1/suppliers`, update_pipeline → `PATCH /v1/pipeline-items/:id`, estimate_delivery
-→ the estimate route. Test each tool through the SDK's in-memory transport against the
-API with PGlite. The README section says how to add it to Claude Desktop and Claude Code
-(cite the official docs for the config file shape). Then ARB-340 (templates page) and
-ARB-300 (Upwork: official docs through Firecrawl, every endpoint cited, the CI grep that
-no browser automation exists).
+**First, not on the board: make `withUser` safe under concurrency** (section 7, first
+item). Then **ARB-340 — Templates page with A/B variants and reply rates.** Claim it on
+the board first. Acceptance: "Reply rate = replies/sends verified". `templates` and
+`template_variants` exist (fixtures carry one of each); the bid drafts record
+`template_variant_id`. Count a send as a submitted bid on the variant and a reply as a
+client message on the job's thread at or after the bid, the same rule as
+`analytics_job_facts` (D-061), so the two pages agree; verify the rate against raw SQL in
+the API test. The page lists templates with their variants, each variant's sends,
+replies and rate (numerator and denominator, "No data (0 of 0)" rather than 0 %),
+create and edit a template and its variants (writer roles; a viewer reads), an audit in
+`docs/audit/templates.md`, Templates in the nav, demo parity. Then ARB-300 (Upwork:
+official docs through Firecrawl, every endpoint cited, the CI grep that no browser
+automation exists; BUILT-PENDING-CREDENTIALS on B-14 and T-04) and Phase 4 as far as
+it can be built without D-01, B-13 and B-15.
 
 ## 7. Loose ends
 
+- **`withUser` on one shared connection is not safe under concurrency.** It runs
+  `begin`, `set_config`, `set local role` and the work on the `db` it is given. Two
+  requests at once on one connection interleave, so one can run with the other's claims;
+  on a `pg.Pool` each statement may land on a different connection. Seen in a test: two
+  concurrent `app.inject` calls on PGlite let a viewer and another org through. Latent
+  today (the API has no production entry point, B-12), but it must hold before the API is
+  hosted: check out a dedicated client per transaction when the `db` can (`connect()` /
+  `release()`), and serialise on a single connection otherwise; test it with concurrent
+  requests from two orgs.
+- A sign-in token for the MCP server expires; a long-lived credential (a personal access
+  token or a device sign-in) is not built and needs the owner's say (D-062).
 - A recorded payment cannot be corrected from the page (D-059): no refund or reversal
   kind exists in any ticket yet.
 - The workers have no production entry point yet (B-12): each processor, the reprice one

@@ -1,7 +1,7 @@
 import { canWrite } from '@arbitron/core';
 import { recordEvent, withUser } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
-import { currentMembership, UUID, type ServerOptions } from '../context.js';
+import { channelOf, currentMembership, UUID, type ServerOptions } from '../context.js';
 import { messageOf, refuse, statusOf } from '../errors.js';
 
 /**
@@ -168,7 +168,7 @@ export function registerJobRoutes(app: FastifyInstance, options: ServerOptions):
           subjectTable: 'jobs',
           subjectId: job.id,
           requestId: request.id,
-          payload: { action, via: 'web', margin_evaluation_id: job.margin_id },
+          payload: { action, via: channelOf(request), margin_evaluation_id: job.margin_id },
         });
         return { action, job, requestId: request.id };
       });
@@ -185,6 +185,87 @@ export function registerJobRoutes(app: FastifyInstance, options: ServerOptions):
         await options.enqueue!.score!({ jobId: result.job.id, requestId: result.requestId });
       }
       return reply.code(202).send({ action: result.action, jobId: result.job.id });
+    } catch (error) {
+      return reply.code(statusOf(error)).send({ error: messageOf(error) });
+    }
+  });
+
+  /** One job with its latest stored judgements and its latest delivery estimate in full. */
+  app.get('/v1/jobs/:id', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const { id } = request.params as { id: string };
+    if (!UUID.test(id)) return reply.code(400).send({ error: 'id is not a uuid' });
+    const result = await withUser(options.db, authUserId, async (tx) => {
+      const { rows } = await tx.query<FeedRow>(`${FEED_SQL} where j.id = $1`, [id]);
+      const job = rows[0];
+      if (!job) return null;
+      const estimate = await tx.query<{
+        method: string;
+        currency: string;
+        low_minor: string;
+        expected_minor: string;
+        high_minor: string;
+        turnaround_days: number | null;
+        created_at: string;
+      }>(
+        `select method::text as method, currency::text as currency, low_minor::text as low_minor,
+                expected_minor::text as expected_minor, high_minor::text as high_minor,
+                turnaround_days, created_at
+           from delivery_estimates where job_id = $1 order by created_at desc limit 1`,
+        [id],
+      );
+      const e = estimate.rows[0];
+      return {
+        job,
+        estimate: e
+          ? {
+              method: e.method,
+              currency: e.currency.trim(),
+              lowMinor: e.low_minor,
+              expectedMinor: e.expected_minor,
+              highMinor: e.high_minor,
+              turnaroundDays: e.turnaround_days,
+              createdAt: e.created_at,
+            }
+          : null,
+      };
+    });
+    if (!result) return reply.code(404).send({ error: 'no such job' });
+    return reply.send(result);
+  });
+
+  /**
+   * Asks for a job to be scored now (ARB-330's score_job). The score worker judges it, and
+   * the chain carries it on to the estimate and the margin (D-028 to D-031).
+   */
+  app.post('/v1/jobs/:id/score', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const { id } = request.params as { id: string };
+    if (!UUID.test(id)) return reply.code(400).send({ error: 'id is not a uuid' });
+    try {
+      const jobId = await withUser(options.db, authUserId, async (tx) => {
+        const me = await currentMembership(tx);
+        if (!me) throw refuse(403, 'you are not a member of an organisation');
+        if (!canWrite(me.role)) throw refuse(403, 'your role can view the feed but not score jobs');
+        const { rows } = await tx.query<{ id: string }>('select id from jobs where id = $1', [id]);
+        if (!rows[0]) throw refuse(404, 'no such job');
+        if (!options.enqueue?.score)
+          throw refuse(503, 'The scoring queue is not available. Try again later.');
+        await recordEvent(tx, {
+          orgId: me.orgId,
+          type: 'job.score_requested',
+          actorUserId: me.userId,
+          subjectTable: 'jobs',
+          subjectId: id,
+          requestId: request.id,
+          payload: { via: channelOf(request) },
+        });
+        return id;
+      });
+      await options.enqueue!.score!({ jobId, requestId: request.id });
+      return reply.code(202).send({ action: 'scoring', jobId });
     } catch (error) {
       return reply.code(statusOf(error)).send({ error: messageOf(error) });
     }

@@ -2512,7 +2512,7 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
-      approval_channel: 'telegram' | 'web' | 'auto';
+      approval_channel: 'telegram' | 'web' | 'auto' | 'mcp';
       budget_type: 'fixed' | 'hourly';
       delivery_order_status:
         'draft' | 'assigned' | 'in_progress' | 'delivered' | 'accepted' | 'cancelled';
@@ -2564,7 +2564,7 @@ export type Enums<T extends keyof PublicSchema['Enums']> = PublicSchema['Enums']
 export const Constants = {
   public: {
     Enums: {
-      approval_channel: ['telegram', 'web', 'auto'],
+      approval_channel: ['telegram', 'web', 'auto', 'mcp'],
       budget_type: ['fixed', 'hourly'],
       delivery_order_status: [
         'draft',

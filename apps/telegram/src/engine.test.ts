@@ -55,6 +55,10 @@ class FakeQueue {
     this.added.push({ name, data, ...(opts?.jobId ? { jobId: opts.jobId } : {}) });
     return Promise.resolve({ id: opts?.jobId ?? name });
   }
+  /** No earlier job is kept here; `enqueueSubmit` asks before adding (D-062). */
+  getJob() {
+    return Promise.resolve(undefined);
+  }
 }
 
 let api: ScriptedTelegram;

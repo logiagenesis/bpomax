@@ -767,3 +767,115 @@ describe('settings', () => {
     expect(viewer.statusCode).toBe(403);
   });
 });
+
+describe('the routes the MCP tools add (ARB-330)', () => {
+  it('GET /v1/jobs/:id gives one job with its latest estimate in full, to its own org only', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/jobs/${JOB_A}`,
+      headers: as(AUTH_VIEWER),
+    });
+    expect(response.statusCode).toBe(200);
+    // The fixture estimate: rate card, R1 000,00 / R1 500,00 / R2 000,00.
+    expect(response.json()).toMatchObject({
+      job: { id: JOB_A, margin_passed: true },
+      estimate: {
+        method: 'rate_card',
+        currency: 'ZAR',
+        lowMinor: '100000',
+        expectedMinor: '150000',
+        highMinor: '200000',
+        turnaroundDays: null,
+      },
+    });
+    const none = await app.inject({ method: 'GET', url: `/v1/jobs/${JOB_U}`, headers: as(AUTH_A) });
+    expect(none.json()).toMatchObject({ job: { id: JOB_U }, estimate: null });
+    const other = await app.inject({
+      method: 'GET',
+      url: `/v1/jobs/${JOB_A}`,
+      headers: as(AUTH_B),
+    });
+    expect(other.statusCode).toBe(404);
+    const bad = await app.inject({ method: 'GET', url: '/v1/jobs/nope', headers: as(AUTH_A) });
+    expect(bad.statusCode).toBe(400);
+  });
+
+  it('POST /v1/jobs/:id/score asks for a score, and refuses a viewer, another org and no queue', async () => {
+    enqueue.score.mockClear();
+    const ok = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${JOB_U}/score`,
+      headers: as(AUTH_OPERATOR),
+    });
+    expect(ok.statusCode).toBe(202);
+    expect(ok.json()).toEqual({ action: 'scoring', jobId: JOB_U });
+    expect(enqueue.score).toHaveBeenCalledWith(expect.objectContaining({ jobId: JOB_U }));
+    const logged = await listEvents(db, { type: 'job.score_requested' });
+    expect(logged[0]).toMatchObject({
+      actor_user_id: USER_OPERATOR,
+      subject_id: JOB_U,
+      payload: { via: 'web' },
+    });
+    // One at a time: the test database is a single connection.
+    const refusals: number[] = [];
+    for (const [server, who] of [
+      [app, AUTH_VIEWER],
+      [app, AUTH_B],
+      [bare, AUTH_A],
+    ] as const) {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/jobs/${JOB_U}/score`,
+        headers: as(who),
+      });
+      refusals.push(response.statusCode);
+    }
+    expect(refusals).toEqual([403, 404, 503]);
+    expect(enqueue.score).toHaveBeenCalledTimes(1);
+    expect(await listEvents(db, { type: 'job.score_requested' })).toHaveLength(1);
+  });
+
+  it('POST /v1/proposals/:id/submit hands only an approved bid back, and only for an approver', async () => {
+    const bid = async (status: string): Promise<string> => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into proposals (org_id, job_id, body, amount_minor, currency, delivery_days, status, approved_by, approved_via, submitted_at)
+         values ($1, $2, 'Bid', 100000, 'ZAR', 5, $3::proposal_status,
+                 case when $3 in ('approved', 'submitted') then $4::uuid end,
+                 case when $3 in ('approved', 'submitted') then 'web'::approval_channel end,
+                 case when $3 = 'submitted' then now() end)
+         returning id`,
+        [ORG_A, JOB_U, status, USER_A],
+      );
+      return rows[0]!.id;
+    };
+    const post = (id: string, who: string, server = app) =>
+      server.inject({ method: 'POST', url: `/v1/proposals/${id}/submit`, headers: as(who) });
+    enqueue.submit.mockClear();
+
+    const approved = await bid('approved');
+    const ok = await post(approved, AUTH_A);
+    expect(ok.statusCode).toBe(202);
+    expect(ok.json()).toEqual({ queued: true });
+    expect(enqueue.submit).toHaveBeenCalledWith(expect.objectContaining({ proposalId: approved }));
+    expect((await listEvents(db, { type: 'proposal.submit_requested' }))[0]).toMatchObject({
+      actor_user_id: USER_A,
+      subject_id: approved,
+      payload: { via: 'web' },
+    });
+
+    const cases: [string, number, string][] = [
+      [await bid('queued'), 409, 'This bid is waiting for approval. Approve it first.'],
+      [await bid('submitted'), 409, 'This bid has already been sent.'],
+      [await bid('rejected'), 409, 'This bid is rejected, so it is not sent.'],
+    ];
+    for (const [id, status, error] of cases) {
+      const response = await post(id, AUTH_A);
+      expect(response.statusCode).toBe(status);
+      expect(response.json().error).toBe(error);
+    }
+    expect((await post(approved, AUTH_VIEWER)).statusCode).toBe(403);
+    expect((await post(approved, AUTH_B)).statusCode).toBe(404);
+    expect((await post(approved, AUTH_A, bare)).statusCode).toBe(503);
+    expect(enqueue.submit).toHaveBeenCalledTimes(1);
+  });
+});
