@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 21 of 55 tickets are DONE; 6 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070); 28 are TODO (099 and all of Phases 2 to 4). Nothing is BLOCKED
+- **Board:** 21 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120); 27 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `3af24ef` (PR #7 merged; run 90 on its head). The ARB-022
-  PR is open from `claude/beautiful-tesla-b6goej` and merges when green.
+- **CI:** green on `main` at `162d421` (PR #8, ARB-022, merged). The ARB-120 PR is open
+  from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-022 merges, Phase 2 under D-036: **ARB-120** (inbox sync)
-  against the stand-in, citing developers.freelancer.com/docs/messaging. See section 6.
+- **Next ticket:** after ARB-120 merges, **ARB-121** (auto-reply once per thread, D-08)
+  and **ARB-122** (outbound messages need approval; LIVE_MODE gate). See section 6.
 
 ## 1. State of `main`
 
@@ -24,9 +24,9 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `3af24ef` = PR #7, ARB-020 end to end                                                   |
-| Open PR                | ARB-022 ingest worker, head `5150f8d` plus the board commit, from `claude/beautiful-tesla-b6goej` |
-| Local checks at `5150f8d` | lint, format, typecheck green; 746 unit tests (54 files) green with Redis and Postgres up |
+| Last merge             | `162d421` = PR #8, ARB-022 ingest worker                                               |
+| Open PR                | ARB-120 inbox sync, from `claude/beautiful-tesla-b6goej`                                |
+| Local checks at ARB-120 | lint, format, typecheck green; 761 unit tests (57 files) green with Redis and Postgres up |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
@@ -34,8 +34,8 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
 | DONE                      | 21    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062 |
-| BUILT-PENDING-CREDENTIALS | 6     | 010 (B-06), 013 (D-14), 015 (T-06), 020 and 022 (C-02), 070 (B-12) |
-| TODO                      | 28    | 099, then Phases 2–4 (120 to 499)                           |
+| BUILT-PENDING-CREDENTIALS | 7     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022 and 120 (C-02), 070 (B-12) |
+| TODO                      | 27    | 099, then the rest of Phases 2–4 (121 to 499)               |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -50,6 +50,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-020 | Freelancer.com OAuth end to end: `@arbitron/freelancer`, Vault tokens (0017), connect/callback/disconnect API, settings controls, callback page, demo | D-041, D-044 |
 | ARB-022 | Ingest worker: one schedule per scanner, the documented project search, per-org upserts (0018), events, score jobs | D-045          |
 | ARB-070 | Web app on Vercel from `main`; demo mode build; `claude/**` branches not deployed                              | D-042, D-043   |
+| ARB-120 | Inbox sync: the documented thread and message lists per connected account, stored once, Telegram card per client message | D-046 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -97,16 +98,17 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-120 — inbox sync.** Claim it on the board first. Build under D-036 against the
-stand-in: add the documented Messaging endpoints to `packages/freelancer` (cite
-https://developers.freelancer.com/docs/messaging/messaging and
-https://developers.freelancer.com/docs/messaging/threads, read through Firecrawl), extend
-`packages/freelancer/src/fake.ts` with threads and messages, and write the `inbox-sync`
-worker in `apps/workers` on the pattern of `ingest.ts` (one schedule per connected
-account; upsert `threads` and `messages`; `message.received` events; the operator alert
-is a Telegram card, ARB-050's `apps/telegram`). T-01 gates nothing in a read; note it in
-the board row. Then ARB-121 (auto-reply, D-08) and ARB-122 (outbound approval and the
-LIVE_MODE gate, on the submit worker's pattern).
+**ARB-121 — auto-reply once per thread when the operator is offline** (docs/02 D-08 is
+the wording and the "offline" rule; the mechanism is built without it, D-036). Claim it
+on the board first. The `auto_replies` table (0006) holds the org's configured reply;
+the `auto-reply` queue is wired in `apps/workers/src/queues.ts`. Trigger it from the
+inbox sync's inbound path (an `auto-reply` job per new inbound message), send through
+`POST /messages/0.1/threads/{thread_id}/messages/` (cited on the threads docs page) in
+`packages/freelancer`, and gate it exactly as the submit worker gates a bid (D-032):
+LIVE_MODE off records `external.blocked_by_live_mode` with the text that would have
+gone. "Once per thread" is a unique key on the send record. Then **ARB-122**: outbound
+messages from the app need an approval event and the same gate; the `messages.origin =
+'app'` rows and 0003's constraint are the guard.
 
 ## 7. Loose ends
 
