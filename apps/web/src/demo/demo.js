@@ -31,6 +31,9 @@ import {
   validateMessageDraft,
   validatePlanRecord,
   validateScanner,
+  supplierCsvTemplate,
+  suppliersToCsv,
+  validateSupplierCsv,
 } from '@arbitron/core';
 
 const env = /** @type {Record<string, string | undefined>} */ (import.meta.env ?? {});
@@ -44,7 +47,7 @@ const SESSION_KEY = 'arbitron.session';
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
  *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
- *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[] }} Store
+ *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[] }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -311,12 +314,70 @@ function initialStore() {
     },
   ];
 
+  // ARB-200: two sample suppliers with rate cards, marked as samples; nothing is a real rate.
+  const suppliers = [
+    {
+      id: uuid(),
+      name: 'Thandi Web (sample)',
+      countryCode: 'ZA',
+      timeZone: 'Africa/Johannesburg',
+      channel: 'direct',
+      languages: ['en', 'zu'],
+      qualityScore: '85.00',
+      onTimeRate: '0.950',
+      paysAfterDelivery: true,
+      externalProfileUrl: null,
+      notes: 'Sample supplier; no real rate.',
+      active: true,
+      rateCards: [
+        {
+          id: uuid(),
+          categorySlug: 'wordpress',
+          categoryName: 'Wordpress',
+          currency: 'ZAR',
+          fixedPriceMinor: '150000',
+          hourlyRateMinor: null,
+          turnaroundDays: 5,
+        },
+        {
+          id: uuid(),
+          categorySlug: 'seo',
+          categoryName: 'Seo',
+          currency: 'ZAR',
+          fixedPriceMinor: null,
+          hourlyRateMinor: '35050',
+          turnaroundDays: null,
+        },
+      ],
+      createdAt: ago(3),
+      updatedAt: ago(3),
+    },
+    {
+      id: uuid(),
+      name: 'Studio Nord (sample)',
+      countryCode: 'NO',
+      timeZone: 'Europe/Oslo',
+      channel: 'upwork',
+      languages: ['en'],
+      qualityScore: null,
+      onTimeRate: null,
+      paysAfterDelivery: false,
+      externalProfileUrl: null,
+      notes: null,
+      active: false,
+      rateCards: [],
+      createdAt: ago(2),
+      updatedAt: ago(2),
+    },
+  ];
+
   return {
     version: 1,
     threads,
     inbound,
     discovery,
     briefs: [],
+    suppliers,
     telegramLinked: false,
     biddingPaused: false,
     settings: {
@@ -445,6 +506,48 @@ function json(status, body, headers = {}) {
   return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json', ...headers },
+  });
+}
+
+const DEMO_CATEGORIES = [
+  'website-build',
+  'wordpress',
+  'elementor',
+  'shopify',
+  'landing-page',
+  'web-app',
+  'mobile-app',
+  'api-integration',
+  'automation',
+  'ai-chatbot',
+  'seo',
+  'google-ads',
+  'social-media-management',
+  'logo-brand',
+  'graphic-design',
+  'ui-ux',
+  'video-editing',
+  'copywriting',
+  'data-entry',
+  'virtual-assistant',
+  '2d-game',
+  '3d-game',
+];
+
+/** @param {string} slug */
+function categoryName(slug) {
+  return slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
+}
+
+/** A CSV file as the API serves one, with the headers the page reads. @param {string} body @param {string} filename @param {number | null} rows */
+function csvFile(body, filename, rows) {
+  return new Response(body, {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="${filename}"`,
+      ...(rows === null ? {} : { 'x-export-rows': String(rows), 'x-export-truncated': 'false' }),
+    },
   });
 }
 
@@ -768,34 +871,119 @@ function api(method, url, body) {
 
   if (key === 'GET /v1/service-categories') {
     return respond(200, {
-      categories: [
-        'website-build',
-        'wordpress',
-        'elementor',
-        'shopify',
-        'landing-page',
-        'web-app',
-        'mobile-app',
-        'api-integration',
-        'automation',
-        'ai-chatbot',
-        'seo',
-        'google-ads',
-        'social-media-management',
-        'logo-brand',
-        'graphic-design',
-        'ui-ux',
-        'video-editing',
-        'copywriting',
-        'data-entry',
-        'virtual-assistant',
-        '2d-game',
-        '3d-game',
-      ].map((slug) => ({
+      categories: DEMO_CATEGORIES.map((slug) => ({
         slug,
-        name: slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+        name: categoryName(slug),
         inHouse: false,
       })),
+    });
+  }
+
+  // ARB-200 in the demo: the supplier database, the template, the export and the import,
+  // checked by the same rule the API runs. Nothing here is a real rate.
+  const suppliers = store.suppliers ?? [];
+  if (key === 'GET /v1/suppliers') return respond(200, { suppliers });
+  if (key === 'GET /v1/suppliers/template.csv') {
+    return csvFile(supplierCsvTemplate(), 'suppliers-template.csv', null);
+  }
+  if (key === 'GET /v1/suppliers.csv') {
+    const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    return csvFile(
+      suppliersToCsv(/** @type {any} */ (suppliers)),
+      `suppliers-${stamp}.csv`,
+      suppliers.length,
+    );
+  }
+  if (key === 'POST /v1/suppliers/import') {
+    if (typeof body?.csv !== 'string') {
+      return respond(422, {
+        error: 'the request was not accepted',
+        errors: [{ field: 'csv', message: 'must be the file as text' }],
+      });
+    }
+    const checked = validateSupplierCsv(body.csv, { categories: new Set(DEMO_CATEGORIES) });
+    if (!checked.ok) {
+      const lines = new Set(checked.errors.map((e) => e.line)).size;
+      return respond(422, {
+        error: `${String(lines)} line${lines === 1 ? ' has' : 's have'} problems; nothing was imported.`,
+        errors: checked.errors,
+      });
+    }
+    const rateCards = checked.value.reduce((n, s) => n + s.rateCards.length, 0);
+    if (body.dryRun === true) {
+      return respond(200, {
+        ok: true,
+        dryRun: true,
+        lines: checked.lines,
+        suppliers: checked.value.length,
+        rateCards,
+        created: 0,
+        updated: 0,
+      });
+    }
+    let created = 0;
+    let updated = 0;
+    const now = new Date().toISOString();
+    for (const s of checked.value) {
+      let row = suppliers.find((r) => r.name.toLowerCase() === s.name.toLowerCase());
+      if (row) updated += 1;
+      else {
+        row = { id: uuid(), rateCards: [], createdAt: now };
+        suppliers.push(row);
+        created += 1;
+      }
+      Object.assign(row, {
+        name: s.name,
+        countryCode: s.countryCode,
+        timeZone: s.timeZone,
+        channel: s.channel,
+        languages: s.languages,
+        qualityScore: s.qualityScore,
+        onTimeRate: s.onTimeRate,
+        paysAfterDelivery: s.paysAfterDelivery,
+        externalProfileUrl: s.externalProfileUrl,
+        notes: s.notes,
+        active: s.active,
+        updatedAt: now,
+      });
+      for (const card of s.rateCards) {
+        const existing = row.rateCards.find(
+          (/** @type {Row} */ c) =>
+            c.categorySlug === card.categorySlug && c.currency === card.currency,
+        );
+        const fields = {
+          categorySlug: card.categorySlug,
+          categoryName: categoryName(card.categorySlug),
+          currency: card.currency,
+          fixedPriceMinor: card.fixedPriceMinor,
+          hourlyRateMinor: card.hourlyRateMinor,
+          turnaroundDays: card.turnaroundDays,
+        };
+        if (existing) Object.assign(existing, fields);
+        else row.rateCards.push({ id: uuid(), ...fields });
+      }
+    }
+    suppliers.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    store.suppliers = suppliers;
+    logEvent(store, 'supplier.imported', {
+      subject_table: 'suppliers',
+      payload: {
+        via: 'web',
+        lines: checked.lines,
+        suppliers: checked.value.length,
+        rate_cards: rateCards,
+        created,
+        updated,
+      },
+    });
+    return respond(200, {
+      ok: true,
+      dryRun: false,
+      lines: checked.lines,
+      suppliers: checked.value.length,
+      rateCards,
+      created,
+      updated,
     });
   }
   if (key === 'GET /v1/threads') {

@@ -51,6 +51,7 @@ export default defineConfig(({ mode }) => {
           feed: 'src/feed.html',
           approvals: 'src/approvals.html',
           conversations: 'src/conversations.html',
+          suppliers: 'src/suppliers.html',
           settings: 'src/settings.html',
           'style-guide': 'src/style-guide.html',
           'audit-log': 'src/audit-log.html',

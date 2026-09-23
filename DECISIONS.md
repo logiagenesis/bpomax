@@ -1469,3 +1469,39 @@ new routes and writing through the owning ones keeps one set of rules per action
 Consequences: a later page (sourcing, pipeline) that needs a thread's state reads the
 same list route. If a thread needs a status change by hand (close it, reopen it), that is
 a new write route with its own event, not a field on this page.
+
+## D-052 — Suppliers arrive by CSV: one line per supplier and rate card, every line checked with its line number, all or nothing, upsert by name; nothing seeded
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-200, session …tJv8)
+
+Decision:
+
+- The CSV has one line per supplier and rate card, with the template's sixteen columns
+  in its order. A supplier with three rate cards is three lines with the same name whose
+  supplier fields must agree; a supplier with no rate card is one line with the rate
+  columns empty. The template (`GET /v1/suppliers/template.csv`) is the heading and one
+  sample line, which the import refuses by name so it is never stored.
+- `validateSupplierCsv` in `@arbitron/core` checks every line and reports every problem
+  with its line number (line 1 is the heading). The page runs it before asking the API;
+  the API runs it again and writes nothing unless every line is right. A dry run checks
+  without writing.
+- An import upserts: a supplier by (org, name), a rate card by (supplier, category,
+  currency). It deletes nothing, so a rate card left out of a later file stays. It is one
+  event, `supplier.imported`, with the counts.
+- Amounts in the file are parsed as text into minor units (`parseAmountText`): a comma or
+  dot followed by one or two digits is the decimal separator, one followed by three
+  digits is a thousands group, spaces and a leading currency symbol are ignored. The
+  export writes `1500.00` (a dot, no grouping) so a spreadsheet reads a number and the
+  import reads it back; on screen every amount stays `R1 234,56` (D-024).
+- Nothing is seeded (docs/02 D-09). The demo carries two sample suppliers marked as
+  samples with no real rate.
+- "History" in docs/01 section I's page name is the supplier's delivery history, which
+  is Phase 3's delivery orders; it is not part of ARB-200.
+
+Why: the ticket's acceptance is "CSV template downloadable; import validates every row
+with line-numbered errors"; the owner's list (D-09) is the only source of suppliers and
+rates, and a half-written import would leave the database inconsistent.
+
+Consequences: ARB-201 ranks the suppliers this import writes; a page for editing one
+supplier by hand is a later ticket, and until then the CSV is the way to change one.

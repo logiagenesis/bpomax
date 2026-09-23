@@ -11,6 +11,7 @@ const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/feed.html', /^Loaded \d+ jobs\.$/, true],
   ['/approvals.html', /^Loaded \d+ bids?( and \d+ repl(y|ies))?\.$/, true],
   ['/conversations.html', /^Loaded \d+ conversations?\.$/, true],
+  ['/suppliers.html', /^Loaded \d+ suppliers?\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
   ['/audit-log.html', /^Loaded \d+ events?\.$/, false],
@@ -94,6 +95,32 @@ test('a reply queued from a sample conversation waits in Approvals and is in the
   await expect(page.locator('#status')).toHaveText('Loaded 2 bids and 2 replies.');
   await page.goto('/audit-log.html');
   await expect(page.locator('#rows tr').first()).toContainText('message.drafted');
+});
+
+test('a supplier CSV pasted in the demo is checked by the real rule and imported into the tab', async ({
+  page,
+}) => {
+  await page.goto('/suppliers.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 2 suppliers.');
+  const heading =
+    'name,country_code,time_zone,channel,languages,quality_score,on_time_rate,pays_after_delivery,external_profile_url,notes,active,category_slug,currency,fixed_price,hourly_rate,turnaround_days';
+  await page
+    .getByLabel('Or paste the CSV')
+    .fill(`${heading}\nNew One (sample),ZA,,direct,,,,yes,,,yes,plumbing,ZAR,100,,`);
+  await page.getByRole('button', { name: 'Import the file' }).click();
+  await expect(page.locator('#import-errors li')).toHaveText([
+    'Line 2, category_slug: is not a service category.',
+  ]);
+  await page
+    .getByLabel('Or paste the CSV')
+    .fill(`${heading}\nNew One (sample),ZA,,direct,,,,yes,,,yes,shopify,ZAR,100,,`);
+  await page.getByRole('button', { name: 'Import the file' }).click();
+  await expect(page.locator('#status')).toHaveText(
+    'Imported 1 supplier and 1 rate card (1 new, 0 updated).',
+  );
+  await expect(page.locator('#rows tr')).toHaveCount(3);
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('supplier.imported');
 });
 
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({

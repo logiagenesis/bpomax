@@ -49,6 +49,7 @@ export const EVENT_TYPES = [
   'sourcing.requested',
   'sourcing.post_approved',
   'sourcing.posted',
+  'supplier.imported',
   'supplier.candidate_added',
   'delivery.order_created',
   'payment.recorded',

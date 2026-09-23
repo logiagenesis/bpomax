@@ -52,6 +52,39 @@ export function formatPercent(ratio: number, decimals = 1): string {
  * minor units of its currency. The digits are worked as text, never multiplied as a
  * float; anything past the currency's minor digits is rounded half up.
  */
+/** Digits after the decimal point for a currency, per ISO 4217: two unless listed. */
+export function minorDigits(currency: string): number {
+  return MINOR_DIGITS[currency.toUpperCase()] ?? 2;
+}
+
+/**
+ * An amount typed or imported as text — `1 500,00`, `1500.50`, `1,500`, `R 1500` —
+ * as whole minor units in a string, so no float is ever involved. Spaces, no-break
+ * spaces and a leading currency letter or symbol are ignored. A comma or dot followed
+ * by one or two digits at the end is the decimal separator; one followed by three
+ * digits is a thousands group. Null when the text is not an amount.
+ */
+export function parseAmountText(text: string, currency: string): string | null {
+  const digits = minorDigits(currency);
+  const cleaned = text
+    .replace(/[\s\u00a0\u202f]/g, '')
+    .replace(/^[A-Za-z$€£R]+/, '')
+    .trim();
+  const match = /^(\d[\d.,]*)$/.exec(cleaned);
+  if (!match) return null;
+  let body = match[1] ?? '';
+  let fraction = '';
+  const tail = /([.,])(\d{1,2})$/.exec(body);
+  if (tail && !/^\d{1,3}([.,]\d{3})+$/.test(body)) {
+    fraction = tail[2] ?? '';
+    body = body.slice(0, -(fraction.length + 1));
+  }
+  if (!/^\d{1,3}([.,]\d{3})*$/.test(body) && !/^\d+$/.test(body)) return null;
+  const whole = body.replace(/[.,]/g, '');
+  if (fraction.length > digits) return null;
+  return String(BigInt(`${whole}${fraction.padEnd(digits, '0')}`));
+}
+
 export function toMinor(amount: number, currency: string): number {
   if (!Number.isFinite(amount)) throw new RangeError(`not an amount: ${String(amount)}`);
   const code = currency.toUpperCase();
