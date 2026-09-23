@@ -10,7 +10,7 @@ same one the API runs (tested in `packages/core/src/suppliers.test.ts`).
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×8, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Suppliers | — | — | — | — | Yes | lists suppliers with their rate cards…, and every link goes somewhere | ✅ |
+| Link, nav links ×9, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Suppliers | — | — | — | — | Yes | lists suppliers with their rate cards…, and every link goes somewhere | ✅ |
 | Button | Refresh | Read the database again | `GET /v1/suppliers` | Spinner, aria-busy, disabled | "Loaded N suppliers." / "No suppliers yet." | "Not signed in…" / "Could not reach the API…" / the API's message | While busy | Yes | lists suppliers…; an empty database says what to do next | ✅ |
 | Button | Download the template | Save the CSV template | `GET /v1/suppliers/template.csv`; saved under the name the API gives it | Spinner, aria-busy, disabled | "Downloaded the template. Replace its sample line with your suppliers." | as Refresh | While busy | Yes | Download the template saves the file the API serves | ✅ |
 | Button | Export CSV | Save the database as a CSV with the template's columns | `GET /v1/suppliers.csv`; saved under the API's name; row count from `x-export-rows` | Spinner, aria-busy, disabled | "Exported N suppliers." | as Refresh | While busy | Yes | Export CSV saves the database as the API serves it, and says how many | ✅ |

@@ -415,47 +415,65 @@ export type Database = {
       };
       delivery_orders: {
         Row: {
+          accepted_at: string | null;
           agreed_cost_minor: number | null;
           brief_id: string | null;
+          cancelled_at: string | null;
           created_at: string;
           currency: string | null;
           delivered_at: string | null;
           due_at: string | null;
+          handed_over_at: string | null;
+          handover: Json;
           id: string;
           milestones: Json;
           org_id: string;
           pipeline_item_id: string;
+          sourcing_request_id: string | null;
           status: Database['public']['Enums']['delivery_order_status'];
+          supplier_candidate_id: string | null;
           supplier_id: string | null;
           updated_at: string;
         };
         Insert: {
+          accepted_at?: string | null;
           agreed_cost_minor?: number | null;
           brief_id?: string | null;
+          cancelled_at?: string | null;
           created_at?: string;
           currency?: string | null;
           delivered_at?: string | null;
           due_at?: string | null;
+          handed_over_at?: string | null;
+          handover?: Json;
           id?: string;
           milestones?: Json;
           org_id: string;
           pipeline_item_id: string;
+          sourcing_request_id?: string | null;
           status?: Database['public']['Enums']['delivery_order_status'];
+          supplier_candidate_id?: string | null;
           supplier_id?: string | null;
           updated_at?: string;
         };
         Update: {
+          accepted_at?: string | null;
           agreed_cost_minor?: number | null;
           brief_id?: string | null;
+          cancelled_at?: string | null;
           created_at?: string;
           currency?: string | null;
           delivered_at?: string | null;
           due_at?: string | null;
+          handed_over_at?: string | null;
+          handover?: Json;
           id?: string;
           milestones?: Json;
           org_id?: string;
           pipeline_item_id?: string;
+          sourcing_request_id?: string | null;
           status?: Database['public']['Enums']['delivery_order_status'];
+          supplier_candidate_id?: string | null;
           supplier_id?: string | null;
           updated_at?: string;
         };
@@ -477,8 +495,22 @@ export type Database = {
           {
             foreignKeyName: 'delivery_orders_pipeline_item_id_fkey';
             columns: ['pipeline_item_id'];
-            isOneToOne: false;
+            isOneToOne: true;
             referencedRelation: 'pipeline_items';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'delivery_orders_sourcing_request_id_fkey';
+            columns: ['sourcing_request_id'];
+            isOneToOne: false;
+            referencedRelation: 'sourcing_requests';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'delivery_orders_supplier_candidate_id_fkey';
+            columns: ['supplier_candidate_id'];
+            isOneToOne: false;
+            referencedRelation: 'supplier_candidates';
             referencedColumns: ['id'];
           },
           {

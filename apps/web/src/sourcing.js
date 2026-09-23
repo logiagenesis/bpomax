@@ -3,7 +3,7 @@ import { canApprove, canWrite } from '@arbitron/core';
 import { apiGet, apiSend } from './lib/api.js';
 import { formatDateTime, formatMoney, formatPercent } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
-import { runAction } from './lib/ui.js';
+import { confirmAction, runAction } from './lib/ui.js';
 import { loadPosts, setPostRoles } from './sourcing-posts.js';
 
 /**
@@ -113,6 +113,16 @@ const CHANNEL_WORDS = /** @type {Record<string, string>} */ ({
 function rateText(c) {
   if (c.quotedPriceMinor === null || c.currency === null) return 'No rate';
   return `${formatMoney(BigInt(c.quotedPriceMinor), c.currency)}${c.priced === 'hourly' ? ' an hour' : ' fixed'}`;
+}
+
+/**
+ * @param {HTMLButtonElement} button
+ * @param {string} reason empty when the button is usable
+ */
+function gate(button, reason) {
+  button.disabled = reason !== '';
+  if (reason) button.title = reason;
+  else button.removeAttribute('title');
 }
 
 /** Why a reprice judged nothing (the margin worker's block reasons, D-029). */
@@ -296,7 +306,23 @@ function renderRequest(r) {
       button.title = reason;
     }
     button.addEventListener('click', () => void toggleShortlist(button, c));
-    action.append(button);
+    const choose = document.createElement('button');
+    choose.type = 'button';
+    choose.className = 'btn btn--secondary';
+    choose.textContent = 'Choose';
+    choose.setAttribute('aria-label', `Choose ${c.name} as the supplier`);
+    gate(
+      choose,
+      !mayWrite
+        ? ROLE_REASON
+        : !['open', 'shortlisting'].includes(r.status)
+          ? `This request is ${STATUS_WORDS[r.status]?.toLowerCase() ?? r.status}, so a supplier cannot be chosen on it.`
+          : c.quotedPriceMinor === null
+            ? 'This candidate has no quote yet, so there is no cost to agree.'
+            : '',
+    );
+    choose.addEventListener('click', () => void chooseSupplier(choose, c));
+    action.append(button, choose);
 
     const margin = document.createElement('td');
     const judged = marginText(c);
@@ -451,6 +477,53 @@ async function toggleShortlist(button, c) {
     } catch (error) {
       if (backToLoginOn401(error)) return;
     }
+  }
+}
+
+/**
+ * "Choose supplier" (docs/01 section I): opens a draft delivery order at the candidate's
+ * quote (ARB-310), after a confirmation, and links to it on the pipeline page.
+ * @param {HTMLButtonElement} button
+ * @param {Candidate} c
+ */
+async function chooseSupplier(button, c) {
+  if (!current) return;
+  const request = current;
+  const ok = await confirmAction({
+    title: `Choose ${c.name}?`,
+    body: `A delivery order opens at their quote of ${rateText(c)}, with the brief’s handover checklist. Nothing is sent to the supplier; the order is assigned on the pipeline page once the job is won.`,
+    confirmLabel: 'Choose',
+  });
+  if (!ok) return;
+  const outcome = await runAction(
+    button,
+    requestStatus,
+    async () => {
+      try {
+        return /** @type {{ order: { id: string } }} */ (
+          await apiSend('POST', `/v1/sourcing-requests/${request.id}/candidates/${c.id}/choose`)
+        );
+      } catch (error) {
+        if (backToLoginOn401(error)) return undefined;
+        throw error;
+      }
+    },
+    { success: `Chose ${c.name}. The delivery order is open on the pipeline page.` },
+  );
+  if (outcome) {
+    const text = requestStatus.textContent ?? '';
+    try {
+      await loadRequest(request.id);
+      await fetchList();
+    } catch (error) {
+      if (backToLoginOn401(error)) return;
+    }
+    requestStatus.className = 'alert alert--success';
+    requestStatus.textContent = `${text} `;
+    const link = document.createElement('a');
+    link.href = `pipeline.html?order=${encodeURIComponent(outcome.order.id)}`;
+    link.textContent = 'Open the delivery order';
+    requestStatus.append(link);
   }
 }
 

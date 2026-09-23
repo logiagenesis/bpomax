@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pipeline — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./pipeline.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./suppliers.html">Suppliers</a></li>
+            <li><a href="./sourcing.html">Sourcing</a></li>
+            <li><a href="./pipeline.html">Pipeline</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Pipeline</h1>
+        <p>
+          Every job from the bid to payment, by stage. A job gets its delivery order when a supplier
+          is chosen on the sourcing page. The order’s milestones must add up to the agreed cost
+          before the supplier is assigned, and the supplier starts once the handover is complete.
+          Nothing here pays anyone.
+        </p>
+      </div>
+
+      <div class="card cluster">
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <div class="stack" id="board"></div>
+      <div class="empty" id="empty" hidden>
+        <p>No jobs in the pipeline yet. A job joins it when its bid is submitted.</p>
+      </div>
+
+      <section id="delivery" class="card stack" hidden aria-labelledby="delivery-title">
+        <div>
+          <h2 id="delivery-title"></h2>
+          <p class="field__hint" id="delivery-meta"></p>
+        </div>
+        <div role="status" aria-live="polite" id="delivery-status"></div>
+
+        <dl class="bid__figures" id="delivery-figures"></dl>
+
+        <h3>Milestones</h3>
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Milestones
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Milestone</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Due</th>
+                <th scope="col">State</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody id="milestone-rows"></tbody>
+          </table>
+        </div>
+
+        <form id="order-form" class="stack" novalidate hidden aria-labelledby="order-form-heading">
+          <h3 id="order-form-heading">Cost and milestones</h3>
+          <p class="section-note">
+            Amounts in the currency’s units, such as 3000.00; dates as DD/MM/YYYY. The milestones
+            must add up to the agreed cost exactly.
+          </p>
+          <div class="grid">
+            <div class="field">
+              <label class="field__label" for="order-agreedCostMinor">Agreed cost</label>
+              <input
+                class="input"
+                id="order-agreedCostMinor"
+                inputmode="decimal"
+                aria-describedby="order-agreedCostMinor-error"
+              />
+              <p class="field__error" id="order-agreedCostMinor-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="order-currency">Currency</label>
+              <input
+                class="input"
+                id="order-currency"
+                maxlength="3"
+                aria-describedby="order-currency-error"
+              />
+              <p class="field__error" id="order-currency-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="order-due">Due (DD/MM/YYYY)</label>
+              <input class="input" id="order-due" aria-describedby="order-due-error" />
+              <p class="field__error" id="order-due-error" hidden></p>
+            </div>
+          </div>
+          <div class="stack" id="order-milestones"></div>
+          <p class="field__error" id="order-milestones-error" hidden></p>
+          <p class="field__hint" id="order-total" aria-live="polite"></p>
+          <div class="row-actions">
+            <button type="button" class="btn btn--secondary" id="milestone-add">
+              Add a milestone
+            </button>
+            <button type="submit" class="btn btn--primary" id="order-save">
+              Save cost and milestones
+            </button>
+          </div>
+        </form>
+
+        <section class="stack" aria-labelledby="handover-heading">
+          <h3 id="handover-heading">Handover checklist</h3>
+          <p class="section-note">
+            Read from the locked brief. The supplier starts once every item is ticked.
+          </p>
+          <ul class="stack" id="handover"></ul>
+        </section>
+
+        <div class="row-actions" id="moves"></div>
+      </section>
+    </main>
+  </body>
+</html>

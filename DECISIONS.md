@@ -1695,3 +1695,41 @@ Decision:
 
 Why: docs/01 section I ("approvals (all pending outbound items, approve / edit / reject,
 bulk)") and the loose end D-054 left.
+
+## D-058 — Delivery orders: chosen from a sourcing candidate at its quote, milestones reconciled in core and in the database, a handover checklist from the brief, forward-only moves
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-310, session …tJv8)
+
+Decision:
+
+- A delivery order starts from "choose supplier" on the sourcing page (docs/01 section I):
+  `POST /v1/sourcing-requests/:id/candidates/:candidateId/choose` opens a draft for the
+  job's pipeline item at the candidate's quote, with one milestone holding all of it
+  (due on the brief's deadline) until the operator splits it. The request becomes
+  `chosen` and the candidate shortlisted. A job without a pipeline item (its bid was not
+  submitted through the app) is refused with the reason: no pipeline item is invented.
+- The acceptance, "Milestone totals reconcile to agreed cost", is held twice: by
+  `validateDeliveryOrderEdit` in core (the page and the API run it; amounts in whole
+  minor units, summed as BigInt, with the difference in money words), and by 0026's
+  `milestones_reconcile` check, which refuses any order past draft whose milestones do
+  not add up to the agreed cost exactly.
+- The handover checklist is read from the locked brief: the scope to share (never the
+  client's name or contact details, D-054), each acceptance criterion and technical
+  constraint for the supplier to confirm, each asset to hand over or still owed, the
+  deadline, and the milestones agreed in writing. Keys are stable, so a tick survives.
+  Nothing on it is invented.
+- The order moves forward only: draft → assigned (a supplier chosen, the job won, the
+  milestones reconciled) → in progress (every handover item ticked; the job moves to In
+  delivery) → delivered (every milestone delivered; the job moves to Delivered) →
+  accepted (every milestone accepted). It may be cancelled before delivery, which
+  reopens the sourcing request. Each move names why it is not allowed yet, on the button.
+- The pipeline page (docs/01 section I, "board by stage") is built here, since no other
+  ticket builds it: the board by stage, a stage move per job (Lost asks first), and the
+  delivery order. The retainer toggle is ARB-312.
+- Nothing here moves money. Paying the supplier against a milestone is ARB-311, and
+  T-05 (the legal structure for paying overseas suppliers) is HARD before the first live
+  supplier payment.
+
+Why: docs/01 section A step 8 ("track the won job through milestones, supplier handover,
+client delivery and payment") and the ticket's acceptance.
