@@ -18,7 +18,9 @@
     "build:web": "pnpm --filter @arbitron/web build",
     "db:reset": "pnpm --filter @arbitron/db db:reset",
     "db:types": "pnpm --filter @arbitron/db db:types",
-    "build:web:e2e": "pnpm --filter @arbitron/web build:e2e"
+    "build:web:e2e": "pnpm --filter @arbitron/web build:e2e",
+    "compose:up": "docker compose up -d --wait --wait-timeout 240",
+    "compose:down": "docker compose down"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

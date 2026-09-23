@@ -8,7 +8,9 @@
 
 services:
   redis:
-    image: redis:7-alpine
+    # Overridable so a registry mirror can stand in when Docker Hub is out of reach
+    # (D-036); unset, the images are exactly the ones named here.
+    image: ${REDIS_IMAGE:-redis:7-alpine}
     container_name: arbitron-redis
     command: ['redis-server', '--appendonly', 'yes']
     ports:
@@ -23,7 +25,7 @@ services:
       start_period: 5s
 
   postgres:
-    image: supabase/postgres:15.8.1.060
+    image: ${POSTGRES_IMAGE:-supabase/postgres:15.8.1.060}
     container_name: arbitron-postgres
     environment:
       POSTGRES_USER: postgres

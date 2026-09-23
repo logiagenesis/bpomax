@@ -52,7 +52,7 @@ says which, and which tickets each one holds up.
 ## Run
 
 ```bash
-docker compose up -d        # Redis on 6379, Postgres on 54322
+pnpm compose:up             # Redis on 6379, Postgres on 54322; waits until both are healthy
 pnpm --filter @arbitron/web dev    # front end on http://localhost:5173
 ```
 

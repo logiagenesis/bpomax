@@ -91,3 +91,24 @@ jobs:
           path: playwright-report/
           retention-days: 7
           if-no-files-found: ignore
+
+  compose:
+    name: docker compose up healthy
+    # ARB-004's acceptance, on every push: the local stack starts and every service
+    # passes its own health check. The build container cannot pull the Postgres image
+    # (its registry download hosts are outside its egress policy), so this is where
+    # the clause is proven (D-037).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack and wait for every health check
+        run: docker compose up -d --wait --wait-timeout 240
+
+      - name: Show the services
+        if: ${{ always() }}
+        run: docker compose ps
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: docker compose down -v

@@ -919,3 +919,60 @@ Reason:
   once; a revoked session lasting up to a minute longer is the trade, recorded.
 - `visually-hidden` inside a table header escaped the table's own scroll box and made
   the document scroll sideways at 380 px; the action columns now have visible headers.
+
+## D-036 — Every ticket is built, blocked or not; what waits on the owner is marked BUILT-PENDING-CREDENTIALS
+
+Date: 23/09/2026
+Decided by: the owner's instruction of 23/09/2026, applied by Claude Code (session …V4PPWs)
+
+Decision:
+
+- A ticket blocked on a credential, an account, a host or an owner's figure is built in
+  full anyway: against fakes in tests, and local stand-ins for development (a local Redis,
+  PGlite for Postgres, a scripted model, an in-process fake of each marketplace API). The
+  real service is chosen by configuration, so a credential dropped into `.env` is the only
+  change needed.
+- Its board status is BUILT-PENDING-CREDENTIALS, and the row names the clause still open
+  and the docs/02 item that closes it. It moves to DONE when that clause is proven with the
+  real thing.
+- Stand-ins are never defaults in production. With no credential the production path
+  refuses and says which one is missing. It never falls back to the fake.
+- Nothing in docs/01 rule 6 changes. Figures, fees, legal wording and plan limits stay
+  the owner's; the code carries the mechanism and a null. LIVE_MODE stays false. Every
+  marketplace endpoint is cited from its official documentation, or the call is not
+  written.
+- A phase-end ticket (ARB-099, 299, 399) no longer holds back the next phase's features:
+  those are built on top of what exists. The phase tag itself still waits for its four
+  links, including a live preview URL (docs/01 section K). No tag is pushed without them.
+- A ticket that runs past an hour pushes a green intermediate commit, so its claim never
+  looks stale under D-034.
+
+Reason:
+
+- The owner asked for the product to be ready for its credentials, not waiting for them.
+  Building against stand-ins now means the owner's answers are configuration, not new
+  work.
+
+## D-037 — `docker compose up` is proven healthy in CI; the images can be pointed at a mirror
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-004, session …V4PPWs)
+
+Decision:
+
+- CI has a `compose` job that runs `docker compose up -d --wait` on every push, which
+  exits non-zero unless every service's own health check passes. That is ARB-004's
+  clause, proven on GitHub's runners.
+- `pnpm compose:up` runs the same command locally.
+- `REDIS_IMAGE` and `POSTGRES_IMAGE` override the two images. Unset, the images are the
+  ones compose names. This lets a registry mirror stand in where Docker Hub is out of
+  reach or rate-limited.
+
+Reason:
+
+- The build container now starts a Docker daemon, which V-01 said it could not.
+  `docker compose up --wait` of the Redis service from `mirror.gcr.io` was healthy there,
+  and the worker queue tests (101) passed against it. The Postgres image cannot be pulled
+  there: Docker Hub answered 429, and the download hosts of Docker Hub, GitHub's registry
+  and AWS's public registry are refused by that container's egress policy. GitHub's
+  runners have none of these limits, so the whole stack is checked there instead.
