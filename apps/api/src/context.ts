@@ -20,6 +20,9 @@ export interface Enqueue {
   }) => Promise<unknown>;
   readonly score?: (data: { jobId: string; requestId?: string }) => Promise<unknown>;
   readonly sendMessage?: (data: { messageId: string; requestId?: string }) => Promise<unknown>;
+  /** ARB-203: post an approved Freelancer.com sourcing post, and read its bids. */
+  readonly sourcingPost?: (data: { postId: string; requestId?: string }) => Promise<unknown>;
+  readonly sourcingCollect?: (data: { postId: string; requestId?: string }) => Promise<unknown>;
 }
 
 export interface ServerOptions {

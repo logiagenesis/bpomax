@@ -1230,6 +1230,25 @@ function api(method, url, body) {
     if (action === 'approve') {
       if (row.status !== 'draft')
         return respond(409, { error: `This post is ${row.status}, so it cannot be approved.` });
+      if (
+        row.platform === 'freelancer' &&
+        (!row.currency || (row.budgetMinMinor === null && row.budgetMaxMinor === null))
+      ) {
+        return respond(409, {
+          error: 'A Freelancer.com post needs a budget before it is approved. Edit it to add one.',
+        });
+      }
+      if (row.platform === 'freelancer') {
+        // Live mode is off in the demo: the sender records what it would have posted.
+        logEvent(store, 'external.blocked_by_live_mode', {
+          actor_kind: 'system',
+          actor_user_id: null,
+          outcome: 'blocked',
+          subject_table: 'sourcing_posts',
+          subject_id: row.id,
+          payload: { wouldSend: { call: 'projects/0.1/projects', title: row.title } },
+        });
+      }
       Object.assign(row, {
         status: 'approved',
         approvedBy: USER,

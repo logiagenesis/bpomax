@@ -33,6 +33,8 @@ import { confirmAction, runAction } from './lib/ui.js';
  * @property {string | null} approvedByName
  * @property {string | null} approvedVia
  * @property {string | null} postedAt
+ * @property {string | null} externalId
+ * @property {string | null} failureReason
  * @property {string} createdAt
  */
 
@@ -145,6 +147,7 @@ function card(p) {
     `Budget: ${budgetText(p)}`,
     p.approvedByName ? `approved by ${p.approvedByName} via ${p.approvedVia ?? '?'}` : null,
     p.postedAt ? `posted ${formatDateTime(p.postedAt)}${p.manual ? ' by hand' : ''}` : null,
+    p.externalId ? `Freelancer.com project ${p.externalId}` : null,
     `drafted ${formatDateTime(p.createdAt)}`,
   ]
     .filter(Boolean)
@@ -230,7 +233,9 @@ function card(p) {
       ? 'Your role can view posts but not approve them.'
       : p.status !== 'draft'
         ? `This post is ${STATE_WORDS[p.status]?.toLowerCase() ?? p.status}, so it cannot be approved.`
-        : '',
+        : !p.manual && (!p.currency || (p.budgetMinMinor === null && p.budgetMaxMinor === null))
+          ? 'A Freelancer.com post needs a budget before it is approved. Edit it to add one.'
+          : '',
   );
   actions.append(edit, approve);
   if (p.manual) {
@@ -251,6 +256,16 @@ function card(p) {
     );
     posted.addEventListener('click', () => void act(posted, p, 'posted'));
     actions.append(posted);
+  }
+  if (!p.manual && p.status === 'posted' && p.externalId) {
+    const collect = document.createElement('button');
+    collect.type = 'button';
+    collect.className = 'btn btn--secondary';
+    collect.textContent = 'Collect bids now';
+    collect.setAttribute('aria-label', `Collect the bids on the ${name} post now`);
+    gate(collect, mayWrite ? '' : 'Your role can view posts but not change them.');
+    collect.addEventListener('click', () => void act(collect, p, 'collect'));
+    actions.append(collect);
   }
   const close = document.createElement('button');
   close.type = 'button';
@@ -307,7 +322,11 @@ function card(p) {
     if (ok) void act(close, p, 'close');
   });
 
-  article.append(head, title, body, meta, actions, form);
+  const failure = document.createElement('p');
+  failure.className = 'field__error';
+  failure.hidden = !p.failureReason;
+  failure.textContent = p.failureReason ? `Not posted: ${p.failureReason}` : '';
+  article.append(head, title, body, meta, failure, actions, form);
   return article;
 }
 
@@ -349,14 +368,17 @@ async function reload() {
 /**
  * @param {HTMLButtonElement} button
  * @param {Post} p
- * @param {'approve' | 'posted' | 'close'} action
+ * @param {'approve' | 'posted' | 'close' | 'collect'} action
  */
 async function act(button, p, action) {
   const name = PLATFORM_WORDS[p.platform] ?? p.platform;
   const text = {
-    approve: `Approved the ${name} post.`,
+    approve: p.manual
+      ? `Approved the ${name} post.`
+      : `Approved the ${name} post. It is posted when live mode allows; until then the audit log shows what would be sent.`,
     posted: `Recorded the ${name} post as posted by hand.`,
     close: `Closed the ${name} post.`,
+    collect: `Asked Freelancer.com for the bids on the ${name} post. They appear in the ranking as they arrive.`,
   }[action];
   const keep = { value: '' };
   const done = await runAction(

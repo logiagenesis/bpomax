@@ -4,6 +4,7 @@
  * `@arbitron/freelancer/fake` so production code never imports it.
  */
 export * from './config.js';
+export * from './employer.js';
 export * from './http.js';
 export * from './messaging.js';
 export * from './oauth.js';

@@ -183,7 +183,8 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
       'POST /v1/sourcing-posts/:id/:action': (req, route) => {
         const parts = req.path.split('/');
         const action = parts.pop();
-        const row = posts.find((p) => p.id === parts.pop());
+        const postId = parts.pop();
+        const row = posts.find((p) => p.id === postId);
         if (!row) return route.fulfill({ status: 404, json: { error: 'no such sourcing post' } });
         if (action === 'approve')
           Object.assign(row, {
@@ -194,7 +195,8 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
         if (action === 'posted')
           Object.assign(row, { status: 'posted', postedAt: '2026-09-23T12:30:00Z' });
         if (action === 'close') Object.assign(row, { status: 'closed' });
-        return route.fulfill({ json: { post: row } });
+        if (action === 'collect') return route.fulfill({ status: 202, json: { queued: true } });
+        return route.fulfill({ json: { post: row, queued: false } });
       },
       'PATCH /v1/sourcing-requests/:id/candidates/:candidateId': (req, route) => {
         if (options.patch) return route.fulfill(options.patch);
@@ -460,20 +462,111 @@ test('Cancel leaves the post as it was', async ({ page }) => {
 test('Approve asks first, then approves in the person’s name; it cannot be approved twice', async ({
   page,
 }) => {
-  const requests = await openRequest(page, { posts: [post({})] });
+  const requests = await openRequest(page, {
+    posts: [post({ currency: 'ZAR', budgetMinMinor: '800000', budgetMaxMinor: '1200000' })],
+  });
   await page.getByRole('button', { name: 'Approve the Freelancer.com post' }).click();
   await expect(page.getByRole('dialog')).toContainText('Approve the Freelancer.com post?');
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
   expect(requests.filter((r) => r.path.endsWith('/approve'))).toHaveLength(0);
   await page.getByRole('button', { name: 'Approve the Freelancer.com post' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
-  await expect(page.locator('#posts-status')).toHaveText('Approved the Freelancer.com post.');
+  await expect(page.locator('#posts-status')).toHaveText(
+    'Approved the Freelancer.com post. It is posted when live mode allows; until then the audit log shows what would be sent.',
+  );
   await expect(page.locator('#posts article')).toContainText('approved by Ayanda Nkosi via web');
   const approve = page.getByRole('button', { name: 'Approve the Freelancer.com post' });
   await expect(approve).toBeDisabled();
   await expect(approve).toHaveAttribute(
     'title',
     'This post is approved, so it cannot be approved.',
+  );
+});
+
+test('a Freelancer.com post without a budget cannot be approved, and says why', async ({
+  page,
+}) => {
+  await openRequest(page, { posts: [post({})] });
+  const approve = page.getByRole('button', { name: 'Approve the Freelancer.com post' });
+  await expect(approve).toBeDisabled();
+  await expect(approve).toHaveAttribute(
+    'title',
+    'A Freelancer.com post needs a budget before it is approved. Edit it to add one.',
+  );
+});
+
+test('a failed post shows why; a posted one shows its project and collects its bids on request', async ({
+  page,
+}) => {
+  const requests = await openRequest(page, {
+    posts: [
+      post({
+        id: 'p-failed',
+        status: 'failed',
+        failureReason: 'Freelancer.com lists no currency EUR, so the project is not posted.',
+      }),
+      post({
+        id: 'p-posted',
+        status: 'posted',
+        externalId: '16000001',
+        postedAt: '2026-09-23T12:30:00Z',
+        currency: 'ZAR',
+        budgetMinMinor: '800000',
+        budgetMaxMinor: '1200000',
+      }),
+    ],
+  });
+  const cards = page.locator('#posts article');
+  await expect(cards.nth(0)).toContainText(
+    'Not posted: Freelancer.com lists no currency EUR, so the project is not posted.',
+  );
+  await expect(cards.nth(1)).toContainText('Freelancer.com project 16000001');
+  await page
+    .getByRole('button', { name: 'Collect the bids on the Freelancer.com post now' })
+    .click();
+  await expect(page.locator('#posts-status')).toHaveText(
+    'Asked Freelancer.com for the bids on the Freelancer.com post. They appear in the ranking as they arrive.',
+  );
+  expect(requests.find((r) => r.path.endsWith('/collect'))?.path).toBe(
+    '/v1/sourcing-posts/p-posted/collect',
+  );
+});
+
+test('a bid collected from the platform appears in the ranking with where it came from', async ({
+  page,
+}) => {
+  await serve(page, {
+    partial: {
+      candidates: [
+        ...candidates(),
+        {
+          id: 'c-bid',
+          supplierId: null,
+          name: 'kolkata-devs',
+          channel: null,
+          countryCode: 'IN',
+          timeZone: null,
+          currency: 'ZAR',
+          quotedPriceMinor: '750000',
+          priced: 'fixed',
+          turnaroundDays: 14,
+          score: null,
+          parts: null,
+          reasons: [],
+          shortlisted: false,
+          source: 'bid',
+        },
+      ],
+    },
+  });
+  await page.goto(`/sourcing.html?request=${REQUEST}`);
+  const bid = page.locator('#candidate-rows tr').nth(2);
+  await expect(bid).toContainText('kolkata-devs');
+  await expect(bid).toContainText('R7 500,00 fixed');
+  await expect(bid).toContainText('14 days');
+  await expect(bid).toContainText('Not scored');
+  await expect(bid).toContainText(
+    'A bid on the Freelancer.com post from IN; not ranked, compare it by hand.',
   );
 });
 
