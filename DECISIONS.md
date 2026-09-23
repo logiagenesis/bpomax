@@ -1200,3 +1200,51 @@ Reason:
 - Asking for the four scopes once means the owner consents once, not again per phase.
 - Gating the connect on LIVE_MODE would make the sandbox clause untestable with the
   switch off, which is the only way it is ever run before go-live.
+
+## D-045 — The ingest worker keeps one schedule per scanner from a minute-by-minute sync; a listing is one row per org; a rate limit is the queue's backoff
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-022, session …tJv8)
+
+Decision:
+
+- The `ingest` queue runs two kinds of job. A `sync` every minute, from one fixed BullMQ
+  job scheduler, reads the active Freelancer.com scanners whose org has a connected
+  account and keeps one job scheduler per scanner at the scanner's own interval
+  (`scanner:<id>`, `every` = its seconds). A `poll` per scanner, at that interval, is one
+  call to the documented search. Adding, editing, pausing or deleting a scanner in
+  Settings takes effect within a minute, and the API tells Redis nothing.
+- The search is `GET /projects/0.1/projects/active/`, cited in
+  `packages/freelancer/src/projects.ts` parameter by parameter. Scanner filters map to
+  it as far as it goes: keywords to `query` (every term must match, the endpoint's own
+  rule), the hourly switch to `project_types[]`, included countries to `countries[]`, a
+  USD budget floor to `min_price` (which the docs define in USD). A floor in another
+  currency is applied to listings priced in that currency, and a listing in a third
+  currency is kept, since comparing them needs a rate the worker does not have.
+  Excluded countries and category slugs cannot be applied (the endpoint filters by
+  country only inclusively and the listing carries no client country; the slugs are the
+  org's own taxonomy, which the estimate worker classifies into), and each run's
+  `scanner.polled` event names the filters it did not apply.
+- Migration 0018 makes the dedupe key per org: `unique (org_id, platform, external_id)`.
+  The upsert refreshes what the marketplace changes (title, text, budget, bids) and keeps
+  what the org added (scanner, category). A listing seen for the first time is a
+  `job.ingested` event and a score job; one seen again is neither.
+- `bid_stats.bid_avg` stays in `jobs.raw` only: the docs do not say which currency it is
+  in, so `average_bid_minor` is left null rather than guessed.
+- A 429 (`AuthorisationExceptionCodes.RATE_LIMITED`, with the `RateLimit-*` headers) is
+  logged as `external.call` and thrown back to the queue: ARB-030's exponential backoff
+  is the wait, and a run that fails every attempt is a dead letter. A refused token (401
+  or 403) marks the account `expired`, is logged, and is not retried: the owner connects
+  again in Settings.
+- The listing's client fields (`client_country`, `client_payment_verified`,
+  `client_spend_minor`, `client_rating`) stay null. The search's `user_details`
+  projection is documented only as "basic user information"; its shape is for the sandbox
+  run to show (C-02).
+
+Reason:
+
+- A sync that owns the schedules is idempotent and needs no coupling between the API and
+  the queues, and one scheduler per scanner is exactly "per scanner interval" (docs/01
+  section E).
+- A per-org key is what every later table assumes: each org has its own scores,
+  estimates and bids for the same public listing.

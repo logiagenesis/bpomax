@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatPercent } from './money.js';
+import { formatMoney, formatPercent, toMinor } from './money.js';
 
 /** D-024's format, held to the same outputs as apps/web/src/lib/format.test.ts. */
 const NBSP = ' ';
@@ -32,5 +32,30 @@ describe('money from minor units', () => {
   it('writes percentages with a decimal comma', () => {
     expect(formatPercent(0.125)).toBe('12,5%');
     expect(formatPercent(0.4, 0)).toBe('40%');
+  });
+});
+
+describe('toMinor', () => {
+  it('turns a marketplace amount into whole minor units, by the currency', () => {
+    // Hand-worked: USD has two minor digits, so 250 is 25 000 cents.
+    expect(toMinor(250, 'USD')).toBe(25000);
+    expect(toMinor(462.57575757575756, 'USD')).toBe(46258);
+    expect(toMinor(276.1875, 'usd')).toBe(27619);
+    expect(toMinor(0.5, 'ZAR')).toBe(50);
+    // The yen has no minor digits; the dinar has three.
+    expect(toMinor(5000, 'JPY')).toBe(5000);
+    expect(toMinor(1.2345, 'KWD')).toBe(1235);
+    expect(toMinor(-12.34, 'EUR')).toBe(-1234);
+  });
+
+  it('rounds half up on the digit after the last minor digit, as text', () => {
+    expect(toMinor(1.005, 'USD')).toBe(101);
+    expect(toMinor(1.004, 'USD')).toBe(100);
+    expect(toMinor(0.1 + 0.2, 'USD')).toBe(30);
+  });
+
+  it('refuses what is not an amount or not a currency', () => {
+    expect(() => toMinor(Number.NaN, 'USD')).toThrow(RangeError);
+    expect(() => toMinor(1, 'dollars')).toThrow(RangeError);
   });
 });

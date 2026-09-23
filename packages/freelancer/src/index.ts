@@ -6,5 +6,6 @@
 export * from './config.js';
 export * from './http.js';
 export * from './oauth.js';
+export * from './projects.js';
 export * from './tokens.js';
 export * from './users.js';
