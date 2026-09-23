@@ -49,7 +49,7 @@ Mark each item done by writing the answer or "DONE dd/mm/yyyy" in the Answer col
 | D-06 | Starting saved searches (keywords, categories, budget floor, client countries to include/exclude) | HARD | ARB-021 | Provide at least 3 | |
 | D-07 | Bid templates: tone, CTA style, sign-off, company name shown to clients | HARD | ARB-043 | Provide one approved template per main category or approve the drafts Claude Code produces | |
 | D-08 | Auto-reply text for first client message | SOFT | ARB-121 | Provide or approve draft | |
-| D-09 | Initial supplier list (name, country, channel, categories, rates, turnaround, pays-after-delivery yes/no) | HARD for Phase 2 | ARB-200 | CSV template will be generated at ARB-200 | |
+| D-09 | Initial supplier list (name, country, channel, categories, rates, turnaround, pays-after-delivery yes/no) | HARD for Phase 2 | ARB-200 | The template is built (ARB-200): Suppliers page → Download the template, or `GET /v1/suppliers/template.csv`; fill it in and import it on the same page. Nothing is seeded until then. | |
 | D-10 | Portfolio items that are genuinely Logi-Ink work (URLs, screenshots, permission to show) | HARD | ARB-043 | Only own work or clearly labelled demos | |
 | D-11 | Confirm exact Logi-Ink brand colour values (primary cyan hex, secondary) and supply the logo file | SOFT | ARB-060 | Needed for design tokens | |
 | D-12 | SaaS pricing (Phase 4) | HARD for Phase 4 | ARB-410 | Earlier working figures are not approved | |
