@@ -108,3 +108,36 @@ B-12, T-06, or a figure the owner must supply). Every Phase 2 to 4 ticket depend
 ARB-099. The highest-value answers remain T-02, D-02 and D-03 (the margin engine), then
 B-06 (sign-in and the generated types) and B-11/B-12 (the preview link Phase 1 needs).
 
+## 23/09/2026 — session …G8QbdJJy (scheduled audit run)
+
+Ran the full local verification suite rather than only re-reading the board, to check
+whether anything marked DONE has actually regressed: `pnpm lint`, `pnpm typecheck`,
+`pnpm test` (655 tests) and `pnpm test:e2e` (93 Playwright specs, including the visual
+snapshots). All four are green. `git ls-remote origin main` matches local HEAD; the last
+five GitHub Actions runs on main all succeeded.
+
+Two things in this container are environment artefacts, not product bugs, and are noted
+here so the next session does not mistake them for regressions:
+
+- `pnpm test` fails 10 tests across `apps/workers` on a fresh container because no Redis
+  is running (BullMQ has no fake worth using — the project already documents this class
+  of gap for Docker, V-01). Starting `redis-server --daemonize yes` first (as CI's service
+  container does) makes all 655 pass; nothing in the queue code changed.
+- `pnpm test:e2e` fails every spec on a fresh container because this box ships a Chromium
+  build the installed Playwright version (1.63.0) does not recognise by default. Setting
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to the pre-installed binary, exactly as the comment in
+  `e2e/playwright.config.ts` describes, makes all 93 pass, snapshots included.
+
+Confirms the prior run (…TC2vS5, same day): no unblocked tickets remain. ARB-004, 010,
+013, 015, 020, 022 and 070 still wait on docs/02-BLOCKERS.md; ARB-099 still needs all of
+Phase 1; every Phase 2 to 4 ticket depends on ARB-099. docs/02-BLOCKERS.md's Answer column
+is still empty throughout — nothing here is a code defect, all of it is an owner action
+(a credential, an account, or a figure the build already refuses to invent). No board or
+code changes made.
+
+Repo hygiene noted for the owner, not acted on here since neither PR is this session's:
+`claude/exciting-fermi-5n7vtl` (#1) is a superseded ARB-062 draft whose own description
+says "do not merge" — safe to close. `claude/eager-ritchie-bpufcs` (#2) is a clean,
+mergeable, docs-only run-log entry from session …TC2vS5 that duplicates part of this one;
+worth merging or closing before it drifts further behind main.
+
