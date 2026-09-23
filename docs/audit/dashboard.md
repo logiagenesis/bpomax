@@ -9,7 +9,7 @@ formulas are written beside its fields and hand-worked against real Postgres in
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Link | Arbitron | Go to the dashboard | Goes to dashboard.html | — | — | — | Never | Yes | shows every figure… (every link goes somewhere) | ✅ |
-| Nav links ×5 | Dashboard, Feed, Approvals, Settings, Audit log | Go to that page; current page marked | Go there; `aria-current="page"` on Dashboard | — | — | — | Never | Yes | shows every figure… | ✅ |
+| Nav links ×10 | Dashboard, Feed, Approvals, Conversations, Suppliers, Sourcing, Pipeline, Analytics, Settings, Audit log | Go to that page; current page marked | Go there; `aria-current="page"` on Dashboard | — | — | — | Never | Yes | shows every figure… | ✅ |
 | Button | Sign out | End the session and go to login | `POST /auth/v1/logout` with the bearer token (best effort), sessionStorage cleared, login.html | Disabled while leaving | Login page shown, not bounced back | The local session is cleared even if Supabase cannot be reached | Never | Yes | sign out revokes the session with Supabase, clears it, and goes to login | ✅ |
 | Button | Refresh | Ask the API again | `GET /v1/dashboard`, tiles re-rendered | Spinner, aria-busy, disabled | "Figures are up to date." | The API's message, e.g. "The API refused the request: boom." | While busy | Yes | refresh asks the API again; an API failure is shown in the status line | ✅ |
 | Link | N sent this month. Open approvals | Go to the approvals queue | Goes to approvals.html | — | — | — | Never | Yes | the bids tile links to approvals | ✅ |

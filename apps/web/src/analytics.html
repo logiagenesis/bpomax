@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Feed — Arbitron</title>
+    <title>Analytics — Arbitron</title>
     <link rel="stylesheet" href="./styles/app.css" />
-    <script type="module" src="./feed.js"></script>
+    <script type="module" src="./analytics.js"></script>
   </head>
   <body>
     <header class="app-header">
@@ -34,56 +34,58 @@
 
     <main class="container stack page">
       <div>
-        <h1>Feed</h1>
+        <h1>Analytics</h1>
         <p>
-          Jobs the scanners found, newest first, with the stored score, cost estimate and margin
-          beside each. Queue bid asks for a bid to be drafted; nothing is sent until it is approved.
+          How the bids have done, grouped by category, template, supplier or scanner. Every figure
+          is counted from stored rows over the jobs with a bid sent. Reply rate is the bids that had
+          a client message after them, of the bids; win rate is the jobs won, of those won or lost;
+          realised margin is payments in less payments out, in rand; cost per reply is the model
+          spend on those jobs, of the replies. A rate with nothing under it says so.
         </p>
       </div>
 
       <form id="filters" class="card cluster" novalidate aria-labelledby="filters-heading">
         <h2 id="filters-heading" class="visually-hidden">Filter</h2>
         <div class="field">
-          <label class="field__label" for="verdict">Verdict</label>
-          <select class="select" id="verdict" name="verdict">
-            <option value="">All jobs</option>
-            <option value="go">Go</option>
-            <option value="caution">Caution</option>
-            <option value="skip">Skip</option>
-            <option value="unscored">Not scored yet</option>
+          <label class="field__label" for="by">Group by</label>
+          <select class="select" id="by" name="by">
+            <option value="category">Category</option>
+            <option value="template">Template</option>
+            <option value="supplier">Supplier</option>
+            <option value="scanner">Scanner</option>
           </select>
         </div>
-        <button type="submit" class="btn btn--primary" id="apply">Apply filter</button>
-        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+        <div class="field">
+          <label class="field__label" for="since">Bids sent since (DD/MM/YYYY)</label>
+          <input class="input" id="since" name="since" aria-describedby="since-error" />
+          <p class="field__error" id="since-error" hidden></p>
+        </div>
+        <button type="submit" class="btn btn--primary" id="apply">Apply</button>
       </form>
       <div role="status" aria-live="polite" id="status"></div>
 
       <div class="table-wrap" id="results" hidden>
         <table class="table">
           <caption class="visually-hidden">
-            Jobs in the feed
+            Analytics
           </caption>
           <thead>
             <tr>
-              <th scope="col">Job</th>
-              <th scope="col">Budget</th>
-              <th scope="col">Score</th>
-              <th scope="col">Estimate</th>
-              <th scope="col">Margin</th>
-              <th scope="col">Bid</th>
-              <th scope="col">Action</th>
+              <th scope="col" id="group-heading">Category</th>
+              <th scope="col">Bids</th>
+              <th scope="col">Reply rate</th>
+              <th scope="col">Win rate</th>
+              <th scope="col">Realised margin</th>
+              <th scope="col">Model cost per reply</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
+          <tfoot id="total"></tfoot>
         </table>
       </div>
+      <p class="field__hint" id="unconverted" hidden></p>
       <div class="empty" id="empty" hidden>
-        <p>No jobs match this filter.</p>
-      </div>
-      <div class="cluster">
-        <button type="button" class="btn btn--ghost" id="previous" disabled>Previous</button>
-        <button type="button" class="btn btn--ghost" id="next" disabled>Next</button>
-        <p id="count" class="field__hint"></p>
+        <p>No bids have been sent yet, so there is nothing to count.</p>
       </div>
     </main>
   </body>

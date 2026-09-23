@@ -11,7 +11,7 @@ answer. The browser never sees a token (D-041, D-044).
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×5, Sign out | as dashboard.md | as dashboard.md | as dashboard.md | — | — | — | — | Yes | Back to Settings goes to Settings | ✅ |
+| Link, nav links ×10, Sign out | as dashboard.md | as dashboard.md | as dashboard.md | — | — | — | — | Yes | Back to Settings goes to Settings | ✅ |
 | Link | Back to Settings | Return to the settings page | Goes to settings.html | — | — | — | Never | Yes | Back to Settings goes to Settings | ✅ |
 | Status (`role="status"`, no control) | — | Say what happened | On load the code is read from the address and removed from it and from the history (`history.replaceState`), then sent once to the API | "Finishing the connection…" | "Connected the Freelancer.com account <username>." | The API's message as it is (a 409 for a stale or missing attempt says "Start again from Settings"; a 502 says nothing was connected); with no code: "Freelancer.com did not send back an authorisation code, so nothing was connected. Go back to Settings and try again." and nothing is sent | — | Not applicable | hands the code to the API, says which account was connected, and clears the code from the address; without a code nothing is sent, and the page says what to do; the API’s refusal is shown as it is | ✅ |
 

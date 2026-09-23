@@ -1793,3 +1793,36 @@ Decision:
 
 Why: docs/01 section I (the pipeline's retainer toggle, the dashboard's retainer total) and
 the ticket's acceptance.
+
+## D-061 — Analytics: a per-job view read with the caller's rights, grouped in core; a rate with no denominator is no data; cost per reply is model spend
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-320, session …tJv8)
+
+Decision:
+
+- `analytics_job_facts` (0028) is one row per job with a submitted bid: its category,
+  scanner, the template of its latest sent bid, the supplier of its live delivery order,
+  whether a client message came at or after the bid, won or lost from the pipeline,
+  payments in and out in rand with unconverted ones counted apart, and the model spend on
+  the job and its bids. It is a view with `security_invoker`, so RLS keeps each
+  organisation to its own rows; nothing is materialised, so every figure is the stored
+  rows' own when read. docs/01 section E's nightly `rollup` worker ("analytics
+  tables/views") is met by the view; its queue stays for a snapshot if volume needs one.
+- `aggregateAnalytics` in core groups the rows by category, template, supplier or
+  scanner, and `analyticsTotal` gives every bid together; the API and the demo both call
+  them. Reply rate = bids with a reply ÷ bids; win rate = won ÷ (won + lost); realised
+  margin = payments in − payments out in rand (docs/05 section 3.5); cost per reply = model
+  spend ÷ replies, in nano-US-dollars (D-021). Each rate carries its numerator and
+  denominator, and one with nothing under it is "no data", never 0 %.
+- Cost per reply counts the model spend only. Marketplace bid costs are not stored
+  anywhere (the bid allowance is T-03's count, not a price), so they are not in it; the
+  page's intro says what is counted.
+- A group with no value is named for what it lacks ("Not classified", "No template",
+  "No supplier", "No scanner"), and "Bids sent since" filters by the day the bid went,
+  from 00:00 SAST.
+- Analytics joins the nav after Pipeline, following docs/01 section I's order.
+
+Why: docs/01 section A step 9 ("realised margin, reply rate and win rate per category,
+template, supplier and search") and the ticket's acceptance, "Figures verified against raw
+SQL in tests".

@@ -23,8 +23,10 @@
  *   ARB-202  sourcing post drafts and the client-identity check (sourcing-posts.ts)
  *   ARB-310  delivery orders: milestones reconciled, handover checklist, moves (delivery.ts)
  *   ARB-311  payments, their rand figures and realised margin      (payments.ts)
+ *   ARB-320  analytics: rates and margin per category, template, supplier, scanner (analytics.ts)
  */
 export * from './allowance.js';
+export * from './analytics.js';
 export * from './auth.js';
 export * from './auto-reply.js';
 export * from './brief.js';

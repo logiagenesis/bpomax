@@ -7,7 +7,7 @@ shapes `GET /v1/jobs` and `POST /v1/jobs/:id/queue-bid` return
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×5, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Feed | — | — | — | — | Yes | lists jobs with the stored score… | ✅ |
+| Link, nav links ×10, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Feed | — | — | — | — | Yes | lists jobs with the stored score… | ✅ |
 | Select | Verdict | Restrict to go / caution / skip / not scored | Sends `verdict=` to the API; address bar updated | — | — | — | Never | Yes | the verdict filter sends exactly that verdict…; a linked view restores its filter | ✅ |
 | Button (submit) | Apply filter | Load page 1 with the filter | `GET /v1/jobs?verdict=&limit=25&offset=0` | Spinner, aria-busy, disabled | "Loaded N jobs." / "No jobs match this filter." | "Not signed in…" / "Could not reach the API…" / the API's message | While busy | Yes | the verdict filter…; an empty filter says so | ✅ |
 | Button | Refresh | Ask again with the same filter and page | Same request | as Apply | as Apply | as Apply | While busy | Yes | refresh asks again… | ✅ |
