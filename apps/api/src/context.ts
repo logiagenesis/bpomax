@@ -1,6 +1,7 @@
 import type { Role } from '@arbitron/core';
 import { isRole } from '@arbitron/core';
 import type { Queryable } from '@arbitron/db';
+import type { Fetch, FreelancerConfigResult } from '@arbitron/freelancer';
 import type { FastifyRequest } from 'fastify';
 
 /**
@@ -39,6 +40,12 @@ export interface ServerOptions {
   /** The environment's LIVE_MODE switch (D-032), shown on the settings page. */
   readonly liveMode?: boolean;
   readonly now?: () => Date;
+  /**
+   * Freelancer.com (ARB-020): the result of `freelancerConfig(process.env)`, and a fetch
+   * the tests point at the stand-in. Absent or not ok, connecting is refused with the
+   * reason, naming docs/02 B-03.
+   */
+  readonly freelancer?: { readonly config: FreelancerConfigResult; readonly fetch?: Fetch };
 }
 
 export interface FieldProblem {

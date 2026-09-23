@@ -33,7 +33,7 @@ const SESSION_KEY = 'arbitron.session';
 /**
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
- *   events: Row[] }} Store
+ *   events: Row[], connectPending?: boolean }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -553,7 +553,54 @@ function api(method, url, body) {
       accounts: store.accounts,
       telegramLinked: store.telegramLinked,
       role: 'owner',
+      freelancer: { configured: true, environment: 'demo', reason: null },
     });
+  }
+  // ARB-020 in the demo: "connecting" goes straight to the callback page with a sample
+  // code, and nothing reaches Freelancer.com.
+  if (key === 'POST /v1/platform-accounts/freelancer/connect') {
+    store.connectPending = true;
+    logEvent(store, 'account.connect_started', { payload: { via: 'web', note: 'demo' } });
+    return respond(201, {
+      authorizeUrl: './freelancer-callback.html?code=demo-code',
+      expiresAt: new Date(Date.now() + 600_000).toISOString(),
+    });
+  }
+  if (key === 'POST /v1/platform-accounts/freelancer/callback') {
+    if (!store.connectPending) {
+      return respond(409, {
+        error:
+          'No connection is waiting for this code, or it is more than ten minutes old. Start again from Settings.',
+      });
+    }
+    store.connectPending = false;
+    let account = store.accounts.find((a) => a.platform === 'freelancer');
+    if (!account) {
+      account = { id: uuid(), platform: 'freelancer', scopes: [], lastSyncAt: null };
+      store.accounts.push(account);
+    }
+    Object.assign(account, {
+      externalUserId: 'sample-account',
+      externalUsername: 'sample-account (demo)',
+      status: 'connected',
+      scopes: ['basic', '1', '2', '5', '6'],
+    });
+    logEvent(store, 'account.connected', {
+      subject_table: 'platform_accounts',
+      subject_id: account.id,
+      payload: { via: 'web', note: 'demo: nothing reached Freelancer.com' },
+    });
+    return respond(201, { account });
+  }
+  if (method === 'POST' && /^\/v1\/platform-accounts\/[^/]+\/disconnect$/.test(path)) {
+    const account = store.accounts.find((a) => a.id === idIn('/v1/platform-accounts/'));
+    if (!account) return respond(404, { error: 'no such platform account' });
+    account.status = 'disconnected';
+    logEvent(store, 'account.disconnected', {
+      subject_table: 'platform_accounts',
+      subject_id: account.id,
+    });
+    return respond(200, { account });
   }
   if (key === 'PATCH /v1/settings') {
     const validated = validateMarginRules(body);

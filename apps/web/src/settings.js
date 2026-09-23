@@ -442,7 +442,7 @@ feeForm.addEventListener('submit', async (event) => {
 const accounts = byId('accounts');
 
 /**
- * @param {{ id: string, platform: string, externalUserId: string, status: string, lastSyncAt: string | null,
+ * @param {{ id: string, platform: string, externalUserId: string, externalUsername?: string | null, status: string, lastSyncAt: string | null,
  *           planName: string | null, monthlyBidAllowance: number | null, planRecordedOn: string | null }} account
  */
 function accountCard(account) {
@@ -452,7 +452,7 @@ function accountCard(account) {
   form.setAttribute('aria-labelledby', `account-${account.id}-title`);
   const title = document.createElement('h3');
   title.id = `account-${account.id}-title`;
-  title.textContent = `${account.platform} · ${account.externalUserId}`;
+  title.textContent = `${account.platform} · ${account.externalUsername ?? account.externalUserId}`;
   const meta = document.createElement('p');
   meta.className = 'section-note';
   meta.textContent = `Status ${account.status}${account.lastSyncAt ? `, last synced ${formatDateTime(account.lastSyncAt)}` : ''}${
@@ -481,8 +481,43 @@ function accountCard(account) {
   save.textContent = 'Save plan';
   save.setAttribute('aria-label', `Save plan for ${account.platform}`);
   actions.append(save);
-  form.append(title, meta, grid, actions);
   const allowed = canWrite(role);
+  // Disconnecting deletes the stored tokens (ARB-020, D-041); the row and its history stay.
+  if (account.status !== 'disconnected') {
+    const disconnect = document.createElement('button');
+    disconnect.type = 'button';
+    disconnect.className = 'btn btn--danger';
+    disconnect.textContent = 'Disconnect';
+    disconnect.setAttribute('aria-label', `Disconnect ${account.platform}`);
+    disconnect.disabled = !allowed;
+    if (!allowed) disconnect.title = 'Your role can view accounts but not change them.';
+    disconnect.addEventListener('click', async () => {
+      const ok = await confirmAction({
+        title: `Disconnect ${account.platform}?`,
+        body: 'The stored sign-in is deleted and nothing more is fetched or sent through this account until it is connected again. Jobs, bids and history are kept.',
+        confirmLabel: 'Disconnect',
+        danger: true,
+      });
+      if (!ok) return;
+      await runAction(
+        disconnect,
+        status,
+        async () => {
+          try {
+            const body = /** @type {{ account: typeof account }} */ (
+              await apiSend('POST', `/v1/platform-accounts/${account.id}/disconnect`)
+            );
+            form.replaceWith(accountCard(body.account));
+          } catch (e) {
+            bail(e);
+          }
+        },
+        { success: `Disconnected ${account.platform}.` },
+      );
+    });
+    actions.append(disconnect);
+  }
+  form.append(title, meta, grid, actions);
   for (const control of [plan, allowance, save]) {
     control.disabled = !allowed;
     if (!allowed) control.title = 'Your role can view accounts but not change them.';
@@ -518,6 +553,55 @@ function accountCard(account) {
   });
   return form;
 }
+
+// ------------------------------------------------------- connect Freelancer.com
+const connectButton = /** @type {HTMLButtonElement} */ (byId('connect-freelancer'));
+const connectHint = byId('connect-hint');
+
+/**
+ * ARB-020: the button is live once the API has the Freelancer.com app's settings
+ * (docs/02 B-03). It asks the API for the authorise address and sends the browser there;
+ * Freelancer.com sends it back to freelancer-callback.html with a code.
+ * @param {{ configured: boolean, environment: string | null, reason: string | null } | undefined} freelancer
+ */
+function renderConnect(freelancer) {
+  if (!freelancer?.configured) {
+    connectButton.disabled = true;
+    if (freelancer?.reason) connectHint.textContent = freelancer.reason;
+    return;
+  }
+  const allowed = canWrite(role);
+  connectButton.disabled = !allowed;
+  connectButton.title = allowed ? '' : 'Your role cannot connect accounts.';
+  connectHint.textContent =
+    freelancer.environment === 'demo'
+      ? 'Demo: returns at once with a sample account. Nothing reaches Freelancer.com.'
+      : freelancer.environment === 'production'
+        ? 'Opens Freelancer.com to sign in and approve access. One account per verified identity.'
+        : freelancer.environment === 'sandbox'
+          ? 'Opens the Freelancer.com sandbox to sign in and approve access. One account per verified identity.'
+          : 'Opens a stand-in of Freelancer.com, not the real site (FREELANCER_BASE_URL). One account per verified identity.';
+}
+
+connectButton.addEventListener('click', () => {
+  void runAction(
+    connectButton,
+    status,
+    async () => {
+      try {
+        const body = /** @type {{ authorizeUrl: string }} */ (
+          await apiSend('POST', '/v1/platform-accounts/freelancer/connect')
+        );
+        location.assign(body.authorizeUrl);
+        return true;
+      } catch (e) {
+        bail(e);
+        return false;
+      }
+    },
+    { success: 'Opening Freelancer.com…' },
+  );
+});
 
 // ----------------------------------------------------------------- scanners
 /**
@@ -827,6 +911,7 @@ async function load() {
           none.textContent = 'No platform account is connected.';
           accounts.append(none);
         }
+        renderConnect(body.freelancer);
         telegramState.textContent = body.telegramLinked
           ? 'Your Telegram chat is linked. A new code moves the link to the chat that sends it.'
           : 'Your Telegram chat is not linked yet. Create a code and send it to the bot as /start <code>.';

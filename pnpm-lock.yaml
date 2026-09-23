@@ -44,6 +44,9 @@ importers:
       '@arbitron/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@arbitron/freelancer':
+        specifier: workspace:*
+        version: link:../../packages/freelancer
       '@fastify/cors':
         specifier: ^11.3.0
         version: 11.3.0

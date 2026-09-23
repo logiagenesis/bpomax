@@ -54,6 +54,7 @@ export default defineConfig(({ mode }) => {
           'style-guide': 'src/style-guide.html',
           'audit-log': 'src/audit-log.html',
           privacy: 'src/privacy.html',
+          'freelancer-callback': 'src/freelancer-callback.html',
         },
       },
     },

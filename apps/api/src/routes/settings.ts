@@ -8,6 +8,7 @@ import { recordEvent, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import { currentMembership, invalid, UUID, type ServerOptions } from '../context.js';
 import { messageOf, refuse, statusOf } from '../errors.js';
+import { freelancerStatus } from './platform-accounts.js';
 
 /**
  * Settings (ARB-061, docs/01 section I): platform accounts, margin rules, the fee table,
@@ -35,6 +36,7 @@ interface AccountRow {
   readonly id: string;
   readonly platform: string;
   readonly external_user_id: string;
+  readonly external_username?: string | null;
   readonly status: string;
   readonly scopes: string[];
   readonly last_sync_at: string | null;
@@ -111,8 +113,9 @@ export function registerSettingsRoutes(app: FastifyInstance, options: ServerOpti
       if (!me) return null;
       const row = await readSettings(tx, me.orgId);
       const accounts = await tx.query<AccountRow>(
-        `select id, platform::text as platform, external_user_id, status::text as status, scopes,
-                last_sync_at, plan_name, monthly_bid_allowance, plan_recorded_on::text
+        `select id, platform::text as platform, external_user_id, external_username,
+                status::text as status, scopes, last_sync_at, plan_name, monthly_bid_allowance,
+                plan_recorded_on::text
          from platform_accounts order by platform`,
       );
       return { me, row, accounts: accounts.rows };
@@ -127,6 +130,7 @@ export function registerSettingsRoutes(app: FastifyInstance, options: ServerOpti
         id: account.id,
         platform: account.platform,
         externalUserId: account.external_user_id,
+        externalUsername: account.external_username,
         status: account.status,
         scopes: account.scopes,
         lastSyncAt: account.last_sync_at,
@@ -136,6 +140,7 @@ export function registerSettingsRoutes(app: FastifyInstance, options: ServerOpti
       })),
       telegramLinked: result.me.telegramLinked,
       role: result.me.role,
+      freelancer: freelancerStatus(options),
     });
   });
 

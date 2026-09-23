@@ -12,6 +12,7 @@ export const EVENT_TYPES = [
   'auth.member_role_changed',
   'auth.member_removed',
   // marketplace accounts and scanners
+  'account.connect_started',
   'account.connected',
   'account.disconnected',
   'account.token_refreshed',

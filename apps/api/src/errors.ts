@@ -20,6 +20,10 @@ const CONSTRAINT_WORDS: readonly (readonly [RegExp, string])[] = [
   [/live_mode_requires_retention_period/i, 'live mode needs the retention period first'],
   [/auto_send_requires_guardrails/i, 'auto-send needs a daily cap and a minimum score'],
   [/scanners_org_id_name_key/i, 'a scanner with that name already exists in this org'],
+  [
+    /platform_accounts_platform_external_user_id_key/i,
+    'this Freelancer.com account is already connected to another organisation; one account per verified identity (docs/01 section H)',
+  ],
   [/submission_requires_approval/i, 'a bid cannot be sent without an approval'],
   [/row-level security|refused/i, 'you do not have permission to do that in this org'],
 ];

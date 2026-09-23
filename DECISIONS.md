@@ -1073,6 +1073,46 @@ Reason:
 - Keeping the wording in a file the owner edits means T-06's answer is a content change
   with no code change. The page is static, so it works on any host (C-03).
 
+## D-041 — Marketplace tokens live in Supabase Vault, not pgsodium columns; a connect is bound to the person by a single-use attempt row
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-020, session …tJv8)
+
+Decision:
+
+- docs/01 section C names pgsodium for token encryption. Supabase now marks pgsodium
+  "pending deprecation" and points to Vault
+  (https://supabase.com/docs/guides/database/extensions/pgsodium;
+  https://supabase.com/docs/guides/database/vault). So migration 0017 drops the two
+  `bytea` token columns from `platform_accounts` and stores each account's access and
+  refresh token as a Vault secret, keeping only the two secret ids on the row.
+- Reading tokens back (`app.platform_tokens`) is `service_role` only: a signed-in person
+  can connect and disconnect an account but never see a token. Connecting and
+  disconnecting go through `app.connect_platform_tokens` and
+  `app.disconnect_platform_account`, which check `app.can_write` for the account's org.
+  Disconnecting deletes the secrets and marks the row `disconnected`; the row and its
+  history stay.
+- The test databases (PGlite, plain Postgres) have a `vault` schema shim with the same
+  functions and no encryption (`packages/db/src/testing.ts`). CI's compose job runs
+  `scripts/db-verify-vault.sql` against the real `supabase/postgres` image and fails
+  unless the stored secret is unreadable in `vault.secrets`, decrypts to the value
+  written, is refused to `authenticated`, and is gone after a disconnect. This clears
+  V-02 (run 72).
+- Freelancer.com documents no `state` parameter on its authorise endpoint
+  (https://developers.freelancer.com/docs/authentication/generating-access-tokens). A
+  connect therefore starts with a `platform_connect_attempts` row for the person, valid
+  for ten minutes. The returning code is accepted only while that person has an unused
+  attempt, and the callback uses up every open attempt of theirs before it tries the
+  code, so a code is never tried twice, even when the exchange fails.
+
+Reason:
+
+- Vault is the mechanism Supabase says to use, and it does what section C asks of
+  pgsodium: authenticated encryption with the key held outside the database.
+- Without `state`, the attempt row is the only thing that ties a code arriving at the
+  callback to a person who asked for it, and expiring it keeps a stale link from
+  connecting an account later.
+
 ## D-042 — Work reaches main through one pull request per ticket, merged as soon as CI is green; claims go straight to main
 
 Date: 23/09/2026
@@ -1127,3 +1167,36 @@ Reason:
 - The owner wants every page viewable now, and the sign-in and API hosts do not exist yet
   (B-06, B-12). A demo that runs in the browser needs no server that could be mistaken
   for the product.
+
+## D-044 — Connecting a Freelancer.com account: scopes 1, 2, 5 and 6; not gated by LIVE_MODE; a callback page of its own; demo mode connects a sample account
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-020, session …tJv8)
+
+Decision:
+
+- The authorise request asks for `scope=basic` and the advanced scopes 1 (create
+  projects), 2 (manage projects), 5 (messaging) and 6 (user information), each cited in
+  `packages/freelancer/src/oauth.ts` from the official scope table. These cover Phases
+  1 to 3 (bids, sourcing posts, the inbox). No wider scope is asked for.
+- Connecting is not an outbound action to a client or a marketplace listing, so
+  `LIVE_MODE` does not gate it. The sandbox connect is the ticket's acceptance clause,
+  and nothing else in the product can reach Freelancer.com until an account is
+  connected. The submit worker's own gate (D-032) is unchanged.
+- The redirect lands on a page of its own, `freelancer-callback.html`
+  (`FREELANCER_REDIRECT_URI`). It hands the code to the API, clears it from the address
+  bar and the history, says which account was connected, and links back to Settings. The
+  browser never sees a token.
+- One connected account per org and per verified identity. A second org connecting the
+  same identity is refused by the unique constraint, reported in words. Connecting a
+  different identity while one is connected is refused with "Disconnect it first".
+  Reconnecting the same identity, or any identity after a disconnect, reuses the row.
+- In demo mode (D-043) Connect returns at once with a sample account named
+  "sample-account (demo)" and nothing reaches Freelancer.com; the hint beside the button
+  says so.
+
+Reason:
+
+- Asking for the four scopes once means the owner consents once, not again per phase.
+- Gating the connect on LIVE_MODE would make the sandbox clause untestable with the
+  switch off, which is the only way it is ever run before go-live.
