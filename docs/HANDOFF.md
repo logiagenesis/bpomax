@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 30 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203); 17 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
+- **Board:** 31 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203); 16 are TODO (099, 299 and Phases 3 and 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `af004c9` (PR #18, ARB-203, merged). The ARB-204 PR is open
+- **CI:** green on `main` at `0c570dd` (PR #19, ARB-204, merged). The ARB-210 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-204 merges, **ARB-210** (the sourcing and suppliers pages
-  audit, and sourcing posts on the approvals page). See section 6.
+- **Next ticket:** after ARB-210 merges, **ARB-310** (delivery orders, milestones, the
+  supplier handover checklist). ARB-299 waits like ARB-099. See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `af004c9` = PR #18, ARB-203 sourcing projects and bids                                 |
-| Open PR                | ARB-204 reprice with a candidate's quote, from `claude/beautiful-tesla-b6goej`         |
-| Local checks at ARB-204 | lint, format, typecheck green; 894 unit tests (80 files) green; 173 + 22 Playwright tests green |
+| Last merge             | `0c570dd` = PR #19, ARB-204 reprice with a candidate's quote                           |
+| Open PR                | ARB-210 sourcing and suppliers pages; posts on approvals, from `claude/beautiful-tesla-b6goej` |
+| Local checks at ARB-210 | lint, format, typecheck green; 895 unit tests (80 files) green; 179 + 23 Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204 |
+| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210 |
 | BUILT-PENDING-CREDENTIALS | 8     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12) |
-| TODO                      | 17    | 099, then the rest of Phases 2–4 (210 to 499)               |
+| TODO                      | 16    | 099, 299, then Phases 3 and 4 (300 to 499)                  |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -61,6 +61,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-202 | Sourcing post drafts: scope-only builder and client-identity check in core, title column (0024), draft/edit/approve/close/record-posted API, posts panel, demo, 9 + 1 Playwright tests | D-054 |
 | ARB-203 | Sourcing projects on Freelancer.com: the documented employer calls and stand-in endpoints, a sender behind the live gate, bids collected as candidates (0025), budget rule on approval, Collect bids now, 3 Playwright tests (BUILT-PENDING-CREDENTIALS, C-02) | D-055 |
 | ARB-204 | Reprice: a candidate's quote as a `candidate_quote` estimate judged by the ARB-041 engine, the employer fee on our own project's bids, `margin.repriced` events, the Telegram breach card, a reprice per new or changed bid, the Reprice button and Margin column, demo, 5 + 2 Playwright tests | D-056 |
+| ARB-210 | Sourcing and suppliers pages re-walked (every control has a row and a test, checked by script; keyboard tests); sourcing posts on the approvals page with Approve, Edit link and Close; `GET /v1/sourcing-posts`; demo | D-057 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -109,20 +110,18 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-210 — sourcing and suppliers pages.** Claim it on the board first. Acceptance:
-"Every button audited; Playwright coverage". Depends on ARB-204 and ARB-060. Both pages
-exist and are audited (docs/audit/sourcing.md, docs/audit/suppliers.md): re-walk every
-control against docs/05 section 1, close any gap, and add the one loose end D-054 left:
-sourcing posts listed on the approvals page beside bids and replies (docs/01 section I:
-all pending outbound items), approved there through the same `POST /v1/sourcing-posts/:id/approve`.
-Keep the demo in step. Then ARB-299 (the Phase 2 audit, which like ARB-099 waits on the
-Phase 2 tickets that are BUILT-PENDING-CREDENTIALS) and Phase 3 from ARB-310.
+**ARB-310 — delivery orders, milestones, supplier handover checklist.** Claim it on the
+board first. Depends on ARB-299, which (like ARB-099) waits on the Phase 2 tickets that
+are BUILT-PENDING-CREDENTIALS; under D-036 the build carries on into Phase 3 meanwhile.
+Blocker T-05 (read the row in docs/02-BLOCKERS.md before writing anything, and build the
+rest behind it). Acceptance: "Milestone totals reconcile to agreed cost". Read docs/01
+sections E to G and the `delivery_orders` and `payments` tables already in migration 0005
+(there is no milestones table yet) before designing; the brief's acceptance criteria are the natural
+handover checklist. Then ARB-311 (payments with the FX rate used, realised margin; B-10),
+ARB-312, ARB-320, ARB-330 and ARB-340.
 
 ## 7. Loose ends
 
-- Sourcing posts are approved on the sourcing page, not yet listed on the approvals page
-  beside bids and replies (docs/01 section I says all pending outbound items). ARB-210
-  is the place for it (D-054).
 - The workers have no production entry point yet (B-12): each processor, the reprice one
   included (`createRepriceProcessor`, with `repriceAlert` from apps/telegram as its
   `alert`), is wired and tested, and the host's start script binds them.
