@@ -47,6 +47,7 @@ export const EVENT_TYPES = [
   'brief.locked',
   // sourcing and delivery
   'sourcing.requested',
+  'sourcing.shortlisted',
   'sourcing.post_approved',
   'sourcing.posted',
   'supplier.imported',

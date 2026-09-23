@@ -143,6 +143,8 @@ const briefVersions = byId('brief-versions');
 const briefForm = /** @type {HTMLFormElement} */ (byId('brief-form'));
 const briefSave = /** @type {HTMLButtonElement} */ (byId('brief-save'));
 const briefCategory = /** @type {HTMLSelectElement} */ (byId('brief-category'));
+const briefSource = /** @type {HTMLButtonElement} */ (byId('brief-source'));
+const briefSourcingLink = /** @type {HTMLAnchorElement} */ (byId('brief-sourcing-link'));
 
 let mayWrite = false;
 const ROLE_REASON = 'Your role can view conversations but not change them.';
@@ -157,6 +159,8 @@ let brief = null;
 let versions = [];
 /** The version on screen when it is not the current one (read-only). @type {Brief | null} */
 let shown = null;
+/** The sourcing request on the current brief, when one exists (ARB-201). @type {{ id: string, status: string, candidateCount: number } | null} */
+let sourcing = null;
 
 const STATUS_WORDS = /** @type {Record<string, string>} */ ({
   open: 'Open',
@@ -594,6 +598,7 @@ function renderBrief() {
     gate(briefLock, mayWrite ? 'Draft the brief first.' : ROLE_REASON);
     gate(briefNewVersion, mayWrite ? 'Draft the brief first.' : ROLE_REASON);
     gate(briefSave, mayWrite ? 'Draft the brief first.' : ROLE_REASON);
+    gateSourcing();
     return;
   }
   const isCurrent = brief !== null && onScreen.id === brief.id;
@@ -643,6 +648,27 @@ function renderBrief() {
         ? `Version ${String(brief.version)} is still open. Lock it before starting another.`
         : '',
   );
+  gateSourcing();
+}
+
+/** Start sourcing needs a locked, current brief that is not delivered in-house (D-04) and no request yet. */
+function gateSourcing() {
+  briefSourcingLink.hidden = sourcing === null;
+  if (sourcing) briefSourcingLink.href = `./sourcing.html?request=${sourcing.id}`;
+  gate(
+    briefSource,
+    !mayWrite
+      ? ROLE_REASON
+      : !brief
+        ? 'Draft the brief first.'
+        : sourcing
+          ? 'Sourcing has already started for this brief; open it beside this button.'
+          : !brief.locked
+            ? 'Lock the brief before sourcing starts.'
+            : brief.deliveryRoute === 'in_house'
+              ? 'This brief is delivered in-house, so nothing is sourced.'
+              : '',
+  );
 }
 
 /** @param {string} id */
@@ -663,6 +689,14 @@ async function loadThread(id) {
   brief = briefBody.brief;
   versions = briefBody.versions;
   shown = null;
+  sourcing = null;
+  if (brief) {
+    const body =
+      /** @type {{ request: { id: string, status: string, candidateCount: number } | null }} */ (
+        await apiGet(`/v1/briefs/${brief.id}/sourcing`)
+      );
+    sourcing = body.request;
+  }
   const handle = current.clientHandle ?? 'Unnamed client';
   threadTitle.textContent = `Conversation with ${handle}`;
   threadMeta.textContent = [
@@ -942,6 +976,23 @@ briefNewVersion.addEventListener('click', () => {
       /** @type {Promise<{ brief: Brief }>} */ (apiSend('POST', `/v1/briefs/${from.id}/versions`)),
     (result) =>
       `Started version ${String(result.brief.version)} of the brief from version ${String(from.version)}.`,
+  );
+});
+
+briefSource.addEventListener('click', () => {
+  if (!brief) return;
+  const target = brief;
+  void change(
+    briefSource,
+    () =>
+      /** @type {Promise<{ request: { id: string, candidateCount: number, excluded: unknown[] } }>} */ (
+        apiSend('POST', `/v1/briefs/${target.id}/sourcing`)
+      ),
+    (result) => {
+      // The ranking is on the sourcing page; go there once the message has been read.
+      setTimeout(() => location.assign(`./sourcing.html?request=${result.request.id}`), 800);
+      return `Sourcing started: ${String(result.request.candidateCount)} supplier${result.request.candidateCount === 1 ? '' : 's'} ranked, ${String(result.request.excluded.length)} not ranked. Opening the request.`;
+    },
   );
 });
 

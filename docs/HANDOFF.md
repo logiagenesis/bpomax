@@ -1,4 +1,4 @@
-# HANDOFF — 23/09/2026, 11:35 UTC (13:35 SAST)
+# HANDOFF — 23/09/2026, 12:05 UTC (14:05 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 27 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120); 21 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
+- **Board:** 28 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120); 20 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `27ebf23` (PR #14, ARB-140, merged). The ARB-200 PR is open
+- **CI:** green on `main` at `28bd840` (PR #15, ARB-200, merged). The ARB-201 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-200 merges, **ARB-201** (the sourcing request from a locked
-  brief; existing suppliers ranked and the ranking explained). See section 6.
+- **Next ticket:** after ARB-201 merges, **ARB-202** (sourcing post drafts: brief scope
+  only, no client-identifying data). See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `27ebf23` = PR #14, ARB-140 conversations page                                         |
-| Open PR                | ARB-200 supplier database, from `claude/beautiful-tesla-b6goej`                        |
-| Local checks at ARB-200 | lint, format, typecheck green; 841 unit tests (72 files) green; 143 + 17 Playwright tests green |
+| Last merge             | `28bd840` = PR #15, ARB-200 supplier database                                          |
+| Open PR                | ARB-201 sourcing and supplier ranking, from `claude/beautiful-tesla-b6goej`            |
+| Local checks at ARB-201 | lint, format, typecheck green; 851 unit tests (74 files) green; 156 + 19 Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 27    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200 |
+| DONE                      | 28    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200, 201 |
 | BUILT-PENDING-CREDENTIALS | 7     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022 and 120 (C-02), 070 (B-12) |
-| TODO                      | 21    | 099, then the rest of Phases 2–4 (201 to 499)               |
+| TODO                      | 20    | 099, then the rest of Phases 2–4 (202 to 499)               |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -57,6 +57,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-131 | Brief builder: section F's schema in core, drafted from the answers by hand or by the model at 70 %, locked only when complete, versions kept | D-050 |
 | ARB-140 | Conversations page: thread list and detail routes, messages with states, a reply for approval, the discovery and brief panels, demo, 18 + 2 Playwright tests | D-051 |
 | ARB-200 | Supplier database: CSV template, parser and line-by-line validator in core, all-or-nothing import, export, the suppliers page, demo, 10 + 2 Playwright tests | D-052 |
+| ARB-201 | Sourcing: deterministic ranking in core with a sentence per part, request from a locked brief (0023), the sourcing page with the shortlist, Start sourcing on conversations, demo, 13 + 2 Playwright tests | D-053 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -104,25 +105,25 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-201 — sourcing request from a locked brief; rank existing suppliers.** Claim it on
-the board first. Acceptance: "Ranking deterministic and explained per supplier". Depends
-on ARB-131 and ARB-200 (both DONE). The tables exist since 0004 (`sourcing_requests`:
-brief, channels, status; `supplier_candidates`: request, supplier or external profile,
-quoted price, turnaround, country, score, shortlisted). Build: a ranking function in
-`packages/core` that scores each active supplier with a rate card in the brief's
-category against the brief (rate against the budget, turnaround against the deadline,
-quality score and on-time rate, time-zone distance from SAST, pays-after-delivery), with
-the weights as named constants and the reasons returned in words per supplier; unit
-tests with hand-worked scores; `POST /v1/briefs/:id/sourcing` (locked brief only;
-refused when the brief's route is in-house, D-04) that creates the request and one
-`supplier_candidates` row per ranked supplier with its score, plus `GET
-/v1/sourcing-requests/:id` with the ranking and the reasons; events
-`sourcing.requested` (already in the vocabulary); a sourcing panel on the conversations
-page's brief section or a `sourcing.html` page (docs/01 section I lists "sourcing" as its
-own page: requests, posts, candidates, shortlist, choose supplier; ARB-202 and ARB-203
-add the posts and the marketplace half); demo; Playwright; `docs/audit/sourcing.md`; a
-decision. The sourcing worker in docs/01 section E is the ARB-202/203 half; ARB-201 is
-the ranking and the request.
+**ARB-202 — sourcing post drafts (Freelancer employer project; Upwork and Fiverr drafts
+for manual posting).** Claim it on the board first. Acceptance: "Drafts contain brief
+scope only, no client-identifying data". Depends on ARB-201 (DONE). The table exists
+since 0004: `sourcing_posts` (request, platform, body, budget min and max, currency,
+status draft/approved/posted/closed/failed, approval, external id) with a check that a
+posted row carries its approval. Build: a pure `buildSourcingPost` in `packages/core`
+that writes the body from the locked brief's scope fields only (outcome, must-haves,
+later, references, assets, tech constraints, acceptance criteria, deadline and budget)
+and never from the thread, the client handle, the job title or free text that could name
+the client; a scrubber that refuses a draft containing the client handle, an email
+address, a phone number or a URL from the thread, with a test for each; `POST
+/v1/sourcing-requests/:id/posts` (one draft per platform: freelancer, upwork, fiverr),
+edit, approve and reject on the ARB-122 pattern (an edit clears the approval); a Posts
+panel on the sourcing page; the Upwork and Fiverr drafts are for copying by hand and are
+never sent (docs/01 section B: no verified buyer API). T-02 (the employer fee) affects
+only the margin, which is ARB-204's; say so in the decision and keep the ticket DONE if
+the clause is met. Then **ARB-203**, posting through the API after approval, which waits
+on the sandbox (C-02) and T-01/T-02, so it is BUILT-PENDING-CREDENTIALS against the
+stand-in.
 
 ## 7. Loose ends
 

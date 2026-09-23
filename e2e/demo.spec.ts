@@ -12,6 +12,7 @@ const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/approvals.html', /^Loaded \d+ bids?( and \d+ repl(y|ies))?\.$/, true],
   ['/conversations.html', /^Loaded \d+ conversations?\.$/, true],
   ['/suppliers.html', /^Loaded \d+ suppliers?\.$/, true],
+  ['/sourcing.html', /^Loaded \d+ sourcing requests?\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
   ['/audit-log.html', /^Loaded \d+ events?\.$/, false],
@@ -121,6 +122,24 @@ test('a supplier CSV pasted in the demo is checked by the real rule and imported
   await expect(page.locator('#rows tr')).toHaveCount(3);
   await page.goto('/audit-log.html');
   await expect(page.locator('#rows tr').first()).toContainText('supplier.imported');
+});
+
+test('the sample sourcing request is ranked by the real rule, and a shortlist is kept for the tab', async ({
+  page,
+}) => {
+  await page.goto('/sourcing.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 1 sourcing request.');
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild (sample)' })
+    .click();
+  await expect(page.locator('#request-status')).toContainText('1 supplier ranked, 1 not ranked');
+  await expect(page.locator('#candidate-rows tr').first()).toContainText('Thandi Web (sample)');
+  await expect(page.locator('#candidate-rows tr').first()).toContainText('R1 500,00 fixed');
+  await expect(page.locator('#excluded li')).toHaveText(['Studio Nord (sample): inactive.']);
+  await page.getByRole('button', { name: 'Shortlist Thandi Web (sample)' }).click();
+  await expect(page.locator('#request-status')).toHaveText('Shortlisted Thandi Web (sample).');
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('sourcing.shortlisted');
 });
 
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({

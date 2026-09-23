@@ -1825,6 +1825,7 @@ export type Database = {
           brief_id: string;
           channels: Database['public']['Enums']['supplier_channel'][];
           created_at: string;
+          excluded: Json;
           id: string;
           org_id: string;
           status: Database['public']['Enums']['sourcing_status'];
@@ -1834,6 +1835,7 @@ export type Database = {
           brief_id: string;
           channels?: Database['public']['Enums']['supplier_channel'][];
           created_at?: string;
+          excluded?: Json;
           id?: string;
           org_id: string;
           status?: Database['public']['Enums']['sourcing_status'];
@@ -1843,6 +1845,7 @@ export type Database = {
           brief_id?: string;
           channels?: Database['public']['Enums']['supplier_channel'][];
           created_at?: string;
+          excluded?: Json;
           id?: string;
           org_id?: string;
           status?: Database['public']['Enums']['sourcing_status'];
@@ -1919,6 +1922,7 @@ export type Database = {
           id: string;
           org_id: string;
           quoted_price_minor: number | null;
+          ranking: Json;
           score: number | null;
           shortlisted: boolean;
           sourcing_request_id: string;
@@ -1935,6 +1939,7 @@ export type Database = {
           id?: string;
           org_id: string;
           quoted_price_minor?: number | null;
+          ranking?: Json;
           score?: number | null;
           shortlisted?: boolean;
           sourcing_request_id: string;
@@ -1951,6 +1956,7 @@ export type Database = {
           id?: string;
           org_id?: string;
           quoted_price_minor?: number | null;
+          ranking?: Json;
           score?: number | null;
           shortlisted?: boolean;
           sourcing_request_id?: string;

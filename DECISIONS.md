@@ -1505,3 +1505,42 @@ rates, and a half-written import would leave the database inconsistent.
 
 Consequences: ARB-201 ranks the suppliers this import writes; a page for editing one
 supplier by hand is a later ticket, and until then the CSV is the way to change one.
+
+## D-053 — Supplier ranking: five parts with fixed weights, a sentence per part, a fixed order, and no conversion guessed
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-201, session …tJv8)
+
+Decision:
+
+- `rankSuppliers` in `@arbitron/core` scores each active supplier with a rate card in the
+  brief's category out of 100, in five parts with named weights: rate against the budget
+  40, turnaround against the deadline 20, quality score and on-time rate 20, time-zone
+  distance from Pretoria 10, payment after delivery 10. Each part comes with one
+  sentence saying why, and the sentences are stored with the candidate.
+- Rate: full marks at or under the budget's lower figure, sliding to half at the upper
+  figure, then to nothing at twice it; half marks, said as such, when the brief has no
+  budget. A brief priced by the hour is compared with hourly rates.
+- Turnaround: full marks when it fits the days left to the deadline (counted in SAST);
+  half when it misses a flexible deadline; nothing when it misses a fixed one; half with
+  no deadline; a quarter when the supplier has no turnaround recorded.
+- Time zone: the offset is read from the platform's own zone data at the moment of
+  ranking, so summer time is handled without a table; within two hours of SAST is full
+  marks, five hours six, eight hours three, further nothing.
+- The order is score, then name, then id, so the same inputs give the same list in any
+  order they arrive (a test shuffles them).
+- A supplier is left out, with the reason stored, when it is inactive, on the in-house
+  or AI-build channel, has no rate card in the category, has none in the brief's currency
+  (no conversion is guessed), or has no price of the kind the brief is priced by.
+- A sourcing request needs a locked brief whose route is not in-house (D-04), and only
+  one open request per brief. Migration 0023 adds the stored ranking to each candidate
+  and the left-out list to the request. The shortlist is a flag per candidate; the
+  request reads "shortlisting" while any is set.
+
+Why: the ticket's acceptance is "Ranking deterministic and explained per supplier", and
+docs/01 section D step 5 names what is shown: country, time zone, rate, turnaround and
+quality history. The weights are a starting point the owner can ask to change; they
+decide the order only, never a price.
+
+Consequences: ARB-202 drafts sourcing posts from the same request; ARB-204 reprices from a
+candidate's real quote. Changing a weight is a one-line change with its hand-worked tests.

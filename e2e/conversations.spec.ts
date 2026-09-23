@@ -195,6 +195,8 @@ const COMPLETE = brief({
 
 interface Options {
   role?: Role;
+  sourcing?: unknown;
+  startSourcing?: { status: number; json: unknown };
   threads?: unknown[];
   messages?: unknown[];
   session?: unknown;
@@ -326,6 +328,23 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
           status: 201,
           json: { brief: { ...COMPLETE, id: BRIEF_V2, version: 2, locked: false, lockedAt: null } },
         }),
+      'GET /v1/briefs/:id/sourcing': (_request, route) =>
+        route.fulfill({ json: { request: options.sourcing ?? null } }),
+      'POST /v1/briefs/:id/sourcing': (_request, route) =>
+        route.fulfill(
+          options.startSourcing ?? {
+            status: 201,
+            json: {
+              request: {
+                id: 'aaaaaaaa-0000-4000-8000-000000000071',
+                candidateCount: 2,
+                excluded: [
+                  { supplierId: 's4', name: 'No Card', reason: 'no rate card for wordpress' },
+                ],
+              },
+            },
+          },
+        ),
       'POST /v1/threads/:id/messages': (request, route) =>
         route.fulfill({
           status: 201,
@@ -698,6 +717,71 @@ test('an older version can be shown read-only beside the current one', async ({ 
   await expect(page.getByRole('button', { name: 'Save brief' })).toBeEnabled();
 });
 
+test('Start sourcing is off while the brief is open, and there is no request link yet', async ({
+  page,
+}) => {
+  await openAcme(page);
+  const start = page.getByRole('button', { name: 'Start sourcing' });
+  await expect(start).toBeDisabled();
+  await expect(start).toHaveAttribute('title', 'Lock the brief before sourcing starts.');
+  await expect(page.getByRole('link', { name: 'Open the sourcing request' })).toBeHidden();
+});
+
+test('on a locked brief Start sourcing asks the API and goes to the sourcing page', async ({
+  page,
+}) => {
+  const locked = {
+    ...COMPLETE,
+    deliveryRoute: 'supplier',
+    locked: true,
+    lockedAt: '2026-09-22T10:00:00Z',
+  };
+  const requests = await openAcme(page, { brief: locked, versions: [versionOf(locked)] });
+  const start = page.getByRole('button', { name: 'Start sourcing' });
+  await expect(start).toBeEnabled();
+  await start.click();
+  await expect(page.locator('#thread-status')).toHaveText(
+    'Sourcing started: 2 suppliers ranked, 1 not ranked. Opening the request.',
+  );
+  expect(requests.find((r) => r.method === 'POST' && r.path.endsWith('/sourcing'))?.path).toBe(
+    `/v1/briefs/${BRIEF_V1}/sourcing`,
+  );
+  await page.waitForURL(/sourcing\.html\?request=aaaaaaaa-0000-4000-8000-000000000071$/);
+});
+
+test('a brief already sourced shows the link and the reason; an in-house brief is never sourced', async ({
+  page,
+}) => {
+  const locked = {
+    ...COMPLETE,
+    deliveryRoute: 'supplier',
+    locked: true,
+    lockedAt: '2026-09-22T10:00:00Z',
+  };
+  await openAcme(page, {
+    brief: locked,
+    versions: [versionOf(locked)],
+    sourcing: { id: 'aaaaaaaa-0000-4000-8000-000000000071', status: 'open', candidateCount: 2 },
+  });
+  const start = page.getByRole('button', { name: 'Start sourcing' });
+  await expect(start).toBeDisabled();
+  await expect(start).toHaveAttribute(
+    'title',
+    'Sourcing has already started for this brief; open it beside this button.',
+  );
+  await expect(page.getByRole('link', { name: 'Open the sourcing request' })).toHaveAttribute(
+    'href',
+    './sourcing.html?request=aaaaaaaa-0000-4000-8000-000000000071',
+  );
+  await page.goto('/conversations.html');
+  const ours = { ...locked, deliveryRoute: 'in_house' };
+  await openAcme(page, { brief: ours, versions: [versionOf(ours)] });
+  await expect(page.getByRole('button', { name: 'Start sourcing' })).toHaveAttribute(
+    'title',
+    'This brief is delivered in-house, so nothing is sourced.',
+  );
+});
+
 test('a viewer can read everything but every change is off, with the reason in its title', async ({
   page,
 }) => {
@@ -710,6 +794,7 @@ test('a viewer can read everything but every change is off, with the reason in i
     'Draft brief',
     'Lock brief',
     'Start a new version',
+    'Start sourcing',
     'Save brief',
   ]) {
     const button = page.getByRole('button', { name });
