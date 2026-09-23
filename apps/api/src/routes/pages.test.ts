@@ -816,20 +816,14 @@ describe('the routes the MCP tools add (ARB-330)', () => {
       subject_id: JOB_U,
       payload: { via: 'web' },
     });
-    // One at a time: the test database is a single connection.
-    const refusals: number[] = [];
-    for (const [server, who] of [
-      [app, AUTH_VIEWER],
-      [app, AUTH_B],
-      [bare, AUTH_A],
-    ] as const) {
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/jobs/${JOB_U}/score`,
-        headers: as(who),
-      });
-      refusals.push(response.statusCode);
-    }
+    // All at once: each request runs as its own user (withUser under concurrency).
+    const refusals = (
+      await Promise.all([
+        app.inject({ method: 'POST', url: `/v1/jobs/${JOB_U}/score`, headers: as(AUTH_VIEWER) }),
+        app.inject({ method: 'POST', url: `/v1/jobs/${JOB_U}/score`, headers: as(AUTH_B) }),
+        bare.inject({ method: 'POST', url: `/v1/jobs/${JOB_U}/score`, headers: as(AUTH_A) }),
+      ])
+    ).map((r) => r.statusCode);
     expect(refusals).toEqual([403, 404, 503]);
     expect(enqueue.score).toHaveBeenCalledTimes(1);
     expect(await listEvents(db, { type: 'job.score_requested' })).toHaveLength(1);
