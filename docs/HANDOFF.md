@@ -11,12 +11,12 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
   015, 020, 022, 070, 120, 203); 11 are TODO (099, 299, 300, 340, 399, Phase 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `c2302cd` (PR #24, ARB-320, merged). The ARB-330 PR is open
-  from `claude/beautiful-tesla-b6goej` and merges when green.
+- **CI:** green on `main` at `22d0ad4` (PR #25, ARB-330, merged). The `withUser`
+  concurrency fix (D-063) is open from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next:** after ARB-330 merges, the `withUser` concurrency fix (section 7, first
-  item), then **ARB-340** (templates page). ARB-299 waits like ARB-099. See section 6.
+- **Next:** after the fix merges, **ARB-340** (templates page). ARB-299 waits like
+  ARB-099. See section 6.
 
 ## 1. State of `main`
 
@@ -24,9 +24,9 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `c2302cd` = PR #24, ARB-320 analytics                                                  |
-| Open PR                | ARB-330 MCP server, from `claude/beautiful-tesla-b6goej`                               |
-| Local checks at ARB-330 | lint, format, typecheck green; 967 unit tests (89 files) green; no web change (209 + 28 Playwright at ARB-320) |
+| Last merge             | `22d0ad4` = PR #25, ARB-330 MCP server                                                 |
+| Open PR                | `withUser` concurrency fix (D-063), from `claude/beautiful-tesla-b6goej`               |
+| Local checks at the fix | lint, format, typecheck green; 970 unit tests (90 files) green; no web change (209 + 28 Playwright at ARB-320) |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
@@ -66,6 +66,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-311 | Payments: four kinds (0027), realised margin in core as docs/05 3.5 states it, the rate typed or from the FX provider (B-10) and never assumed, Paid when the client has paid the value, T-05's notice on a supplier abroad, the Payments panel on the pipeline page, demo; 6 + 1 Playwright tests | D-059 |
 | ARB-312 | Retainers: the pipeline's retainer toggle checked with `validateRetainer`, logged; the dashboard total tested against a hand sum and raw SQL; the demo dashboard sums the tab's retainers; 2 + 1 Playwright tests | D-060 |
 | ARB-320 | Analytics: the per-job view (0028, security_invoker), grouping in core, `GET /v1/analytics` verified against raw SQL, the analytics page, Analytics in the nav, demo; 7 Playwright tests | D-061 |
+| (fix)   | `withUser` borrows a pool connection, uses PGlite's own transaction, or takes turns on one client, so concurrent requests each run as their own user; 3 tests that fail on the old one | D-063 |
 | ARB-330 | MCP server (`apps/mcp`, SDK 1.30.1, stdio): the eleven tools over the API with the operator's token, approvals recorded as `mcp` (0029), `GET /v1/jobs/:id`, `POST /v1/jobs/:id/score`, `POST /v1/proposals/:id/submit`, `enqueueSubmit` re-runs a finished job, README setup for Claude Code and Claude Desktop; 24 tests | D-062 |
 
 ## 4. How to work here (what cost time this session)
@@ -115,8 +116,7 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**First, not on the board: make `withUser` safe under concurrency** (section 7, first
-item). Then **ARB-340 — Templates page with A/B variants and reply rates.** Claim it on
+**ARB-340 — Templates page with A/B variants and reply rates.** Claim it on
 the board first. Acceptance: "Reply rate = replies/sends verified". `templates` and
 `template_variants` exist (fixtures carry one of each); the bid drafts record
 `template_variant_id`. Count a send as a submitted bid on the variant and a reply as a
@@ -132,15 +132,8 @@ it can be built without D-01, B-13 and B-15.
 
 ## 7. Loose ends
 
-- **`withUser` on one shared connection is not safe under concurrency.** It runs
-  `begin`, `set_config`, `set local role` and the work on the `db` it is given. Two
-  requests at once on one connection interleave, so one can run with the other's claims;
-  on a `pg.Pool` each statement may land on a different connection. Seen in a test: two
-  concurrent `app.inject` calls on PGlite let a viewer and another org through. Latent
-  today (the API has no production entry point, B-12), but it must hold before the API is
-  hosted: check out a dedicated client per transaction when the `db` can (`connect()` /
-  `release()`), and serialise on a single connection otherwise; test it with concurrent
-  requests from two orgs.
+- Work inside `withUser` must use the `tx` it is given: the outer connection now waits
+  for the transaction (on PGlite, for ever), so a slip shows as a hanging test (D-063).
 - A sign-in token for the MCP server expires; a long-lived credential (a personal access
   token or a device sign-in) is not built and needs the owner's say (D-062).
 - A recorded payment cannot be corrected from the page (D-059): no refund or reversal
