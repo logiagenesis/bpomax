@@ -202,26 +202,18 @@ describe('editing and approving', () => {
     expect(stored.rows[0]?.title).toBe('Shopify: An online shop that takes orders');
   });
 
-  it('approves in the approver’s own name; an edit after that clears the approval', async () => {
-    const approved = await app.inject({
+  it('a Freelancer.com post needs a budget before approval; then it is approved in the approver’s own name, and an edit clears it', async () => {
+    const early = await app.inject({
       method: 'POST',
       url: `/v1/sourcing-posts/${freelancerPost}/approve`,
       headers: as(AUTH_A),
     });
-    expect(approved.statusCode).toBe(200);
-    expect(approved.json().post).toMatchObject({
-      status: 'approved',
-      approvedBy: USER_A,
-      approvedVia: 'web',
-    });
-    const twice = await app.inject({
-      method: 'POST',
-      url: `/v1/sourcing-posts/${freelancerPost}/approve`,
-      headers: as(AUTH_A),
-    });
-    expect(twice.statusCode).toBe(409);
+    expect(early.statusCode).toBe(409);
+    expect(early.json().error).toBe(
+      'A Freelancer.com post needs a budget before it is approved. Edit it to add one.',
+    );
     // Hand-worked: R8 000,00 to R12 000,00 is 800 000 to 1 200 000 cents.
-    const edited = await app.inject({
+    const budgeted = await app.inject({
       method: 'PATCH',
       url: `/v1/sourcing-posts/${freelancerPost}`,
       headers: as(AUTH_A),
@@ -233,14 +225,43 @@ describe('editing and approving', () => {
         currency: 'ZAR',
       },
     });
-    expect(edited.statusCode).toBe(200);
-    expect(edited.json().post).toMatchObject({
-      status: 'draft',
-      approvedBy: null,
+    expect(budgeted.statusCode).toBe(200);
+    expect(budgeted.json().post).toMatchObject({
       budgetMinMinor: '800000',
       budgetMaxMinor: '1200000',
       currency: 'ZAR',
     });
+    const approved = await app.inject({
+      method: 'POST',
+      url: `/v1/sourcing-posts/${freelancerPost}/approve`,
+      headers: as(AUTH_A),
+    });
+    expect(approved.statusCode).toBe(200);
+    expect(approved.json()).toMatchObject({
+      post: { status: 'approved', approvedBy: USER_A, approvedVia: 'web' },
+      // No queue in this server: the post waits, approved, for the sender.
+      queued: false,
+    });
+    const twice = await app.inject({
+      method: 'POST',
+      url: `/v1/sourcing-posts/${freelancerPost}/approve`,
+      headers: as(AUTH_A),
+    });
+    expect(twice.statusCode).toBe(409);
+    const edited = await app.inject({
+      method: 'PATCH',
+      url: `/v1/sourcing-posts/${freelancerPost}`,
+      headers: as(AUTH_A),
+      payload: {
+        title: 'Shopify shop build',
+        body: 'An online shop that takes orders.',
+        budgetMinMinor: 800000,
+        budgetMaxMinor: 1200000,
+        currency: 'ZAR',
+      },
+    });
+    expect(edited.statusCode).toBe(200);
+    expect(edited.json().post).toMatchObject({ status: 'draft', approvedBy: null });
     expect((await listEvents(db, { type: 'sourcing.post_edited' }))[0]?.payload).toMatchObject({
       cleared_approval: true,
     });
@@ -250,6 +271,59 @@ describe('editing and approving', () => {
       headers: as(AUTH_VIEWER),
     });
     expect(viewer.statusCode).toBe(403);
+  });
+
+  it('with the queues wired, approval hands a Freelancer.com post to the sender, and Collect asks for its bids', async () => {
+    const posts: unknown[] = [];
+    const collects: unknown[] = [];
+    const wired = buildServer({
+      db,
+      authenticate: (request) => {
+        const header = request.headers['x-test-auth-user'];
+        return typeof header === 'string' ? header : null;
+      },
+      now: () => NOW,
+      enqueue: {
+        sourcingPost: async (data) => void posts.push(data),
+        sourcingCollect: async (data) => void collects.push(data),
+      },
+    });
+    await wired.ready();
+    try {
+      const approved = await wired.inject({
+        method: 'POST',
+        url: `/v1/sourcing-posts/${freelancerPost}/approve`,
+        headers: as(AUTH_A),
+      });
+      expect(approved.json()).toMatchObject({ queued: true });
+      expect(posts).toEqual([{ postId: freelancerPost, requestId: expect.any(String) }]);
+      const notYet = await wired.inject({
+        method: 'POST',
+        url: `/v1/sourcing-posts/${freelancerPost}/collect`,
+        headers: as(AUTH_A),
+      });
+      expect(notYet.statusCode).toBe(409);
+      // What the sender writes once the project exists (tested in apps/workers).
+      await db.query(
+        `update sourcing_posts set status = 'posted', external_id = '16000001', posted_at = now() where id = $1`,
+        [freelancerPost],
+      );
+      const collect = await wired.inject({
+        method: 'POST',
+        url: `/v1/sourcing-posts/${freelancerPost}/collect`,
+        headers: as(AUTH_A),
+      });
+      expect(collect.statusCode).toBe(202);
+      expect(collects).toEqual([{ postId: freelancerPost, requestId: expect.any(String) }]);
+      const unwired = await app.inject({
+        method: 'POST',
+        url: `/v1/sourcing-posts/${freelancerPost}/collect`,
+        headers: as(AUTH_A),
+      });
+      expect(unwired.statusCode).toBe(503);
+    } finally {
+      await wired.close();
+    }
   });
 
   it('records a manual post as posted only once approved; a Freelancer.com post is never recorded by hand', async () => {

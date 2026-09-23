@@ -56,6 +56,8 @@ interface CandidateRow {
   readonly ranking: Record<string, unknown>;
   readonly supplier_channel: string | null;
   readonly supplier_time_zone: string | null;
+  readonly external_bid_id: string | null;
+  readonly sourcing_post_id: string | null;
 }
 
 const REQUEST_SQL = `
@@ -72,7 +74,8 @@ const REQUEST_SQL = `
 const CANDIDATES_SQL = `
   select c.id, c.supplier_id, c.display_name, c.country_code, c.quoted_price_minor::text as quoted_price_minor,
          c.currency::text as currency, c.turnaround_days, c.score::text as score, c.shortlisted, c.ranking,
-         s.channel::text as supplier_channel, s.time_zone as supplier_time_zone
+         s.channel::text as supplier_channel, s.time_zone as supplier_time_zone,
+         c.external_bid_id, c.sourcing_post_id
     from supplier_candidates c
     left join suppliers s on s.id = c.supplier_id
    where c.sourcing_request_id = $1
@@ -94,6 +97,10 @@ function describeCandidate(row: CandidateRow) {
     parts: (row.ranking.parts as Record<string, number> | undefined) ?? null,
     reasons: (row.ranking.reasons as string[] | undefined) ?? [],
     shortlisted: row.shortlisted,
+    /** Ranked from the supplier database (ARB-201), or a bid on a posted project (ARB-203). */
+    source: row.external_bid_id ? ('bid' as const) : ('ranking' as const),
+    externalBidId: row.external_bid_id,
+    sourcingPostId: row.sourcing_post_id,
   };
 }
 

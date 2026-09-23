@@ -1582,3 +1582,48 @@ data"; docs/01 section H puts sourcing posts among the outbound actions that nee
 
 Consequences: ARB-203 posts an approved Freelancer.com draft; its title and text are the
 approved ones, unchanged.
+
+## D-055 — Posting a sourcing project: the documented calls, a budget required, the brief's category as the skill, behind the live gate; bids stored as quoted
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-203, session …tJv8)
+
+Decision:
+
+- `@arbitron/freelancer` gains the employer's calls, each cited in code from
+  developers.freelancer.com ("Creating a Project", "List Project Bids"): the currency
+  lookup, the skill (job) search, the project create with the documented JSON body, and a
+  project's bids with the `user_details` and `user_country_details` projections. The
+  stand-in answers all four in the documented shapes.
+- A Freelancer.com post needs a budget before it is approved (the documented body carries
+  one); the API refuses the approval otherwise, and the page says so on the button. The
+  budget is sent in the currency's units (R8 000,00 → 8000), converted from the stored
+  minor units as text at the edge.
+- The project's skill is the brief's category name, matched exactly (ignoring case)
+  against the platform's skill search. No category-to-skill table is invented; when no
+  skill matches, the post fails with the reason. A skill picker on the post is a later
+  improvement if the names do not line up.
+- The sender (`postSourcingProject`) holds the live gate on both switches (D-032): with
+  either off it posts nothing and writes what it would have sent to the audit log. With
+  both on it creates the project, stores the project id and the time, and marks the post
+  posted; a refusal the platform will not reverse marks the post failed with the reason.
+  The title the platform returns (it numbers repeated titles) is kept in the event, not
+  over the approved words.
+- Bids are read every half hour for each posted project whose request is still open, and
+  on request from the page. Each bid is stored once per request by its id (0025), with the
+  bidder's username, country, the quoted price in minor units (`toMinor`, as text) and the
+  days to deliver; a later read updates it. Bids are not scored against the ranking,
+  because the ranking's rate and quality parts need a supplier record; they are listed
+  beside the ranked suppliers, marked as bids. No supplier is linked by guessing a profile
+  address. The employer-side fee (T-02) is not applied to the quote: repricing is ARB-204.
+- The list response's envelope (`result.bids`, `result.users`) and the country's place in
+  the user object are not printed on the docs page; they are read defensively and stay
+  open under docs/BLOCKERS.md C-02 until the sandbox answers.
+
+Why: docs/01 section E ("after approval posts on Freelancer.com as an employer project
+(LIVE_MODE only); collects candidate bids into supplier_candidates") and rule 6: no
+endpoint, field or fee that is not documented or supplied.
+
+Consequences: the ticket's own clause, a sandbox employer project, waits on B-03 (with the
+`fln:project_create` scope) and B-04 (a sandbox employer account). Going live waits on
+T-01 as for bids.

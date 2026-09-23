@@ -25,7 +25,49 @@ export interface FakeCall {
   /** Every value of every query parameter, for the `param[]` arrays. */
   readonly queryAll: Record<string, string[]>;
   readonly form: Record<string, string>;
+  /** A JSON body, parsed, when the call sent one (the project create does). */
+  readonly json?: unknown;
   readonly headers: Record<string, string | string[] | undefined>;
+}
+
+/** A currency as the currencies list describes it (ARB-203). */
+export interface FakeCurrency {
+  readonly id: number;
+  readonly code: string;
+}
+
+/** A skill (job) as the job search describes it. */
+export interface FakeJob {
+  readonly id: number;
+  readonly name: string;
+}
+
+/** A project the employer created through the stand-in. */
+export interface FakeCreatedProject {
+  readonly id: number;
+  readonly owner_id: number;
+  readonly title: string;
+  readonly description: string;
+  readonly currency: { readonly id: number };
+  readonly budget: { readonly minimum: number; readonly maximum: number };
+  readonly jobs: readonly { readonly id: number }[];
+}
+
+/** A bid a freelancer places on one of the employer's projects. */
+export interface FakeBid {
+  readonly id: number;
+  readonly bidder_id: number;
+  readonly amount: number;
+  readonly period: number;
+  readonly description?: string;
+  readonly submitdate?: number;
+}
+
+/** A bidder as `user_details` with `user_country_details` would describe them. */
+export interface FakeBidder {
+  readonly id: number;
+  readonly username: string;
+  readonly country_code?: string;
 }
 
 /**
@@ -114,6 +156,14 @@ export interface FakeFreelancer {
   setMembers(members: readonly FakeMember[]): void;
   /** A message arriving later, as a client writing back; bumps its thread's time_updated. */
   addMessage(message: FakeMessage): void;
+  /** The currencies and skills the lookups know (ARB-203). */
+  setCurrencies(currencies: readonly FakeCurrency[]): void;
+  setJobs(jobs: readonly FakeJob[]): void;
+  /** Every project created through the stand-in, oldest first. */
+  readonly createdProjects: readonly FakeCreatedProject[];
+  /** Bids arriving on a created project, and who placed them. */
+  setBids(projectId: number, bids: readonly FakeBid[]): void;
+  setBidders(bidders: readonly FakeBidder[]): void;
   close(): Promise<void>;
 }
 
@@ -166,6 +216,11 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
   let messages: FakeMessage[] = [];
   let members: readonly FakeMember[] = [];
   let rateLimitedCalls = 0;
+  let currencies: readonly FakeCurrency[] = [];
+  let jobs: readonly FakeJob[] = [];
+  const createdProjects: FakeCreatedProject[] = [];
+  const bidsByProject = new Map<number, readonly FakeBid[]>();
+  let bidders: readonly FakeBidder[] = [];
 
   const bearer = (request: IncomingMessage): FakeUser | undefined => {
     const header = request.headers['freelancer-oauth-v1'];
@@ -203,7 +258,16 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
     void (async () => {
       const url = new URL(request.url ?? '/', 'http://fake.invalid');
       const raw = request.method === 'POST' ? await readBody(request) : '';
-      const form = Object.fromEntries(new URLSearchParams(raw));
+      const isJson = String(request.headers['content-type'] ?? '').includes('application/json');
+      let parsedJson: unknown;
+      if (isJson && raw) {
+        try {
+          parsedJson = JSON.parse(raw);
+        } catch {
+          parsedJson = undefined;
+        }
+      }
+      const form = isJson ? {} : Object.fromEntries(new URLSearchParams(raw));
       const query = Object.fromEntries(url.searchParams);
       const queryAll: Record<string, string[]> = {};
       for (const key of new Set(url.searchParams.keys()))
@@ -214,6 +278,7 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
         query,
         queryAll,
         form,
+        ...(parsedJson !== undefined ? { json: parsedJson } : {}),
         headers: request.headers,
       });
 
@@ -493,6 +558,148 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
         return;
       }
 
+      // ARB-203, the employer's side, in the shapes of
+      // https://developers.freelancer.com/docs/use-cases/creating-a-project.
+      if (request.method === 'GET' && url.pathname === '/api/projects/0.1/currencies/') {
+        if (!bearer(request)) return notAuthenticated(response);
+        const codes = url.searchParams.getAll('currency_codes[]').map((c) => c.toUpperCase());
+        json(response, 200, {
+          status: 'success',
+          result: {
+            currencies: currencies
+              .filter((c) => codes.length === 0 || codes.includes(c.code.toUpperCase()))
+              .map((c) => ({ code: c.code, id: c.id })),
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/projects/0.1/jobs/search/') {
+        if (!bearer(request)) return notAuthenticated(response);
+        // The documented example answers CakePHP for PHP: a name containing the term.
+        const names = url.searchParams.getAll('job_names[]').map((n) => n.toLowerCase());
+        json(response, 200, {
+          status: 'success',
+          result: jobs
+            .filter((job) => names.some((n) => job.name.toLowerCase().includes(n)))
+            .map((job) => ({ name: job.name, id: job.id, local: false })),
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/projects/0.1/projects/') {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        const body = (
+          typeof parsedJson === 'object' && parsedJson !== null ? parsedJson : {}
+        ) as Record<string, unknown>;
+        const currency = body.currency as { id?: unknown } | undefined;
+        const budget = body.budget as { minimum?: unknown; maximum?: unknown } | undefined;
+        const bodyJobs = Array.isArray(body.jobs) ? (body.jobs as { id?: unknown }[]) : [];
+        if (
+          typeof body.title !== 'string' ||
+          typeof body.description !== 'string' ||
+          typeof currency?.id !== 'number' ||
+          typeof budget?.minimum !== 'number' ||
+          bodyJobs.length === 0
+        ) {
+          apiError(
+            response,
+            400,
+            'Invalid project details',
+            'ProjectExceptionCodes.INVALID_PROJECT',
+          );
+          return;
+        }
+        // "Multiple projects with the same name are not allowed so our project title has
+        // been appended with a number."
+        const taken = createdProjects.filter((p) =>
+          p.title.startsWith(body.title as string),
+        ).length;
+        const title = taken > 0 ? `${body.title} -- ${String(taken + 1)}` : body.title;
+        const created: FakeCreatedProject = {
+          id: 16_000_000 + createdProjects.length + 1,
+          owner_id: user.id,
+          title,
+          description: body.description,
+          currency: { id: currency.id },
+          budget: {
+            minimum: budget.minimum,
+            maximum: typeof budget.maximum === 'number' ? budget.maximum : budget.minimum,
+          },
+          jobs: bodyJobs.map((j) => ({ id: Number(j.id) })),
+        };
+        createdProjects.push(created);
+        json(response, 200, {
+          status: 'success',
+          result: {
+            seo_url: `project/${String(created.id)}`,
+            description: created.description,
+            language: 'en',
+            title: created.title,
+            budget: created.budget,
+            currency: created.currency,
+            type: 'fixed',
+            id: created.id,
+            owner_id: created.owner_id,
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
+      const projectBids = /^\/api\/projects\/0\.1\/projects\/(\d+)\/bids\/$/.exec(url.pathname);
+      if (request.method === 'GET' && projectBids) {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        const projectId = Number(projectBids[1]);
+        const project = createdProjects.find((p) => p.id === projectId);
+        if (!project) {
+          apiError(response, 404, 'Project not found', 'ProjectExceptionCodes.PROJECT_NOT_FOUND');
+          return;
+        }
+        const list = bidsByProject.get(projectId) ?? [];
+        const limit = Math.min(Number(query.limit) || 100, 100);
+        const offset = Number(query.offset) || 0;
+        const page = list.slice(offset, offset + limit);
+        const users: Record<string, unknown> = {};
+        if (url.searchParams.has('user_details')) {
+          for (const bid of page) {
+            const bidder = bidders.find((b) => b.id === bid.bidder_id);
+            if (!bidder) continue;
+            users[String(bidder.id)] = {
+              id: bidder.id,
+              username: bidder.username,
+              ...(url.searchParams.has('user_country_details') && bidder.country_code
+                ? { location: { country: { code: bidder.country_code } } }
+                : {}),
+            };
+          }
+        }
+        json(response, 200, {
+          status: 'success',
+          result: {
+            bids: page.map((bid) => ({
+              id: bid.id,
+              bidder_id: bid.bidder_id,
+              project_id: projectId,
+              retracted: false,
+              amount: bid.amount,
+              period: bid.period,
+              description: bid.description ?? null,
+              submitdate: bid.submitdate ?? Math.floor(Date.now() / 1000),
+              milestone_percentage: 0,
+              highlighted: false,
+            })),
+            users,
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
       apiError(response, 404, `The fake has no ${url.pathname}`, 'RestExceptionCodes.NOT_FOUND');
     })();
   });
@@ -517,6 +724,19 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
     },
     setProjects(list) {
       projects = list;
+    },
+    setCurrencies(list) {
+      currencies = list;
+    },
+    setJobs(list) {
+      jobs = list;
+    },
+    createdProjects,
+    setBids(projectId, list) {
+      bidsByProject.set(projectId, list);
+    },
+    setBidders(list) {
+      bidders = list;
     },
     rateLimitNextCalls(count) {
       rateLimitedCalls = count;

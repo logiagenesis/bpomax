@@ -46,6 +46,7 @@ interface PostRow {
   readonly approved_via: string | null;
   readonly external_id: string | null;
   readonly posted_at: string | null;
+  readonly failure_reason: string | null;
   readonly created_at: string;
   readonly updated_at: string;
 }
@@ -55,7 +56,7 @@ const POST_SQL = `
          p.budget_min_minor::text as budget_min_minor, p.budget_max_minor::text as budget_max_minor,
          p.currency::text as currency, p.status::text as status, p.approved_by,
          u.full_name as approved_by_name, p.approved_via::text as approved_via, p.external_id,
-         p.posted_at, p.created_at, p.updated_at
+         p.posted_at, p.failure_reason, p.created_at, p.updated_at
     from sourcing_posts p
     left join users u on u.id = p.approved_by`;
 
@@ -76,6 +77,7 @@ export function describePost(row: PostRow) {
     approvedVia: row.approved_via,
     externalId: row.external_id,
     postedAt: row.posted_at,
+    failureReason: row.failure_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -283,6 +285,16 @@ export function registerSourcingPostRoutes(app: FastifyInstance, options: Server
         const before = await loadPost(tx, id);
         if (before.status !== 'draft')
           throw refuse(409, `This post is ${before.status}, so it cannot be approved.`);
+        // A Freelancer.com project is created with a budget (ARB-203, D-055).
+        if (
+          before.platform === 'freelancer' &&
+          (!before.currency ||
+            (before.budget_min_minor === null && before.budget_max_minor === null))
+        )
+          throw refuse(
+            409,
+            'A Freelancer.com post needs a budget before it is approved. Edit it to add one.',
+          );
         // The words are checked once more at the moment a person puts their name to them.
         const problems = clientIdentifyingProblems(
           before,
@@ -304,7 +316,39 @@ export function registerSourcingPostRoutes(app: FastifyInstance, options: Server
         });
         return loadPost(tx, id);
       });
-      return reply.send({ post: describePost(row) });
+      // A Freelancer.com post goes to the sender, which holds the live gate (D-032).
+      let queued = false;
+      if (row.platform === 'freelancer' && options.enqueue?.sourcingPost) {
+        await options.enqueue.sourcingPost({ postId: id, requestId: request.id });
+        queued = true;
+      }
+      return reply.send({ post: describePost(row), queued });
+    } catch (error) {
+      return send(reply, error);
+    }
+  });
+
+  /** Asks for the bids on a posted Freelancer.com project to be read now. */
+  app.post('/v1/sourcing-posts/:id/collect', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const { id } = request.params as { id: string };
+    if (!UUID.test(id)) return reply.code(400).send({ error: 'id is not a uuid' });
+    try {
+      const row = await withUser(options.db, authUserId, async (tx) => {
+        await member(tx, canWrite, 'collect bids for');
+        return loadPost(tx, id);
+      });
+      if (row.platform !== 'freelancer' || row.status !== 'posted' || !row.external_id)
+        return reply
+          .code(409)
+          .send({ error: 'Only a posted Freelancer.com project has bids to read.' });
+      if (!options.enqueue?.sourcingCollect)
+        return reply.code(503).send({
+          error: 'The workers are not running here, so bids cannot be read now (docs/02 B-12).',
+        });
+      await options.enqueue.sourcingCollect({ postId: id, requestId: request.id });
+      return reply.code(202).send({ queued: true });
     } catch (error) {
       return send(reply, error);
     }

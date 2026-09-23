@@ -1754,6 +1754,7 @@ export type Database = {
           created_at: string;
           currency: string | null;
           external_id: string | null;
+          failure_reason: string | null;
           id: string;
           org_id: string;
           platform: Database['public']['Enums']['platform'];
@@ -1772,6 +1773,7 @@ export type Database = {
           created_at?: string;
           currency?: string | null;
           external_id?: string | null;
+          failure_reason?: string | null;
           id?: string;
           org_id: string;
           platform: Database['public']['Enums']['platform'];
@@ -1790,6 +1792,7 @@ export type Database = {
           created_at?: string;
           currency?: string | null;
           external_id?: string | null;
+          failure_reason?: string | null;
           id?: string;
           org_id?: string;
           platform?: Database['public']['Enums']['platform'];
@@ -1921,6 +1924,7 @@ export type Database = {
           created_at: string;
           currency: string | null;
           display_name: string;
+          external_bid_id: string | null;
           external_profile_url: string | null;
           id: string;
           org_id: string;
@@ -1928,6 +1932,7 @@ export type Database = {
           ranking: Json;
           score: number | null;
           shortlisted: boolean;
+          sourcing_post_id: string | null;
           sourcing_request_id: string;
           supplier_id: string | null;
           turnaround_days: number | null;
@@ -1938,6 +1943,7 @@ export type Database = {
           created_at?: string;
           currency?: string | null;
           display_name: string;
+          external_bid_id?: string | null;
           external_profile_url?: string | null;
           id?: string;
           org_id: string;
@@ -1945,6 +1951,7 @@ export type Database = {
           ranking?: Json;
           score?: number | null;
           shortlisted?: boolean;
+          sourcing_post_id?: string | null;
           sourcing_request_id: string;
           supplier_id?: string | null;
           turnaround_days?: number | null;
@@ -1955,6 +1962,7 @@ export type Database = {
           created_at?: string;
           currency?: string | null;
           display_name?: string;
+          external_bid_id?: string | null;
           external_profile_url?: string | null;
           id?: string;
           org_id?: string;
@@ -1962,6 +1970,7 @@ export type Database = {
           ranking?: Json;
           score?: number | null;
           shortlisted?: boolean;
+          sourcing_post_id?: string | null;
           sourcing_request_id?: string;
           supplier_id?: string | null;
           turnaround_days?: number | null;
@@ -1973,6 +1982,13 @@ export type Database = {
             columns: ['org_id'];
             isOneToOne: false;
             referencedRelation: 'orgs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'supplier_candidates_sourcing_post_id_fkey';
+            columns: ['sourcing_post_id'];
+            isOneToOne: false;
+            referencedRelation: 'sourcing_posts';
             referencedColumns: ['id'];
           },
           {

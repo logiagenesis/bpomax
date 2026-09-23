@@ -32,6 +32,7 @@ import { loadPosts, setPostRoles } from './sourcing-posts.js';
  * @property {{ rate: number, turnaround: number, quality: number, timeZone: number, paysAfterDelivery: number } | null} parts
  * @property {string[]} reasons
  * @property {boolean} shortlisted
+ * @property {'ranking' | 'bid'} [source]
  */
 
 /**
@@ -226,7 +227,13 @@ function renderRequest(r) {
     const why = document.createElement('td');
     const list = document.createElement('ul');
     list.className = 'stack';
-    for (const reason of c.reasons) {
+    const reasons =
+      c.source === 'bid' && c.reasons.length === 0
+        ? [
+            `A bid on the Freelancer.com post${c.countryCode ? ` from ${c.countryCode}` : ''}; not ranked, compare it by hand.`,
+          ]
+        : c.reasons;
+    for (const reason of reasons) {
       const li = document.createElement('li');
       li.textContent = reason;
       list.append(li);
