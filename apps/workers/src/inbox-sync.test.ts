@@ -149,6 +149,7 @@ beforeAll(async () => {
     db,
     queue: queues['inbox-sync'],
     autoReplyQueue: queues['auto-reply'],
+    discoveryQueue: queues.discovery,
     config,
     now: () => NOW,
     alert: (alert) => {

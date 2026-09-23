@@ -6,6 +6,7 @@
  */
 export * from './allowance.js';
 export * from './client.js';
+export * from './discovery.js';
 export * from './events.js';
 export * from './llm-calls.js';
 export * from './migrations.js';

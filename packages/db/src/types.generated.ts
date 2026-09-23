@@ -493,6 +493,7 @@ export type Database = {
       discovery_sessions: {
         Row: {
           answers: Json;
+          asked: Json;
           completeness: number;
           created_at: string;
           id: string;
@@ -504,6 +505,7 @@ export type Database = {
         };
         Insert: {
           answers?: Json;
+          asked?: Json;
           completeness?: number;
           created_at?: string;
           id?: string;
@@ -515,6 +517,7 @@ export type Database = {
         };
         Update: {
           answers?: Json;
+          asked?: Json;
           completeness?: number;
           created_at?: string;
           id?: string;

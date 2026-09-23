@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { ServerOptions } from './context.js';
 import { registerAutoReplyRoutes } from './routes/auto-reply.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
+import { registerDiscoveryRoutes } from './routes/discovery.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerMeRoutes } from './routes/me.js';
@@ -43,6 +44,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerJobRoutes(app, options);
   registerProposalRoutes(app, options);
   registerMessageRoutes(app, options);
+  registerDiscoveryRoutes(app, options);
   registerSettingsRoutes(app, options);
   registerAutoReplyRoutes(app, options);
   registerPriceBandRoutes(app, options);
