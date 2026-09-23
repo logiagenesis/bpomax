@@ -107,7 +107,7 @@ jobs:
 
       - name: Apply every migration to the Supabase Postgres image (ARB-010)
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/arbitron
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
         run: |
           sh scripts/db-migrate.sh
           psql "$DATABASE_URL" -X -A -t -c "select count(*) || ' public tables' from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'"

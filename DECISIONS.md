@@ -976,3 +976,8 @@ Reason:
   there: Docker Hub answered 429, and the download hosts of Docker Hub, GitHub's registry
   and AWS's public registry are refused by that container's egress policy. GitHub's
   runners have none of these limits, so the whole stack is checked there instead.
+- The Postgres service follows the image's own set-up: its init script runs as
+  `supabase_admin` (the image's default `POSTGRES_USER`) and creates the `postgres` role
+  with `POSTGRES_PASSWORD`. Overriding `POSTGRES_USER` made that script fail (CI run 54:
+  role "supabase_admin" does not exist). The database is `postgres` on port 54322, the
+  name and port the Supabase CLI uses locally, so one `DATABASE_URL` fits either.
