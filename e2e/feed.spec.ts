@@ -231,7 +231,8 @@ test('Queue bid asks the API, reports the answer, and reloads the feed', async (
   );
   const call = requests.find((r) => r.method === 'POST' && r.path.endsWith('/queue-bid'));
   expect(call?.path).toBe(`/v1/jobs/${READY.id}/queue-bid`);
-  expect(requests.filter((r) => r.path === '/v1/jobs').length).toBe(2);
+  // The reload follows the success message, so wait for it rather than race it.
+  await expect.poll(() => requests.filter((r) => r.path === '/v1/jobs').length).toBe(2);
 });
 
 test('a job that is scored first says so', async ({ page }) => {

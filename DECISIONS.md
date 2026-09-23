@@ -1072,3 +1072,24 @@ Reason:
   run away from the working day.
 - Keeping the wording in a file the owner edits means T-06's answer is a content change
   with no code change. The page is static, so it works on any host (C-03).
+
+## D-042 — Work reaches main through one pull request per ticket, merged as soon as CI is green; claims go straight to main
+
+Date: 23/09/2026
+Decided by: the owner's instruction of 23/09/2026, applied by Claude Code (session …tJv8).
+It replaces D-039.
+
+Decision:
+
+- Pull requests #1 to #4 were merged into `main`, oldest first, and their `claude/`
+  branches deleted. #1 was a second ARB-062. `main` already held ARB-062, including #1's
+  API export, taken with credit, so its conflicts were resolved to `main`'s version.
+  Only its tested DD/MM/YYYY parser, which did not conflict, was kept. #2 and #3 were
+  run-log entries, placed in date order.
+- From now on each ticket is built on a branch and opened as a pull request. The PR is
+  merged into `main` as soon as its CI is green, and the branch is then deleted. `main`
+  is the only branch that matters.
+- A claim is a one-line board change pushed straight to `main` before the ticket starts,
+  so the hourly routine sees it (D-034 still applies).
+- The web app deploys to Vercel from `main` (ARB-070). Where a credential is missing it
+  runs in demo mode, so every page can be viewed.
