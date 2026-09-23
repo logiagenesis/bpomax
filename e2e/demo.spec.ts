@@ -72,3 +72,15 @@ test('the settings rules are the real ones: live mode stays off until every rule
   await expect(page.getByRole('switch', { name: 'Organisation live mode' })).toBeDisabled();
   await expect(page.locator('#live-blockers-list li')).toHaveCount(5);
 });
+
+test('connecting Freelancer.com in the demo returns at once with a sample account', async ({
+  page,
+}) => {
+  await page.goto('/settings.html');
+  await expect(page.locator('#connect-hint')).toContainText('Nothing reaches Freelancer.com.');
+  await page.getByRole('button', { name: 'Connect Freelancer.com' }).click();
+  await expect(page).toHaveURL(/\/freelancer-callback\.html$/);
+  await expect(page.locator('#status')).toHaveText(
+    'Connected the Freelancer.com account sample-account (demo).',
+  );
+});

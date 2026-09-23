@@ -43,6 +43,7 @@ interface Options {
   complete?: boolean;
   environmentLiveMode?: boolean;
   bands?: Record<string, unknown>[];
+  freelancer?: { configured: boolean; environment: string | null; reason: string | null };
 }
 
 /** Two bands as `GET /v1/price-bands` returns them: one seed figure, one observed. */
@@ -141,8 +142,22 @@ async function open(page: Page, options: Options = {}) {
             accounts: [account],
             telegramLinked: false,
             role,
+            ...(options.freelancer ? { freelancer: options.freelancer } : {}),
           },
         }),
+      'POST /v1/platform-accounts/freelancer/connect': (_request, route) =>
+        route.fulfill({
+          status: 201,
+          json: {
+            authorizeUrl:
+              'https://accounts.freelancer-sandbox.com/oauth/authorize?response_type=code&client_id=e2e',
+            expiresAt: '2026-09-22T10:10:00Z',
+          },
+        }),
+      'POST /v1/platform-accounts/:id/disconnect': (_request, route) => {
+        account.status = 'disconnected';
+        return route.fulfill({ json: { account } });
+      },
       'PATCH /v1/settings': (request, route) => {
         const body = request.body as Record<string, unknown>;
         if ('minMarginPct' in body) settings.minMarginPct = toNumeric(body.minMarginPct);
@@ -581,6 +596,64 @@ test('seed bands are labelled Seed; observed bands are labelled by their source'
   await expect(observed.locator('.badge--seed')).toHaveCount(0);
   await expect(observed.locator('.badge')).toHaveText('Owner CSV');
   await expect(observed.locator('td').nth(5)).toHaveText('14');
+});
+
+test('Connect Freelancer.com is off, with the API’s reason, while it is not configured', async ({
+  page,
+}) => {
+  await open(page, {
+    freelancer: {
+      configured: false,
+      environment: null,
+      reason: 'Freelancer.com is not configured: FREELANCER_CLIENT_ID is not set. (docs/02 B-03)',
+    },
+  });
+  await expect(page.getByRole('button', { name: 'Connect Freelancer.com' })).toBeDisabled();
+  await expect(page.locator('#connect-hint')).toHaveText(
+    'Freelancer.com is not configured: FREELANCER_CLIENT_ID is not set. (docs/02 B-03)',
+  );
+});
+
+test('Connect Freelancer.com asks the API and opens the sandbox authorise page it names', async ({
+  page,
+}) => {
+  const requests = await open(page, {
+    freelancer: { configured: true, environment: 'sandbox', reason: null },
+  });
+  await expect(page.locator('#connect-hint')).toHaveText(
+    'Opens the Freelancer.com sandbox to sign in and approve access. One account per verified identity.',
+  );
+  await page.route('https://accounts.freelancer-sandbox.com/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<h1>Sandbox consent (stand-in)</h1>' }),
+  );
+  await page.getByRole('button', { name: 'Connect Freelancer.com' }).click();
+  await expect(page).toHaveURL(/^https:\/\/accounts\.freelancer-sandbox\.com\/oauth\/authorize\?/);
+  expect(posts(requests, 'POST', '/v1/platform-accounts/freelancer/connect')).toHaveLength(1);
+});
+
+test('a viewer sees Connect and Disconnect but cannot use them', async ({ page }) => {
+  await open(page, {
+    role: 'viewer',
+    freelancer: { configured: true, environment: 'sandbox', reason: null },
+  });
+  await expect(page.getByRole('button', { name: 'Connect Freelancer.com' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Disconnect freelancer' })).toBeDisabled();
+});
+
+test('Disconnect asks first; cancelling sends nothing; confirming disconnects the account', async ({
+  page,
+}) => {
+  const requests = await open(page);
+  const disconnect = page.getByRole('button', { name: 'Disconnect freelancer' });
+  await disconnect.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  expect(posts(requests, 'POST', /\/disconnect$/)).toHaveLength(0);
+  await disconnect.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Disconnect' }).click();
+  await expectStatus(page, 'Disconnected freelancer.');
+  expect(posts(requests, 'POST', /\/disconnect$/)).toHaveLength(1);
+  await expect(page.locator('#accounts')).toContainText('Status disconnected');
+  await expect(page.getByRole('button', { name: 'Disconnect freelancer' })).toHaveCount(0);
 });
 
 test('reload asks again', async ({ page }) => {

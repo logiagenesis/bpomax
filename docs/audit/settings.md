@@ -1,9 +1,9 @@
-# Control audit — settings.html (ARB-061, ARB-013)
+# Control audit — settings.html (ARB-061, ARB-013, ARB-020)
 
 Per docs/05 section 1. Every control on the page, and the Playwright test (in
 `e2e/settings.spec.ts`) that exercises it. The API is an in-memory copy, at the network
 edge, of `apps/api/src/routes/settings.ts`, `routes/scanners.ts` and
-`routes/telegram.ts` (each tested against real Postgres). Every form is checked before it
+`routes/telegram.ts` and `routes/platform-accounts.ts` (each tested against real Postgres). Every form is checked before it
 sends with the same `@arbitron/core` functions the API runs (`validateMarginRules`,
 `parseFeeTable`, `validatePlanRecord`, `validateScanner`, `checkAutoSendGuardrails`), so
 the client and server rules are one piece of code (docs/05 section 1.5).
@@ -21,7 +21,8 @@ the client and server rules are one piece of code (docs/05 section 1.5).
 | Button (submit) | Save fee table | Save every row | `PATCH /v1/settings {feeTable}` | Spinner, aria-busy, disabled | "Fee table saved with N rules." | API message; field errors attached | Unless owner; while busy | Yes | a fee rule needs its source page and date… | ✅ |
 | Inputs ×2 (per account) | Plan name, Monthly bid allowance | Record the platform plan and its allowance (docs/02 T-03) | Checked with `validatePlanRecord` | — | — | "Must be a whole number." etc. | Unless the person may write (owner or operator) | Yes | the plan and allowance are checked, saved and dated | ✅ |
 | Button (submit, per account) | Save plan for <platform> | Save them | `PATCH /v1/platform-accounts/:id`; the day recorded is stored and shown | Spinner, aria-busy, disabled | "Plan saved for <platform>." | API message | as above; while busy | Yes | the plan and allowance are checked, saved and dated | ✅ |
-| Button | Connect Freelancer.com | Start the OAuth connect | Nothing yet: the control is disabled with the reason beside it (docs/02 B-03, B-04; ARB-020, blocker C-02). It is not a dead control: its disabled state and its reason are the behaviour, and the test asserts both | — | — | — | Always, until C-02 is cleared | Yes (focusable when enabled) | shows what is set and what still blocks live mode… | ✅ |
+| Button | Connect Freelancer.com | Start the OAuth connect (ARB-020) | Asks `POST /v1/platform-accounts/freelancer/connect`, which records a ten-minute single-use attempt (D-041) and answers with the documented authorise address; the browser is sent there. Freelancer.com returns it to `freelancer-callback.html` (docs/audit/freelancer-callback.md). The hint names the environment: sandbox, production, a stand-in, or demo | Spinner, aria-busy, disabled | "Opening Freelancer.com…", then the authorise page | API message (503 with the B-03 reason while not configured) | While the API reports Freelancer.com not configured, with its reason in the hint (docs/02 B-03); unless the person may write (title says so); while busy | Yes | Connect Freelancer.com is off, with the API’s reason, while it is not configured; Connect Freelancer.com asks the API and opens the sandbox authorise page it names; a viewer sees Connect and Disconnect but cannot use them | ✅ |
+| Button (per account) | Disconnect <platform> | Delete the stored sign-in, keep the row and its history | Modal (danger): "Disconnect <platform>?" with what is kept; cancel sends nothing; `POST /v1/platform-accounts/:id/disconnect` deletes the Vault secrets and marks the account `disconnected`; logged as `account.disconnected` naming the person | Spinner, aria-busy, disabled | "Disconnected <platform>."; the card shows the new status | API message | Hidden once the account is disconnected; unless the person may write (title says so); while busy | Yes | Disconnect asks first; cancelling sends nothing; confirming disconnects the account; a viewer sees Connect and Disconnect but cannot use them | ✅ |
 | Inputs ×8 | Name, Platform, Keywords, Check every (seconds), Daily cap, Minimum score, Active, Auto-send | A scanner | Checked with `validateScanner` then `checkAutoSendGuardrails`, the API's own two checks in order (D-018) | — | — | "Must not be empty.", "Must be at least 1 before auto-send can be turned on.", "Must be set before auto-send can be turned on." | Unless the person may write | Yes | a scanner is checked before it is sent… | ✅ |
 | Button (submit) | Add scanner / Save scanner | Create, or save the one being edited | `POST /v1/scanners` with the org id, or `PATCH /v1/scanners/:id`; form cleared; table refreshed | Spinner, aria-busy, disabled | "Added “<name>”." / "Saved “<name>”." | API message, e.g. a duplicate name; 422 field errors attached | as above; while busy | Yes | a scanner can be added, edited and deleted…; the API’s own refusal of a scanner lands on the field | ✅ |
 | Button | Cancel edit | Stop editing | Form back to "Add a scanner", focus on Name | — | — | — | Hidden unless editing | Yes | shows what is set…; a scanner can be added, edited and deleted… | ✅ |
@@ -40,7 +41,8 @@ Auto-reply: there is nothing to set until the inbox lands (ARB-121); the section
 and offers no control.
 
 Destructive actions (docs/05 section 1.3): going live asks for confirmation and is
-logged; deleting a scanner asks and is logged. The server switch (`LIVE_MODE`) is shown,
+logged; deleting a scanner asks and is logged; disconnecting an account asks and is
+logged. The server switch (`LIVE_MODE`) is shown,
 never changed here: it is the host's (D-032).
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.
