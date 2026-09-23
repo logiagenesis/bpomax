@@ -1180,9 +1180,13 @@ export type Database = {
           fx_rate_at: string | null;
           fx_rate_used: number | null;
           id: string;
+          kind: Database['public']['Enums']['payment_kind'];
+          milestone_index: number | null;
+          note: string | null;
           org_id: string;
           paid_at: string | null;
           pipeline_item_id: string | null;
+          recorded_by: string | null;
           reference: string | null;
           updated_at: string;
         };
@@ -1196,9 +1200,13 @@ export type Database = {
           fx_rate_at?: string | null;
           fx_rate_used?: number | null;
           id?: string;
+          kind: Database['public']['Enums']['payment_kind'];
+          milestone_index?: number | null;
+          note?: string | null;
           org_id: string;
           paid_at?: string | null;
           pipeline_item_id?: string | null;
+          recorded_by?: string | null;
           reference?: string | null;
           updated_at?: string;
         };
@@ -1212,9 +1220,13 @@ export type Database = {
           fx_rate_at?: string | null;
           fx_rate_used?: number | null;
           id?: string;
+          kind?: Database['public']['Enums']['payment_kind'];
+          milestone_index?: number | null;
+          note?: string | null;
           org_id?: string;
           paid_at?: string | null;
           pipeline_item_id?: string | null;
+          recorded_by?: string | null;
           reference?: string | null;
           updated_at?: string;
         };
@@ -1238,6 +1250,13 @@ export type Database = {
             columns: ['pipeline_item_id'];
             isOneToOne: false;
             referencedRelation: 'pipeline_items';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'payments_recorded_by_fkey';
+            columns: ['recorded_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
@@ -2503,6 +2522,7 @@ export type Database = {
       llm_purpose: 'score' | 'draft' | 'discovery' | 'brief' | 'estimate' | 'other';
       message_direction: 'in' | 'out';
       payment_direction: 'in' | 'out';
+      payment_kind: 'client' | 'supplier' | 'platform_fee' | 'other_cost';
       pipeline_stage:
         | 'applied'
         | 'replied'
@@ -2560,6 +2580,7 @@ export const Constants = {
       llm_purpose: ['score', 'draft', 'discovery', 'brief', 'estimate', 'other'],
       message_direction: ['in', 'out'],
       payment_direction: ['in', 'out'],
+      payment_kind: ['client', 'supplier', 'platform_fee', 'other_cost'],
       pipeline_stage: [
         'applied',
         'replied',

@@ -279,6 +279,32 @@ test('choosing a supplier in the demo opens a delivery order whose milestones mu
   await expect(page.locator('#rows tr').first()).toContainText('delivery.status_changed');
 });
 
+test('a payment recorded in the demo is worked into realised margin by the real rule', async ({
+  page,
+}) => {
+  await page.goto('/pipeline.html');
+  await page
+    .getByRole('button', { name: 'Open the payments for Shopify store rebuild (sample)' })
+    .click();
+  await expect(page.locator('#payments-empty')).toBeVisible();
+  // R12 000,00 in from the client; R1 200,00 platform fee out: margin R10 800,00.
+  await page.getByLabel('Amount', { exact: true }).fill('12000.00');
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Record' }).click();
+  await expect(page.locator('#payments-status')).toHaveText(
+    'Recorded the client payment of R12 000,00.',
+  );
+  await expect(page.locator('#payments-meta')).toContainText('paid in full');
+  await page.getByLabel('What', { exact: true }).selectOption('platform_fee');
+  await page.getByLabel('Amount', { exact: true }).fill('1200.00');
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Record' }).click();
+  await expect(page.locator('#margin-figures')).toContainText('Realised marginR10 800,00');
+  await expect(page.locator('#board section[data-stage="paid"]')).toContainText(
+    'Shopify store rebuild (sample)',
+  );
+});
+
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({
   page,
 }) => {

@@ -4,9 +4,11 @@ import {
   minorToCsvAmount,
   parseAmountText,
   reconcileMilestones,
+  sastDay,
   validateDeliveryOrderEdit,
+  validatePaymentInput,
 } from '@arbitron/core';
-import { apiGet, apiSend } from './lib/api.js';
+import { ApiError, apiGet, apiSend } from './lib/api.js';
 import { formatDate, formatDateTime, formatMoney } from './lib/format.js';
 import { clearFieldErrors, showFieldErrors } from './lib/forms.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
@@ -18,7 +20,9 @@ import { confirmAction, runAction } from './lib/ui.js';
  * /v1/delivery-orders/:id`, `POST …/status`, `PATCH …/handover/:key` and
  * `PATCH …/milestones/:index`. The milestones are checked on the page with the API's own
  * rule (`validateDeliveryOrderEdit`: they add up to the agreed cost to the cent), and
- * every move shows the API's reasons on its button before it is pressed.
+ * every move shows the API's reasons on its button before it is pressed. Payments
+ * (ARB-311): `GET/POST /v1/pipeline-items/:id/payments`, checked on the page with the
+ * API's rule (`validatePaymentInput`), with realised margin as the API works it.
  */
 
 /**
@@ -97,7 +101,46 @@ const saveButton = /** @type {HTMLButtonElement} */ (byId('order-save'));
 const handoverList = byId('handover');
 const movesBox = byId('moves');
 
+const paymentsSection = byId('payments');
+const paymentsTitle = byId('payments-title');
+const paymentsMeta = byId('payments-meta');
+const paymentsStatus = byId('payments-status');
+const paymentsNotice = byId('payments-notice');
+const marginFigures = byId('margin-figures');
+const unconvertedList = byId('unconverted');
+const paymentRows = byId('payment-rows');
+const paymentsEmpty = byId('payments-empty');
+const paymentForm = /** @type {HTMLFormElement} */ (byId('payment-form'));
+const kindSelect = /** @type {HTMLSelectElement} */ (byId('payment-kind'));
+const payAmount = /** @type {HTMLInputElement} */ (byId('payment-amountMinor'));
+const payCurrency = /** @type {HTMLInputElement} */ (byId('payment-currency'));
+const payPaidOn = /** @type {HTMLInputElement} */ (byId('payment-paidOn'));
+const payRate = /** @type {HTMLInputElement} */ (byId('payment-fxRate'));
+const payOrder = /** @type {HTMLSelectElement} */ (byId('payment-deliveryOrderId'));
+const payMilestone = /** @type {HTMLSelectElement} */ (byId('payment-milestoneIndex'));
+const payReference = /** @type {HTMLInputElement} */ (byId('payment-reference'));
+const paySave = /** @type {HTMLButtonElement} */ (byId('payment-save'));
+
 const ROLE_REASON = 'Your role can view the pipeline but not change it.';
+
+const KIND_WORDS = /** @type {Record<string, string>} */ ({
+  client: 'Client payment',
+  supplier: 'Supplier payment',
+  platform_fee: 'Platform fee',
+  other_cost: 'Other cost',
+});
+
+/**
+ * @typedef {object} PaymentsView
+ * @property {{ id: string, jobTitle: string, stage: string, valueMinor: string | null, currency: string | null }} item
+ * @property {{ id: string, status: string, currency: string | null, supplierName: string | null, supplierCountry: string | null, milestones: { title: string, amountMinor: number, status: string }[] }[]} orders
+ * @property {{ id: string, kind: string, direction: string, amountMinor: string, currency: string, fxRateUsed: string | null, fxRateAt: string | null, amountZarMinor: string | null, paidAt: string, reference: string | null, deliveryOrderId: string | null, milestoneIndex: number | null, recordedByName: string | null }[]} payments
+ * @property {{ inZarMinor: string, supplierZarMinor: string, feesZarMinor: string, otherZarMinor: string, marginZarMinor: string, unconverted: { kind: string, amountMinor: string, currency: string }[] }} margin
+ * @property {boolean} paidInFull
+ */
+
+/** @type {PaymentsView | null} */
+let paymentsView = null;
 
 const STAGE_WORDS = /** @type {Record<string, string>} */ ({
   applied: 'Applied',
@@ -227,6 +270,13 @@ function itemCard(item) {
   }
   moveButton.addEventListener('click', () => void moveItem(moveButton, item, select.value));
   controls.append(label, select, moveButton);
+  const payments = document.createElement('button');
+  payments.type = 'button';
+  payments.className = 'btn btn--secondary';
+  payments.textContent = 'Payments';
+  payments.setAttribute('aria-label', `Open the payments for ${item.jobTitle}`);
+  payments.addEventListener('click', () => void openPayments(payments, item.id));
+  controls.append(payments);
   if (item.deliveryOrderId) {
     const open = document.createElement('button');
     open.type = 'button';
@@ -698,6 +748,223 @@ async function markMilestone(button, o, index, to) {
     `Marked ${m?.title ?? 'the milestone'} ${to}.`,
   );
 }
+
+/** A figure in rand from the API's minor-unit text. */
+const rand = (/** @type {string} */ minor) => formatMoney(BigInt(minor), 'ZAR');
+
+/** Shows the supplier fields only for a supplier payment, and the milestones of the chosen order. */
+function syncPaymentFields() {
+  const supplier = kindSelect.value === 'supplier';
+  for (const control of [payOrder, payMilestone]) {
+    const wrap = control.closest('.field');
+    if (wrap instanceof HTMLElement) wrap.hidden = !supplier;
+  }
+  const order = paymentsView?.orders.find((o) => o.id === payOrder.value);
+  const kept = payMilestone.value;
+  payMilestone.replaceChildren();
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = 'Not against one milestone';
+  payMilestone.append(none);
+  for (const [index, m] of (order?.milestones ?? []).entries()) {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = `${m.title} (${order?.currency ? formatMoney(BigInt(m.amountMinor), order.currency) : String(m.amountMinor)})`;
+    payMilestone.append(option);
+  }
+  if ([...payMilestone.options].some((o) => o.value === kept)) payMilestone.value = kept;
+  const rateWrap = payRate.closest('.field');
+  if (rateWrap instanceof HTMLElement)
+    rateWrap.hidden = payCurrency.value.trim().toUpperCase() === 'ZAR';
+}
+
+/** @param {PaymentsView} view */
+function renderPayments(view) {
+  paymentsView = view;
+  const { item, margin } = view;
+  paymentsTitle.textContent = `Payments for ${item.jobTitle}`;
+  paymentsMeta.textContent = [
+    item.valueMinor && item.currency
+      ? `Value ${formatMoney(BigInt(item.valueMinor), item.currency)}`
+      : 'No value recorded',
+    `stage ${STAGE_WORDS[item.stage]?.toLowerCase() ?? item.stage}`,
+    view.paidInFull ? 'paid in full' : 'not paid in full',
+  ].join(' · ');
+  marginFigures.replaceChildren(
+    ...figure('Client payments (in)', rand(margin.inZarMinor)),
+    ...figure('Supplier payments (out)', rand(margin.supplierZarMinor)),
+    ...figure('Platform fees (out)', rand(margin.feesZarMinor)),
+    ...figure('Other costs (out)', rand(margin.otherZarMinor)),
+    ...figure('Realised margin', rand(margin.marginZarMinor)),
+  );
+  unconvertedList.replaceChildren(
+    ...margin.unconverted.map((u) => {
+      const li = document.createElement('li');
+      li.textContent = `${KIND_WORDS[u.kind] ?? u.kind} of ${formatMoney(BigInt(u.amountMinor), u.currency)} has no rand figure and is left out of the margin.`;
+      return li;
+    }),
+  );
+  paymentRows.replaceChildren(
+    ...view.payments.map((p) => {
+      const tr = document.createElement('tr');
+      const index = p.milestoneIndex;
+      const milestone =
+        p.kind === 'supplier' && index !== null
+          ? (view.orders.find((o) => o.id === p.deliveryOrderId)?.milestones[index]?.title ?? null)
+          : null;
+      const cells = [
+        formatDate(p.paidAt),
+        `${KIND_WORDS[p.kind] ?? p.kind}${milestone ? ` · ${milestone}` : ''}`,
+        formatMoney(BigInt(p.amountMinor), p.currency),
+        p.fxRateUsed
+          ? `${p.fxRateUsed.replace(/0+$/, '').replace(/\.$/, '').replace('.', ',')}${p.fxRateAt ? ` at ${formatDateTime(p.fxRateAt)}` : ''}`
+          : p.currency === 'ZAR'
+            ? '—'
+            : 'No rate',
+        p.amountZarMinor === null ? 'Not converted' : rand(p.amountZarMinor),
+        p.reference ?? '',
+      ];
+      for (const [i, text] of cells.entries()) {
+        const td = document.createElement('td');
+        if (i === 2 || i === 4) td.className = 'num';
+        td.textContent = text;
+        tr.append(td);
+      }
+      return tr;
+    }),
+  );
+  paymentsEmpty.hidden = view.payments.length !== 0;
+
+  payOrder.replaceChildren();
+  for (const o of view.orders) {
+    const option = document.createElement('option');
+    option.value = o.id;
+    option.textContent = `${o.supplierName ?? 'Supplier'} (${o.status.replace('_', ' ')})`;
+    payOrder.append(option);
+  }
+  paymentForm.hidden = !mayWrite;
+  if (!payCurrency.value) payCurrency.value = item.currency ?? 'ZAR';
+  if (!payPaidOn.value) payPaidOn.value = dayText(sastDay(new Date()));
+  syncPaymentFields();
+  paymentsSection.hidden = false;
+}
+
+/** @param {string} itemId */
+async function loadPayments(itemId) {
+  const view = /** @type {PaymentsView} */ (await apiGet(`/v1/pipeline-items/${itemId}/payments`));
+  renderPayments(view);
+  return view;
+}
+
+/**
+ * @param {HTMLButtonElement} button
+ * @param {string} itemId
+ */
+async function openPayments(button, itemId) {
+  paymentsNotice.hidden = true;
+  payCurrency.value = '';
+  payPaidOn.value = '';
+  await runAction(
+    button,
+    paymentsStatus,
+    async () => {
+      try {
+        return await loadPayments(itemId);
+      } catch (error) {
+        if (backToLoginOn401(error)) return null;
+        throw error;
+      }
+    },
+    { success: (v) => (v ? `Opened the payments for ${v.item.jobTitle}.` : '') },
+  );
+  paymentsSection.hidden = false;
+  paymentsSection.scrollIntoView({ block: 'start' });
+}
+
+kindSelect.addEventListener('change', syncPaymentFields);
+payOrder.addEventListener('change', () => {
+  payMilestone.value = '';
+  syncPaymentFields();
+});
+payCurrency.addEventListener('input', syncPaymentFields);
+
+paymentForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!paymentsView) return;
+  const view = paymentsView;
+  clearFieldErrors(paymentForm);
+  const currency = payCurrency.value.trim().toUpperCase();
+  /** @type {{ field: string, message: string }[]} */
+  const problems = [];
+  const minor = parseAmountText(payAmount.value, /^[A-Z]{3}$/.test(currency) ? currency : 'ZAR');
+  if (minor === null)
+    problems.push({ field: 'amountMinor', message: 'must be an amount such as 7500.00' });
+  const paidOn = isoDay(payPaidOn.value);
+  if (!paidOn) problems.push({ field: 'paidOn', message: 'must be a real date as DD/MM/YYYY' });
+  const kind = kindSelect.value;
+  const payload = {
+    kind,
+    amountMinor: minor === null ? null : Number(minor),
+    currency,
+    paidOn: paidOn ?? '',
+    fxRate: currency === 'ZAR' ? null : payRate.value.trim() || null,
+    reference: payReference.value,
+    deliveryOrderId: kind === 'supplier' ? payOrder.value || null : null,
+    milestoneIndex:
+      kind === 'supplier' && payMilestone.value !== '' ? Number(payMilestone.value) : null,
+  };
+  if (problems.length === 0) {
+    const validated = validatePaymentInput(payload, { today: sastDay(new Date()) });
+    if (!validated.ok) problems.push(...validated.errors);
+  }
+  if (problems.length > 0) {
+    showFieldErrors(paymentForm, problems, 'payment-');
+    paymentsStatus.className = 'alert alert--error';
+    paymentsStatus.textContent = 'Some fields need attention. The first one has been selected.';
+    return;
+  }
+  const amountText = formatMoney(BigInt(/** @type {number} */ (payload.amountMinor)), currency);
+  const ok = await confirmAction({
+    title: `Record ${amountText} ${kind === 'client' ? 'in' : 'out'}?`,
+    body: `${KIND_WORDS[kind] ?? kind} for ${view.item.jobTitle}, paid on ${payPaidOn.value.trim()}. A recorded payment is kept in the audit log; it cannot be edited.`,
+    confirmLabel: 'Record',
+  });
+  if (!ok) return;
+  const result = /** @type {(PaymentsView & { notice: string | null }) | undefined} */ (
+    await runAction(
+      paySave,
+      paymentsStatus,
+      async () => {
+        try {
+          return await apiSend('POST', `/v1/pipeline-items/${view.item.id}/payments`, payload);
+        } catch (error) {
+          if (backToLoginOn401(error)) return undefined;
+          // The API's field problems (a rate it needs, B-10) land on their fields.
+          if (error instanceof ApiError && error.errors.length > 0) {
+            showFieldErrors(paymentForm, error.errors, 'payment-');
+            throw new Error('Some fields need attention. The first one has been selected.');
+          }
+          throw error;
+        }
+      },
+      {
+        success: `Recorded the ${(KIND_WORDS[kind] ?? kind).toLowerCase()} of ${amountText}.`,
+      },
+    )
+  );
+  if (result) {
+    const text = paymentsStatus.textContent;
+    payAmount.value = '';
+    payRate.value = '';
+    payReference.value = '';
+    renderPayments(result);
+    paymentsNotice.hidden = !result.notice;
+    paymentsNotice.textContent = result.notice ?? '';
+    paymentsStatus.className = 'alert alert--success';
+    paymentsStatus.textContent = text;
+    await fetchBoard().catch(() => undefined);
+  }
+});
 
 addButton.addEventListener('click', () => {
   const rows = readMilestoneInputs();

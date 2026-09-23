@@ -136,6 +136,129 @@
 
         <div class="row-actions" id="moves"></div>
       </section>
+
+      <section id="payments" class="card stack" hidden aria-labelledby="payments-title">
+        <div>
+          <h2 id="payments-title"></h2>
+          <p class="field__hint" id="payments-meta"></p>
+        </div>
+        <div role="status" aria-live="polite" id="payments-status"></div>
+        <p class="alert alert--warning" id="payments-notice" hidden></p>
+
+        <dl class="bid__figures" id="margin-figures"></dl>
+        <ul class="stack" id="unconverted" aria-label="Payments with no rand figure"></ul>
+
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Payments
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Paid</th>
+                <th scope="col">What</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Rate to ZAR</th>
+                <th scope="col">In rand</th>
+                <th scope="col">Reference</th>
+              </tr>
+            </thead>
+            <tbody id="payment-rows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="payments-empty" hidden>No payments recorded for this job yet.</p>
+
+        <form id="payment-form" class="stack" novalidate aria-labelledby="payment-form-heading">
+          <h3 id="payment-form-heading">Record a payment</h3>
+          <p class="section-note">
+            Record a payment once it is made. A payment not in rand needs the rate to ZAR it was
+            converted at, as on the day it was paid; no rate is ever assumed.
+          </p>
+          <div class="grid">
+            <div class="field">
+              <label class="field__label" for="payment-kind">What</label>
+              <select class="select" id="payment-kind" aria-describedby="payment-kind-error">
+                <option value="client">Client payment (in)</option>
+                <option value="supplier">Supplier payment (out)</option>
+                <option value="platform_fee">Platform fee (out)</option>
+                <option value="other_cost">Other cost (out)</option>
+              </select>
+              <p class="field__error" id="payment-kind-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-amountMinor">Amount</label>
+              <input
+                class="input"
+                id="payment-amountMinor"
+                inputmode="decimal"
+                aria-describedby="payment-amountMinor-error"
+              />
+              <p class="field__error" id="payment-amountMinor-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-currency">Currency</label>
+              <input
+                class="input"
+                id="payment-currency"
+                maxlength="3"
+                aria-describedby="payment-currency-error"
+              />
+              <p class="field__error" id="payment-currency-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-paidOn">Paid on (DD/MM/YYYY)</label>
+              <input class="input" id="payment-paidOn" aria-describedby="payment-paidOn-error" />
+              <p class="field__error" id="payment-paidOn-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-fxRate">Rate to ZAR</label>
+              <input
+                class="input"
+                id="payment-fxRate"
+                inputmode="decimal"
+                aria-describedby="payment-fxRate-hint payment-fxRate-error"
+              />
+              <p class="field__hint" id="payment-fxRate-hint">
+                Only for a payment not in rand: rand per one unit, such as 18.25.
+              </p>
+              <p class="field__error" id="payment-fxRate-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-deliveryOrderId">Delivery order</label>
+              <select
+                class="select"
+                id="payment-deliveryOrderId"
+                aria-describedby="payment-deliveryOrderId-error"
+              ></select>
+              <p class="field__error" id="payment-deliveryOrderId-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-milestoneIndex">Milestone</label>
+              <select
+                class="select"
+                id="payment-milestoneIndex"
+                aria-describedby="payment-milestoneIndex-error"
+              ></select>
+              <p class="field__error" id="payment-milestoneIndex-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="payment-reference">Reference</label>
+              <input
+                class="input"
+                id="payment-reference"
+                maxlength="200"
+                aria-describedby="payment-reference-error"
+              />
+              <p class="field__error" id="payment-reference-error" hidden></p>
+            </div>
+          </div>
+          <div class="row-actions">
+            <button type="submit" class="btn btn--primary" id="payment-save">
+              Record the payment
+            </button>
+          </div>
+        </form>
+      </section>
     </main>
   </body>
 </html>

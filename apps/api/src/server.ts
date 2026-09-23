@@ -10,6 +10,7 @@ import { registerEventRoutes } from './routes/events.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerMessageRoutes } from './routes/messages.js';
+import { registerPaymentRoutes } from './routes/payments.js';
 import { registerPlatformAccountRoutes } from './routes/platform-accounts.js';
 import { registerPriceBandRoutes } from './routes/price-bands.js';
 import { registerProposalRoutes } from './routes/proposals.js';
@@ -60,6 +61,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerSourcingRoutes(app, options);
   registerSourcingPostRoutes(app, options);
   registerDeliveryRoutes(app, options);
+  registerPaymentRoutes(app, options);
   registerPlatformAccountRoutes(app, options);
   registerEventRoutes(app, options);
   registerScannerRoutes(app, options);

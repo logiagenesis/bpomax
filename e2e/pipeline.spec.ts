@@ -100,6 +100,90 @@ interface Options {
   role?: Role;
   none?: boolean;
   order?: ReturnType<typeof order>;
+  /** The API's answer to recording a payment, in place of the stand-in's own. */
+  payment?: { status: number; json: unknown };
+}
+
+/** The job's payments as GET /v1/pipeline-items/:id/payments gives them (ARB-311). */
+function paymentsView(extra: Record<string, unknown>[] = []) {
+  const payments = [
+    {
+      id: 'y1',
+      kind: 'client',
+      direction: 'in',
+      amountMinor: '750000',
+      currency: 'ZAR',
+      fxRateUsed: null,
+      fxRateAt: null,
+      amountZarMinor: '750000',
+      paidAt: '2026-09-17T22:00:00.000Z',
+      reference: 'FL-1',
+      deliveryOrderId: null,
+      milestoneIndex: null,
+      recordedByName: 'Ayanda Nkosi',
+    },
+    {
+      id: 'y2',
+      kind: 'client',
+      direction: 'in',
+      amountMinor: '50000',
+      currency: 'USD',
+      fxRateUsed: '18.25000000',
+      fxRateAt: '2026-09-21T22:00:00.000Z',
+      amountZarMinor: '912500',
+      paidAt: '2026-09-21T22:00:00.000Z',
+      reference: null,
+      deliveryOrderId: null,
+      milestoneIndex: null,
+      recordedByName: 'Ayanda Nkosi',
+    },
+    {
+      id: 'y3',
+      kind: 'supplier',
+      direction: 'out',
+      amountMinor: '300000',
+      currency: 'ZAR',
+      fxRateUsed: null,
+      fxRateAt: null,
+      amountZarMinor: '300000',
+      paidAt: '2026-09-18T22:00:00.000Z',
+      reference: null,
+      deliveryOrderId: ORDER,
+      milestoneIndex: 0,
+      recordedByName: 'Ayanda Nkosi',
+    },
+    ...extra,
+  ];
+  // In: R7 500,00 + R9 125,00 = R16 625,00. Out: R3 000,00. Margin: R13 625,00.
+  return {
+    item: {
+      id: WON,
+      jobTitle: 'Shopify store rebuild',
+      stage: 'won',
+      valueMinor: '1500000',
+      currency: 'ZAR',
+    },
+    orders: [
+      {
+        id: ORDER,
+        status: 'assigned',
+        currency: 'ZAR',
+        supplierName: 'Thandi Web',
+        supplierCountry: 'ZA',
+        milestones: [{ title: 'Full delivery', amountMinor: 900050, status: 'pending' }],
+      },
+    ],
+    payments,
+    margin: {
+      inZarMinor: '1662500',
+      supplierZarMinor: '300000',
+      feesZarMinor: '0',
+      otherZarMinor: '0',
+      marginZarMinor: '1362500',
+      unconverted: [{ kind: 'client', amountMinor: '10000', currency: 'EUR' }],
+    },
+    paidInFull: false,
+  };
 }
 
 async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
@@ -127,6 +211,35 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
             items: options.none ? [] : board,
           },
         }),
+      'GET /v1/pipeline-items/:id/payments': (_req, route) =>
+        route.fulfill({ json: paymentsView() }),
+      'POST /v1/pipeline-items/:id/payments': (_req, route) => {
+        if (options.payment) return route.fulfill(options.payment);
+        return route.fulfill({
+          status: 201,
+          json: {
+            ...paymentsView([
+              {
+                id: 'y4',
+                kind: 'platform_fee',
+                direction: 'out',
+                amountMinor: '150000',
+                currency: 'ZAR',
+                fxRateUsed: null,
+                fxRateAt: null,
+                amountZarMinor: '150000',
+                paidAt: '2026-09-22T22:00:00.000Z',
+                reference: null,
+                deliveryOrderId: null,
+                milestoneIndex: null,
+                recordedByName: 'Ayanda Nkosi',
+              },
+            ]),
+            paymentId: 'y4',
+            notice: null,
+          },
+        });
+      },
       'PATCH /v1/pipeline-items/:id': (req, route) => {
         const item = board.find((i) => req.path.endsWith(i.id))!;
         item.stage = (req.body as { stage: string }).stage;
@@ -422,12 +535,146 @@ test('the controls are labelled and reached by keyboard; Enter opens the order',
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(
+    page.getByRole('button', { name: 'Open the payments for Shopify store rebuild' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
     page.getByRole('button', { name: 'Open the delivery order for Shopify store rebuild' }),
   ).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#delivery-status')).toHaveText(
     'Opened the delivery order for Shopify store rebuild.',
   );
+});
+
+async function openPayments(page: Page, options: Options = {}): Promise<Captured[]> {
+  const requests = await open(page, options);
+  await page.getByRole('button', { name: 'Open the payments for Shopify store rebuild' }).click();
+  await expect(page.locator('#payments-status')).toHaveText(
+    'Opened the payments for Shopify store rebuild.',
+  );
+  return requests;
+}
+
+test('Payments shows realised margin as the API works it, and each payment with its rate and rand figure', async ({
+  page,
+}) => {
+  await openPayments(page);
+  await expect(page.locator('#payments-meta')).toContainText(
+    'Value R15 000,00 · stage won · not paid in full',
+  );
+  const figures = page.locator('#margin-figures');
+  await expect(figures).toContainText('Client payments (in)R16 625,00');
+  await expect(figures).toContainText('Supplier payments (out)R3 000,00');
+  await expect(figures).toContainText('Realised marginR13 625,00');
+  await expect(page.locator('#unconverted li')).toHaveText([
+    'Client payment of EUR 100,00 has no rand figure and is left out of the margin.',
+  ]);
+  const rows = page.locator('#payment-rows tr');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(1)).toContainText('USD 500,00');
+  await expect(rows.nth(1)).toContainText('18,25 at 22/09/2026 00:00');
+  await expect(rows.nth(1)).toContainText('R9 125,00');
+  await expect(rows.nth(2)).toContainText('Supplier payment · Full delivery');
+});
+
+test('a payment is checked with the API’s rule, confirmed, and recorded in whole cents', async ({
+  page,
+}) => {
+  const requests = await openPayments(page);
+  await page.getByLabel('What', { exact: true }).selectOption('platform_fee');
+  await expect(page.getByLabel('Delivery order', { exact: true })).toBeHidden();
+  await page.getByLabel('Amount', { exact: true }).fill('1500.00');
+  await page.getByLabel('Paid on (DD/MM/YYYY)').fill('32/09/2026');
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  await expect(page.locator('#payment-paidOn-error')).toHaveText(
+    'Must be a real date as DD/MM/YYYY.',
+  );
+  await page.getByLabel('Paid on (DD/MM/YYYY)').fill('23/09/2026');
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Record R1 500,00 out?');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect(requests.filter((r) => r.method === 'POST')).toHaveLength(0);
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  await dialog.getByRole('button', { name: 'Record' }).click();
+  await expect(page.locator('#payments-status')).toHaveText(
+    'Recorded the platform fee of R1 500,00.',
+  );
+  expect(requests.find((r) => r.method === 'POST')?.body).toEqual({
+    kind: 'platform_fee',
+    amountMinor: 150000,
+    currency: 'ZAR',
+    paidOn: '2026-09-23',
+    fxRate: null,
+    reference: '',
+    deliveryOrderId: null,
+    milestoneIndex: null,
+  });
+  await expect(page.locator('#payment-rows tr')).toHaveCount(4);
+});
+
+test('a supplier payment names its order and milestone; the API’s need for a rate lands on the field', async ({
+  page,
+}) => {
+  const requests = await openPayments(page, {
+    payment: {
+      status: 422,
+      json: {
+        error: 'the request was not accepted',
+        errors: [
+          {
+            field: 'fxRate',
+            message:
+              'must be typed: a USD payment needs the rate to ZAR it was converted at, and no FX provider is configured (docs/02 B-10)',
+          },
+        ],
+      },
+    },
+  });
+  await page.getByLabel('What', { exact: true }).selectOption('supplier');
+  await expect(page.getByLabel('Delivery order', { exact: true })).toHaveValue(ORDER);
+  await page.getByLabel('Milestone', { exact: true }).selectOption('0');
+  await page.getByLabel('Amount', { exact: true }).fill('300.00');
+  await page.locator('#payment-form').getByLabel('Currency', { exact: true }).fill('USD');
+  await expect(page.getByLabel('Rate to ZAR')).toBeVisible();
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Record' }).click();
+  await expect(page.locator('#payment-fxRate-error')).toHaveText(
+    'Must be typed: a USD payment needs the rate to ZAR it was converted at, and no FX provider is configured (docs/02 B-10).',
+  );
+  expect(requests.find((r) => r.method === 'POST')?.body).toMatchObject({
+    kind: 'supplier',
+    amountMinor: 30000,
+    currency: 'USD',
+    deliveryOrderId: ORDER,
+    milestoneIndex: 0,
+  });
+});
+
+test('a payment to a supplier abroad shows the T-05 notice', async ({ page }) => {
+  await openPayments(page, {
+    payment: {
+      status: 201,
+      json: {
+        ...paymentsView(),
+        paymentId: 'y5',
+        notice:
+          'docs/02 T-05 is open: the legal structure for paying overseas suppliers (Exchange Control/SARB reporting, invoicing, VAT treatment of export services) is to be confirmed with Logi-Ink’s accountant before the first live supplier payment.',
+      },
+    },
+  });
+  await page.getByLabel('What', { exact: true }).selectOption('supplier');
+  await page.getByLabel('Amount', { exact: true }).fill('100.00');
+  await page.getByRole('button', { name: 'Record the payment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Record' }).click();
+  await expect(page.locator('#payments-notice')).toContainText('docs/02 T-05 is open');
+});
+
+test('a viewer sees the payments and the margin but has no form', async ({ page }) => {
+  await openPayments(page, { role: 'viewer' });
+  await expect(page.locator('#margin-figures')).toContainText('R13 625,00');
+  await expect(page.locator('#payment-form')).toBeHidden();
 });
 
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
