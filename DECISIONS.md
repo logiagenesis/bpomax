@@ -1861,3 +1861,28 @@ Why: docs/01 section I lists the tools; ARB-330's acceptance is "Each tool calla
 automated test" (`apps/mcp/src/server.test.ts` calls all eleven through the SDK against
 the real API and Postgres), and docs/01's rule that every outbound action needs a named
 person's approval holds whichever client asks.
+
+## D-063 — `withUser` holds its connection for the whole transaction
+
+Date: 23/09/2026
+Decided by: Claude Code (session …tJv8; not a board ticket: a fix found while testing ARB-330)
+
+Decision:
+
+- `withUser` no longer runs `begin … commit` on whatever it is handed. A pool (anything
+  with `connect()`, as node-postgres's `Pool`) lends one connection for the transaction
+  and gets it back even when the work fails; PGlite runs it as its own `transaction`,
+  which holds its single connection until the end; anything else (one plain client) is
+  taken one transaction at a time.
+- Why it mattered: two requests at once on one connection shared one transaction, so the
+  second's `set_config` could replace the first's claims mid-way. Two concurrent API
+  requests on PGlite let a viewer score a job and another organisation reach this one's.
+  On a pool, each statement could have gone to a different connection, the role switch
+  included. The API has no production entry point yet (B-12), so no deployed code was
+  exposed; it had to hold before one exists.
+- Work inside `withUser` must use the `tx` it is given. Using the outer connection there
+  now waits for the transaction to end (on PGlite, for ever), so a slip shows up as a
+  hanging test rather than a silent read outside RLS. The whole suite runs clean.
+
+Why: D-015 (every tenant read runs as the signed-in user, under RLS) holds only if each
+request has its transaction to itself.
