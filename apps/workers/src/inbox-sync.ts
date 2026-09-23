@@ -13,6 +13,7 @@ import {
 } from '@arbitron/freelancer';
 import type { Job, Queue } from 'bullmq';
 import { enqueueAutoReply } from './auto-reply.js';
+import { enqueueDiscovery } from './discovery.js';
 
 /**
  * The inbox-sync worker (ARB-120, docs/01 section E): "interval — pulls new client
@@ -81,6 +82,8 @@ export interface InboxDeps {
   readonly alert?: (alert: InboundAlert) => Promise<unknown>;
   /** Where each new inbound message goes next: the auto-reply worker (ARB-121). */
   readonly autoReplyQueue?: Queue;
+  /** And the discovery worker (ARB-130), which does nothing without a session. */
+  readonly discoveryQueue?: Queue;
 }
 
 export interface InboxSync {
@@ -471,6 +474,12 @@ export async function pollInbox(
   for (const alert of alerts) {
     if (deps.autoReplyQueue) {
       await enqueueAutoReply(deps.autoReplyQueue, {
+        messageId: alert.messageId,
+        ...(requestId ? { requestId } : {}),
+      });
+    }
+    if (deps.discoveryQueue) {
+      await enqueueDiscovery(deps.discoveryQueue, {
         messageId: alert.messageId,
         ...(requestId ? { requestId } : {}),
       });

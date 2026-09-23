@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 23 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120); 25 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
+- **Board:** 24 of 55 tickets are DONE; 7 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120); 24 are TODO (099 and the rest of Phases 2 to 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `ea20e58` (PR #10, ARB-121, merged). The ARB-122 PR is open
+- **CI:** green on `main` at `a85d78c` (PR #11, ARB-122, merged). The ARB-130 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-122 merges, **ARB-130** (discovery sessions: the versioned
-  question set, batched questions, completeness). See section 6.
+- **Next ticket:** after ARB-130 merges, **ARB-131** (the brief builder: section F's
+  schema, validation, lock and versions). See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `ea20e58` = PR #10, ARB-121 auto-reply                                                 |
-| Open PR                | ARB-122 outbound messages, from `claude/beautiful-tesla-b6goej`                        |
-| Local checks at ARB-122 | lint, format, typecheck green; 789 unit tests (63 files), 115 Playwright and 13 demo Playwright tests green |
+| Last merge             | `a85d78c` = PR #11, ARB-122 outbound messages                                          |
+| Open PR                | ARB-130 discovery sessions, from `claude/beautiful-tesla-b6goej`                       |
+| Local checks at ARB-130 | lint, format, typecheck green; 804 unit tests (66 files) green; the web app is unchanged since ARB-122's 115 + 13 Playwright tests |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 23    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122 |
+| DONE                      | 24    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130 |
 | BUILT-PENDING-CREDENTIALS | 7     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022 and 120 (C-02), 070 (B-12) |
-| TODO                      | 25    | 099, then the rest of Phases 2–4 (130 to 499)               |
+| TODO                      | 24    | 099, then the rest of Phases 2–4 (131 to 499)               |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -53,6 +53,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-120 | Inbox sync: the documented thread and message lists per connected account, stored once, Telegram card per client message | D-046 |
 | ARB-121 | Auto-reply once per thread while the operator is offline: rule, settings control, worker with the live gate | D-047 |
 | ARB-122 | Outbound messages need approval: drafts on a thread, the approvals page beside the bids, a send-message worker with the live gate | D-048 |
+| ARB-130 | Discovery sessions: the ten questions as versioned data, three at a time for approval, a client's reply read into answers, completeness | D-049 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -100,19 +101,21 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-130 — discovery sessions: versioned question set, batched questions, completeness
-%.** Claim it on the board first. Acceptance: "Completeness updates as answers are
-captured; questions never sent all at once". docs/01 section F lists the ten questions;
-the `discovery_sessions` table (0003) holds `question_set_version`, `answers` (jsonb)
-and `completeness`. Build: the question set as data in `packages/core` with a version
-and a batch size; a rule that turns stored answers into a completeness percentage and
-picks the next batch (never every open question at once); a `discovery` worker
-(`packages/llm`'s `completeJson` on the score worker's pattern) that drafts the next
-batch as an outbound message for approval (ARB-122's drafts, so nothing is sent without
-a person) and reads a client reply into answers; API routes to read a thread's session
-and capture answers by hand; tests with a scripted model. The page is ARB-140. Then
-**ARB-131**, the brief schema of section F in `packages/core`, validated, with lock and
-versions on the `briefs` table.
+**ARB-131 — brief builder: structured brief per section F, validation, lock/version.**
+Claim it on the board first. Acceptance: "Brief cannot lock with missing required
+fields; versions preserved". The `briefs` table (0003) already carries every field of
+section F's schema and a `locked_brief_is_complete` check (category, delivery route, at
+least one must-have and one acceptance criterion, `locked_at`), with `unique (thread_id,
+version)`. Build: the brief schema in `packages/core` (`validateBrief`, money as minor
+units, dates DD/MM/YYYY at the edge), API routes to draft a brief from a thread's
+discovery answers (a first version filled from the captured answers, the rest empty),
+to edit the current unlocked version, and to lock it (refused with the missing fields
+named; a locked version is never edited: a change creates version n+1), events
+`brief.drafted`, `brief.updated`, `brief.locked` (add the first two to
+`packages/core/src/events.ts`), and a `brief-build` worker on the discovery worker's
+pattern that fills a draft from the answers with the model when completeness reaches a
+threshold (say what the threshold is in a decision). Then **ARB-140**, the
+conversations page: threads, discovery progress, the brief; every button audited.
 
 ## 7. Loose ends
 

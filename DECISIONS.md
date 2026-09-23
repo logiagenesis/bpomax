@@ -1364,3 +1364,40 @@ Reason:
   disagree with them, and the auto-reply's rows (D-047) read correctly without change.
 - One worker per outbound path keeps the live gate in one place per path, on the submit
   worker's pattern, so a reviewer finds it where they expect it.
+
+## D-049 — Discovery: section F's ten questions as versioned data, three at a time, the batch a template the operator approves, the reply read by the model into answers only when confident
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-130, session …tJv8)
+
+Decision:
+
+- The question set is `DISCOVERY_QUESTIONS` in `@arbitron/core`, version "1": docs/01
+  section F's ten questions in its words and order. A session records the version it
+  was started with (`discovery_sessions.question_set_version`), so a later set does not
+  change what an old session means.
+- A batch is three questions: the open ones, those never put to the client first, and
+  always fewer than the whole set (the size is capped below ten in code, so "never all
+  at once" cannot be configured away). `asked` (0022) records when each question was
+  put to the client.
+- The batch put to the client is not written by the model. It is a fixed template: a
+  greeting with the client's handle, the questions numbered, "Short answers are fine."
+  It is drafted as an outbound message of the app and waits on the approvals page like
+  any other (D-048), where the operator edits and approves it.
+- The model's job is reading. On each client reply the discovery worker asks it, against
+  `DISCOVERY_EXTRACT_SCHEMA` with one retry (D-011's rule for every model call), which
+  open questions the reply answers, each with a confidence. Only readings at 0,6 or
+  above, for questions still open, are written as answers, marked `client`; a question
+  already answered is never overwritten by the model. An operator's own capture
+  (`PATCH …/discovery/answers`) may overwrite anything and is marked `operator`.
+- Completeness is answered questions over ten, to two decimals, recomputed on every
+  capture and carried in each `discovery.updated` event.
+- A session is started by the operator, not on every reply: a thread without one is left
+  alone by the worker.
+
+Reason:
+
+- Fixed wording for the questions keeps every session comparable and keeps the model from
+  inventing questions; the operator still edits the draft before it goes.
+- A confidence floor and "never overwrite" make a wrong reading cost at most a re-ask,
+  never a lost answer.

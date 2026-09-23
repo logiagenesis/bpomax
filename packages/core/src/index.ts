@@ -16,11 +16,13 @@
  *   ARB-061  settings, plan and approval form rules      (settings.ts)
  *   ARB-121  auto-reply rule and the offline test       (auto-reply.ts)
  *   ARB-122  outbound message draft rule and state       (messaging.ts)
+ *   ARB-130  discovery question set, batches, completeness (discovery.ts)
  *   ARB-131  brief schema
  */
 export * from './allowance.js';
 export * from './auth.js';
 export * from './auto-reply.js';
+export * from './discovery.js';
 export * from './drafting.js';
 export * from './estimating.js';
 export * from './events.js';
