@@ -22,6 +22,7 @@
  *   ARB-201  supplier ranking for a locked brief          (sourcing.ts)
  *   ARB-202  sourcing post drafts and the client-identity check (sourcing-posts.ts)
  *   ARB-310  delivery orders: milestones reconciled, handover checklist, moves (delivery.ts)
+ *   ARB-311  payments, their rand figures and realised margin      (payments.ts)
  */
 export * from './allowance.js';
 export * from './auth.js';
@@ -35,6 +36,7 @@ export * from './events.js';
 export * from './margin.js';
 export * from './messaging.js';
 export * from './money.js';
+export * from './payments.js';
 export * from './privacy.js';
 export * from './scanners.js';
 export * from './scoring.js';

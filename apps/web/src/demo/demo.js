@@ -27,6 +27,12 @@ import {
   nextDiscoveryBatch,
   DELIVERY_TRANSITIONS,
   PIPELINE_STAGES,
+  clientPaidInFull,
+  directionOf,
+  realisedMargin,
+  sastDay,
+  validatePaymentInput,
+  zarOf,
   evaluateMargin,
   feeOn,
   findFeeRule,
@@ -63,7 +69,7 @@ const SESSION_KEY = 'arbitron.session';
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
  *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
  *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[],
- *   sourcing?: Row[], posts?: Row[], pipeline?: Row[], orders?: Row[] }} Store
+ *   sourcing?: Row[], posts?: Row[], pipeline?: Row[], orders?: Row[], payments?: Row[] }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -1536,6 +1542,125 @@ function api(method, url, body) {
       payload: { via: 'web', title: m.title, from, to: m.status },
     });
     return respond(200, { order: describeOrder(o) });
+  }
+
+  // ARB-311 in the demo: payments and realised margin, by core's rules. No FX provider.
+  const payments = store.payments ?? [];
+  store.payments = payments;
+  /** @param {Row} item */
+  const paymentsView = (item) => {
+    const mine = payments.filter((y) => y.pipelineItemId === item.id);
+    const storedRows = mine.map((y) => ({
+      kind: y.kind,
+      amountMinor: Number(y.amountMinor),
+      currency: y.currency,
+      amountZarMinor: y.amountZarMinor === null ? null : Number(y.amountZarMinor),
+    }));
+    const m = realisedMargin(storedRows);
+    return {
+      item: {
+        id: item.id,
+        jobTitle: item.jobTitle,
+        stage: item.stage,
+        valueMinor: item.valueMinor,
+        currency: item.currency,
+      },
+      orders: orders
+        .filter((o) => o.pipelineItemId === item.id && o.status !== 'cancelled')
+        .map((o) => ({
+          id: o.id,
+          status: o.status,
+          currency: o.currency,
+          supplierName: o.supplierName,
+          supplierCountry:
+            (store.suppliers ?? []).find((x) => x.id === o.supplierId)?.countryCode ?? null,
+          milestones: o.milestones,
+        })),
+      payments: mine,
+      margin: {
+        inZarMinor: m.inZarMinor.toString(),
+        supplierZarMinor: m.supplierZarMinor.toString(),
+        feesZarMinor: m.feesZarMinor.toString(),
+        otherZarMinor: m.otherZarMinor.toString(),
+        marginZarMinor: m.marginZarMinor.toString(),
+        unconverted: m.unconverted.map((u) => ({ ...u, amountMinor: String(u.amountMinor) })),
+      },
+      paidInFull: clientPaidInFull(
+        storedRows,
+        item.valueMinor === null ? null : Number(item.valueMinor),
+        item.currency,
+      ),
+    };
+  };
+  if (method === 'GET' && /^\/v1\/pipeline-items\/[^/]+\/payments$/.test(path)) {
+    const item = pipeline.find((x) => x.id === path.split('/')[3]);
+    if (!item) return respond(404, { error: 'no such pipeline item' });
+    return respond(200, paymentsView(item));
+  }
+  if (method === 'POST' && /^\/v1\/pipeline-items\/[^/]+\/payments$/.test(path)) {
+    const item = pipeline.find((x) => x.id === path.split('/')[3]);
+    if (!item) return respond(404, { error: 'no such pipeline item' });
+    const validated = validatePaymentInput(body, { today: sastDay(new Date()) });
+    if (!validated.ok)
+      return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+    const v = validated.value;
+    if (v.currency !== 'ZAR' && v.fxRate === null)
+      return respond(422, {
+        error: 'the request was not accepted',
+        errors: [
+          {
+            field: 'fxRate',
+            message: `must be typed: a ${v.currency} payment needs the rate to ZAR it was converted at, and no FX provider is configured (docs/02 B-10)`,
+          },
+        ],
+      });
+    let notice = null;
+    if (v.kind === 'supplier') {
+      const o = orders.find((x) => x.id === v.deliveryOrderId && x.pipelineItemId === item.id);
+      if (!o)
+        return respond(422, {
+          error: 'the request was not accepted',
+          errors: [{ field: 'deliveryOrderId', message: 'must be a delivery order of this job' }],
+        });
+      if (o.status === 'draft')
+        return respond(409, {
+          error: 'A supplier is paid once assigned. Assign the supplier first.',
+        });
+      const supplier = (store.suppliers ?? []).find((x) => x.id === o.supplierId);
+      if (supplier?.countryCode !== 'ZA')
+        notice =
+          'docs/02 T-05 is open: the legal structure for paying overseas suppliers (Exchange Control/SARB reporting, invoicing, VAT treatment of export services) is to be confirmed with Logi-Ink’s accountant before the first live supplier payment.';
+    }
+    const zar = zarOf(v.amountMinor, v.currency, v.fxRate);
+    const row = {
+      id: uuid(),
+      pipelineItemId: item.id,
+      kind: v.kind,
+      direction: directionOf(v.kind),
+      amountMinor: String(v.amountMinor),
+      currency: v.currency,
+      fxRateUsed: v.fxRate,
+      fxRateAt: v.fxRate ? new Date(`${v.paidOn}T00:00:00+02:00`).toISOString() : null,
+      amountZarMinor: zar === null ? null : String(zar),
+      paidAt: new Date(`${v.paidOn}T00:00:00+02:00`).toISOString(),
+      reference: v.reference,
+      deliveryOrderId: v.deliveryOrderId,
+      milestoneIndex: v.milestoneIndex,
+      recordedByName: 'Demo Owner',
+      createdAt: new Date().toISOString(),
+    };
+    payments.push(row);
+    logEvent(store, 'payment.recorded', {
+      subject_table: 'payments',
+      subject_id: row.id,
+      payload: { via: 'web', kind: v.kind, amount_minor: row.amountMinor, currency: v.currency },
+    });
+    const view = paymentsView(item);
+    if (v.kind === 'client' && item.stage !== 'paid' && view.paidInFull) {
+      moveStage(item, 'paid');
+      view.item.stage = 'paid';
+    }
+    return respond(201, { ...view, paymentId: row.id, notice });
   }
 
   // ARB-202 in the demo: sourcing post drafts, checked by the same rules as the API.

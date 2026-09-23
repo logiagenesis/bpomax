@@ -198,8 +198,8 @@ export function tenantRows(org: string, ref: string, own: string): readonly Fixt
     },
     {
       table: 'payments',
-      sql: `insert into payments (id, org_id, pipeline_item_id, direction, amount_minor, currency)
-            values ('${o(ENTITY.payment)}', '${org}', '${r(ENTITY.pipelineItem)}', 'in', 200000, 'ZAR')`,
+      sql: `insert into payments (id, org_id, pipeline_item_id, direction, kind, amount_minor, currency)
+            values ('${o(ENTITY.payment)}', '${org}', '${r(ENTITY.pipelineItem)}', 'in', 'client', 200000, 'ZAR')`,
     },
     {
       table: 'templates',

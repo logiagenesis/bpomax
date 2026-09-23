@@ -1,4 +1,4 @@
-import type { Role } from '@arbitron/core';
+import type { FxQuote, Role } from '@arbitron/core';
 import { isRole } from '@arbitron/core';
 import type { Queryable } from '@arbitron/db';
 import type { Fetch, FreelancerConfigResult } from '@arbitron/freelancer';
@@ -56,6 +56,11 @@ export interface ServerOptions {
    * reason, naming docs/02 B-03.
    */
   readonly freelancer?: { readonly config: FreelancerConfigResult; readonly fetch?: Fetch };
+  /**
+   * The FX provider (docs/02 B-10), for a payment not in rand whose rate is not typed
+   * (ARB-311). Absent until B-10 is answered: the rate must then be typed with the payment.
+   */
+  readonly fx?: { quote(from: string, to: string): Promise<FxQuote> } | null;
 }
 
 export interface FieldProblem {

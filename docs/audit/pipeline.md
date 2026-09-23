@@ -1,4 +1,4 @@
-# Control audit — pipeline.html (ARB-310)
+# Control audit — pipeline.html (ARB-310, ARB-311)
 
 Per docs/05 section 1. Every control on the page, and the Playwright test (in
 `e2e/pipeline.spec.ts`) that exercises it. The API is an in-memory copy, at the network
@@ -28,12 +28,23 @@ sourcing page (Choose, audited in `sourcing.md`).
 | Button | Assign the supplier | Assign after a confirmation naming the cost and the number of milestones | Dialog → `POST …/status {assigned}` | Spinner, aria-busy, disabled | "Assigned the supplier." | The API's reasons as they are | While any reason stands (job not won, no supplier, milestones not reconciled; title lists them); for a viewer | Yes (Cancel has focus) | Assign asks first; Start stays closed with the reason until every handover item is ticked | ✅ |
 | Button | Start the work | Start once the handover is complete; the job moves to In delivery | `POST …/status {in_progress}` | Spinner, aria-busy, disabled | "The supplier has started. The job is in delivery." | as above | While a handover item is not ticked (title says how many) | Yes | Assign asks first; Start stays closed… | ✅ |
 | Button | Mark the order delivered / Mark the order accepted | Deliver once every milestone is; accept once every milestone is | `POST …/status`; the job moves to Delivered | Spinner, aria-busy, disabled | "The order is delivered. The job is marked delivered." / "The order is accepted." | as above | While a milestone is not delivered / accepted (title says how many) | Yes | once work has started, each milestone is marked… (the reason on the button); routes/delivery.test.ts for the moves | ✅ |
+| Button (per job) | Payments (aria-label "Open the payments for <job>") | Show the job's payments and realised margin (ARB-311) | `GET /v1/pipeline-items/:id/payments` | Spinner, aria-busy, disabled | "Opened the payments for <job>." | The API's message | While busy | Yes (after Move, before Open delivery) | Payments shows realised margin as the API works it…; the controls are labelled and reached by keyboard… | ✅ |
+| Select | What | Client payment (in), supplier payment, platform fee or other cost (out) | Shows the delivery order and milestone only for a supplier payment | — | — | On the field | — | Yes | a payment is checked with the API’s rule…; a supplier payment names its order and milestone… | ✅ |
+| Inputs ×5, selects ×2 | Amount, Currency, Paid on (DD/MM/YYYY), Rate to ZAR, Reference; Delivery order, Milestone | The payment as made | Amount as text into whole cents (`parseAmountText`); the day to ISO; checked with `validatePaymentInput` (a day after today is refused); the rate field shown only for a payment not in rand | — | — | On the field; the API's own problems (a rate it needs while no FX provider is configured, B-10) land on their fields | — | Yes | a payment is checked with the API’s rule…; a supplier payment names its order and milestone; the API’s need for a rate lands on the field | ✅ |
+| Button (submit) | Record the payment | Record it after a confirmation naming the amount and direction | Checked on the page first; dialog; `POST /v1/pipeline-items/:id/payments`; `payment.recorded` logged; the job moves to Paid when the client has paid its value; a supplier abroad shows T-05's notice | Spinner, aria-busy, disabled | "Recorded the <kind> of <amount>." | Field errors, first one focused; the API's refusal as it is | While busy; the form is not shown to a viewer | Yes (Cancel has focus) | a payment is checked with the API’s rule, confirmed, and recorded in whole cents; a payment to a supplier abroad shows the T-05 notice; a viewer sees the payments… | ✅ |
 | Button (danger) | Cancel the order | Cancel after a danger confirmation; the sourcing request reopens | Dialog → `POST …/status {cancelled}` | Spinner, aria-busy, disabled | "Cancelled the order. The sourcing request is open again for another supplier." | as above | Once delivered or accepted (not offered) | Yes (Cancel has focus) | Cancel asks first, as a danger, and says the sourcing request is open again | ✅ |
 
 Figures (docs/05 section 3): every amount is `formatMoney` of the stored minor units; the
 milestones' total is summed as BigInt by the API and shown beside the agreed cost with
 whether they reconcile; dates are DD/MM/YYYY (SAST). Nothing is recalculated on the page
 except the running total while typing, with the API's own rule.
+
+Payments (docs/05 section 3): realised margin is the API's, worked by `realisedMargin` in
+core as client payments − supplier payments − platform fees − other costs, each in rand
+(docs/05 section 3.5); a payment not in rand shows its amount, the rate it was converted at
+and when, and its rand figure (section 3.4); one with no rand figure is listed and left out,
+never guessed. Recording a payment asks first, because a recorded payment cannot be
+edited; nothing on the page pays anyone.
 
 Destructive actions (docs/05 section 1.3): assigning a supplier and cancelling an order
 ask first; marking a job lost asks first. Every change is an event. Nothing on this page

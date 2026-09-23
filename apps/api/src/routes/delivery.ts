@@ -152,7 +152,7 @@ function send(reply: FastifyReply, error: unknown) {
 }
 
 /** Moves the job's pipeline stage and says so in the audit log. */
-async function moveStage(
+export async function moveStage(
   tx: Queryable,
   me: Membership,
   itemId: string,

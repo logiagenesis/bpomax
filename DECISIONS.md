@@ -1733,3 +1733,39 @@ Decision:
 
 Why: docs/01 section A step 8 ("track the won job through milestones, supplier handover,
 client delivery and payment") and the ticket's acceptance.
+
+## D-059 — Payments: recorded by hand once made, each with its kind, its rate to rand typed or from the provider, and realised margin as docs/05 section 3.5 states it
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-311, session …tJv8)
+
+Decision:
+
+- A payment has a kind (0027): a client payment in; a supplier payment, a platform fee or
+  another cost out. The database holds that the direction matches the kind, that a
+  supplier payment names its delivery order, and that only a supplier payment names a
+  milestone. Existing rows, if any, were read by direction only (in → client, out → other
+  cost); no payments existed before this ticket.
+- Realised margin per job is client payments − supplier payments − platform fees − other
+  costs, each in rand (docs/05 section 3.5, `realisedMargin` in core, summed as BigInt).
+  A payment not in rand uses the rand figure stored with it at its rate; one with no rate
+  is listed as unconverted and left out, never guessed.
+- A payment is recorded once made, by hand, with the day it was paid (a later day is
+  refused). A payment not in rand needs its rate to ZAR: typed with it (dated the day it
+  was paid), or taken from the FX provider when one is configured (dated when the
+  provider answered). With neither it is refused on the rate field naming docs/02 B-10.
+  The API takes the provider as an injected option, as the margin worker does (D-029).
+- The job moves to Paid once the client's payments in the job's own currency reach its
+  value; a payment in another currency is not converted to decide it.
+- A payment to a supplier outside South Africa carries docs/02 T-05's notice, in the
+  row's own words. Recording is allowed: the app records what was paid; the legal
+  structure is the owner's to confirm.
+- A recorded payment is kept as recorded: the page offers no edit or delete, and every one
+  is in the audit log. Correcting a wrong entry (a refund or a reversal kind) is not in
+  any ticket yet; it is noted in the handoff rather than invented here.
+- The dashboard's month-to-date revenue in and out and realised margin (ARB-061) already
+  read `payments`, with fees as payments out, and so agree with this.
+
+Why: docs/01 section D (`payments`: direction, amount, currency, fx rate used, paid_at,
+reference) and docs/05 sections 3.4 and 3.5; the ticket's acceptance, "Realised margin
+matches hand calculation in tests".

@@ -98,12 +98,12 @@ beforeAll(async () => {
   // Dashboard rows. Payments: in R3 000,00 and USD 50,00 converted to R900,00 this
   // month; out R1 200,00 this month; USD 100,00 in with no rand figure; R9 999,99 in last
   // month (excluded).
-  await db.exec(`insert into payments (org_id, pipeline_item_id, direction, amount_minor, currency, paid_at, amount_zar_minor, fx_rate_used, fx_rate_at) values
-    ('${ORG_A}', '${PIPELINE_A}', 'in', 300000, 'ZAR', '2026-09-05T08:00:00Z', null, null, null),
-    ('${ORG_A}', '${PIPELINE_A}', 'in', 5000, 'USD', '2026-09-06T08:00:00Z', 90000, 18.00000000, '2026-09-06T08:00:00Z'),
-    ('${ORG_A}', '${PIPELINE_A}', 'out', 120000, 'ZAR', '2026-09-10T08:00:00Z', null, null, null),
-    ('${ORG_A}', '${PIPELINE_A}', 'in', 10000, 'USD', '2026-09-11T08:00:00Z', null, null, null),
-    ('${ORG_A}', '${PIPELINE_A}', 'in', 999999, 'ZAR', '2026-08-30T08:00:00Z', null, null, null)`);
+  await db.exec(`insert into payments (org_id, pipeline_item_id, direction, kind, amount_minor, currency, paid_at, amount_zar_minor, fx_rate_used, fx_rate_at) values
+    ('${ORG_A}', '${PIPELINE_A}', 'in', 'client', 300000, 'ZAR', '2026-09-05T08:00:00Z', null, null, null),
+    ('${ORG_A}', '${PIPELINE_A}', 'in', 'client', 5000, 'USD', '2026-09-06T08:00:00Z', 90000, 18.00000000, '2026-09-06T08:00:00Z'),
+    ('${ORG_A}', '${PIPELINE_A}', 'out', 'platform_fee', 120000, 'ZAR', '2026-09-10T08:00:00Z', null, null, null),
+    ('${ORG_A}', '${PIPELINE_A}', 'in', 'client', 10000, 'USD', '2026-09-11T08:00:00Z', null, null, null),
+    ('${ORG_A}', '${PIPELINE_A}', 'in', 'client', 999999, 'ZAR', '2026-08-30T08:00:00Z', null, null, null)`);
   await db.exec(
     `update pipeline_items set value_minor = 200000, currency = 'ZAR' where id = '${PIPELINE_A}'`,
   );
