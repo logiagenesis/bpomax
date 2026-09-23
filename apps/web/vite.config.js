@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => {
           settings: 'src/settings.html',
           'style-guide': 'src/style-guide.html',
           'audit-log': 'src/audit-log.html',
+          privacy: 'src/privacy.html',
         },
       },
     },
