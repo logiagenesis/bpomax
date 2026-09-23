@@ -23,6 +23,7 @@ import {
   liveModeBlockers,
   nextDiscoveryBatch,
   parseFeeTable,
+  rankSuppliers,
   renderDiscoveryBatch,
   validateAutoReply,
   validateBrief,
@@ -47,7 +48,8 @@ const SESSION_KEY = 'arbitron.session';
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
  *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
- *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[] }} Store
+ *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[],
+ *   sourcing?: Row[] }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -371,13 +373,98 @@ function initialStore() {
     },
   ];
 
+  // ARB-201: the sample conversation's brief is locked and sourced; the ranking is the
+  // real rule over the sample suppliers, so the reasons on the page are the real ones.
+  const deadline = new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10);
+  const lockedBrief = {
+    id: 'd0d0d0d0-0000-4000-8000-000000000061',
+    threadId: THREAD_ACME,
+    version: 1,
+    locked: true,
+    lockedAt: ago(0, 1),
+    title: 'Shopify store rebuild (sample)',
+    outcome: 'An online shop for our customers (sample)',
+    users: 'Our customers and two staff (sample)',
+    mustHaves: ['Take orders'],
+    later: ['Loyalty'],
+    references: [],
+    assetsProvided: [],
+    assetsMissing: [],
+    techConstraints: [],
+    deadline,
+    deadlineFixed: false,
+    budget: {
+      minMinor: 1000000,
+      maxMinor: 2000000,
+      currency: 'ZAR',
+      type: /** @type {'fixed'} */ ('fixed'),
+    },
+    acceptanceCriteria: ['Orders go through'],
+    signOff: { name: null, responseTime: null },
+    risks: [],
+    category: 'wordpress',
+    deliveryRoute: 'supplier',
+    createdAt: ago(0, 2),
+    updatedAt: ago(0, 1),
+  };
+  const sampleRanking = rankSuppliers(
+    {
+      category: 'wordpress',
+      budget: lockedBrief.budget,
+      deadline,
+      deadlineFixed: false,
+    },
+    /** @type {any} */ (
+      suppliers.map((sup) => ({
+        ...sup,
+        rateCards: sup.rateCards.filter((/** @type {Row} */ c) => c.categorySlug === 'wordpress'),
+      }))
+    ),
+    { now: new Date() },
+  );
+  const sourcing = [
+    {
+      id: 'd0d0d0d0-0000-4000-8000-000000000071',
+      briefId: lockedBrief.id,
+      briefVersion: 1,
+      briefTitle: lockedBrief.title,
+      category: 'wordpress',
+      deliveryRoute: 'supplier',
+      threadId: THREAD_ACME,
+      clientHandle: 'acme-shop (sample)',
+      jobTitle: shop.title,
+      channels: [...new Set(sampleRanking.ranked.map((r) => r.channel))],
+      status: 'open',
+      excluded: sampleRanking.excluded,
+      candidates: sampleRanking.ranked.map((r) => ({
+        id: uuid(),
+        supplierId: r.supplierId,
+        name: r.name,
+        channel: r.channel,
+        countryCode: r.countryCode,
+        timeZone: r.timeZone,
+        currency: r.currency,
+        quotedPriceMinor: r.quotedPriceMinor,
+        priced: r.priced,
+        turnaroundDays: r.turnaroundDays,
+        score: r.score,
+        parts: r.parts,
+        reasons: r.reasons,
+        shortlisted: false,
+      })),
+      createdAt: ago(0, 1),
+      updatedAt: ago(0, 1),
+    },
+  ];
+
   return {
     version: 1,
     threads,
     inbound,
     discovery,
-    briefs: [],
+    briefs: [lockedBrief],
     suppliers,
+    sourcing,
     telegramLinked: false,
     biddingPaused: false,
     settings: {
@@ -877,6 +964,136 @@ function api(method, url, body) {
         inHouse: false,
       })),
     });
+  }
+
+  // ARB-201 in the demo: sourcing requests ranked by the real rule from the tab's suppliers.
+  const sourcing = store.sourcing ?? [];
+  /** @param {Row} r @param {boolean} withCandidates */
+  const describeSourcing = (r, withCandidates) => {
+    const { candidates, ...rest } = r;
+    return {
+      ...rest,
+      candidateCount: candidates.length,
+      shortlistedCount: candidates.filter((/** @type {Row} */ c) => c.shortlisted).length,
+      ...(withCandidates ? { candidates } : {}),
+    };
+  };
+  if (method === 'POST' && /^\/v1\/briefs\/[^/]+\/sourcing$/.test(path)) {
+    const b = (store.briefs ?? []).find((row) => row.id === idIn('/v1/briefs/'));
+    if (!b) return respond(404, { error: 'no such brief' });
+    if (!b.locked)
+      return respond(409, { error: 'The brief must be locked before sourcing starts.' });
+    if (b.deliveryRoute === 'in_house') {
+      return respond(422, {
+        error: 'This brief is delivered in-house, so nothing is sourced (docs/02 D-04).',
+      });
+    }
+    if (
+      sourcing.some(
+        (r) => r.briefId === b.id && ['open', 'shortlisting', 'chosen'].includes(r.status),
+      )
+    ) {
+      return respond(409, { error: 'Sourcing has already started for this brief.' });
+    }
+    const t = threads.find((row) => row.id === b.threadId);
+    const ranking = rankSuppliers(
+      {
+        category: b.category,
+        budget: b.budget,
+        deadline: b.deadline,
+        deadlineFixed: b.deadlineFixed,
+      },
+      /** @type {any} */ (
+        (store.suppliers ?? []).map((sup) => ({
+          ...sup,
+          rateCards: sup.rateCards.filter((/** @type {Row} */ c) => c.categorySlug === b.category),
+        }))
+      ),
+      { now: new Date() },
+    );
+    const now = new Date().toISOString();
+    const row = {
+      id: uuid(),
+      briefId: b.id,
+      briefVersion: b.version,
+      briefTitle: b.title,
+      category: b.category,
+      deliveryRoute: b.deliveryRoute,
+      threadId: b.threadId,
+      clientHandle: t?.clientHandle ?? null,
+      jobTitle: t?.jobTitle ?? null,
+      channels: [...new Set(ranking.ranked.map((r) => r.channel))],
+      status: 'open',
+      excluded: ranking.excluded,
+      candidates: ranking.ranked.map((r) => ({
+        id: uuid(),
+        supplierId: r.supplierId,
+        name: r.name,
+        channel: r.channel,
+        countryCode: r.countryCode,
+        timeZone: r.timeZone,
+        currency: r.currency,
+        quotedPriceMinor: r.quotedPriceMinor,
+        priced: r.priced,
+        turnaroundDays: r.turnaroundDays,
+        score: r.score,
+        parts: r.parts,
+        reasons: r.reasons,
+        shortlisted: false,
+      })),
+      createdAt: now,
+      updatedAt: now,
+    };
+    sourcing.unshift(row);
+    store.sourcing = sourcing;
+    logEvent(store, 'sourcing.requested', {
+      subject_table: 'sourcing_requests',
+      subject_id: row.id,
+      payload: {
+        via: 'web',
+        brief_id: b.id,
+        category: b.category,
+        ranked: ranking.ranked.length,
+        excluded: ranking.excluded.length,
+      },
+    });
+    return respond(201, { request: describeSourcing(row, true) });
+  }
+  if (method === 'GET' && /^\/v1\/briefs\/[^/]+\/sourcing$/.test(path)) {
+    const row = sourcing.find((r) => r.briefId === idIn('/v1/briefs/'));
+    return respond(200, { request: row ? describeSourcing(row, true) : null });
+  }
+  if (key === 'GET /v1/sourcing-requests') {
+    return respond(200, { requests: sourcing.map((r) => describeSourcing(r, false)) });
+  }
+  if (method === 'GET' && /^\/v1\/sourcing-requests\/[^/]+$/.test(path)) {
+    const row = sourcing.find((r) => r.id === idIn('/v1/sourcing-requests/'));
+    if (!row) return respond(404, { error: 'no such sourcing request' });
+    return respond(200, { request: describeSourcing(row, true) });
+  }
+  if (method === 'PATCH' && /^\/v1\/sourcing-requests\/[^/]+\/candidates\/[^/]+$/.test(path)) {
+    const row = sourcing.find((r) => r.id === idIn('/v1/sourcing-requests/'));
+    if (!row) return respond(404, { error: 'no such sourcing request' });
+    const candidateId = path.split('/').pop();
+    const candidate = row.candidates.find((/** @type {Row} */ c) => c.id === candidateId);
+    if (!candidate) return respond(404, { error: 'no such candidate on this request' });
+    if (typeof body?.shortlisted !== 'boolean') {
+      return respond(422, {
+        error: 'the request was not accepted',
+        errors: [{ field: 'shortlisted', message: 'must be true or false' }],
+      });
+    }
+    candidate.shortlisted = body.shortlisted;
+    row.status = row.candidates.some((/** @type {Row} */ c) => c.shortlisted)
+      ? 'shortlisting'
+      : 'open';
+    row.updatedAt = new Date().toISOString();
+    logEvent(store, 'sourcing.shortlisted', {
+      subject_table: 'supplier_candidates',
+      subject_id: candidate.id,
+      payload: { via: 'web', sourcing_request_id: row.id, shortlisted: body.shortlisted },
+    });
+    return respond(200, { request: describeSourcing(row, true) });
   }
 
   // ARB-200 in the demo: the supplier database, the template, the export and the import,

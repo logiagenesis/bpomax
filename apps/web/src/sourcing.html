@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sourcing — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./sourcing.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./suppliers.html">Suppliers</a></li>
+            <li><a href="./sourcing.html">Sourcing</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Sourcing</h1>
+        <p>
+          Each sourcing request ranks your own suppliers against a locked brief: rate against the
+          budget, turnaround against the deadline, quality, time zone and payment terms, with the
+          reason for every mark. Nothing is posted to a marketplace from here.
+        </p>
+      </div>
+
+      <div class="card cluster">
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh</button>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <div class="table-wrap" id="results" hidden>
+        <table class="table">
+          <caption class="visually-hidden">
+            Sourcing requests
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Brief</th>
+              <th scope="col">Category</th>
+              <th scope="col">Status</th>
+              <th scope="col">Candidates</th>
+              <th scope="col">Started</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" hidden>
+        <p>No sourcing requests yet. Lock a brief on its conversation and press Start sourcing.</p>
+      </div>
+
+      <section id="request" class="stack" hidden aria-labelledby="request-title">
+        <div>
+          <h2 id="request-title"></h2>
+          <p class="field__hint" id="request-meta"></p>
+        </div>
+        <div role="status" aria-live="polite" id="request-status"></div>
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Ranked suppliers
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Supplier</th>
+                <th scope="col">Rate</th>
+                <th scope="col">Turnaround</th>
+                <th scope="col">Score</th>
+                <th scope="col">Why</th>
+                <th scope="col">Shortlist</th>
+              </tr>
+            </thead>
+            <tbody id="candidate-rows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="candidates-empty" hidden>
+          No supplier could be ranked for this brief. The reasons are below; import suppliers with a
+          rate card in this category and start sourcing again from a new version of the brief.
+        </p>
+        <section class="card stack" aria-labelledby="excluded-heading">
+          <h3 id="excluded-heading">Not ranked</h3>
+          <ul id="excluded"></ul>
+          <p class="field__hint" id="excluded-empty" hidden>
+            Every supplier with a rate card in this category is ranked above.
+          </p>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

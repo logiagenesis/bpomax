@@ -19,6 +19,7 @@
  *   ARB-130  discovery question set, batches, completeness (discovery.ts)
  *   ARB-131  brief schema, lock rule, drafts        (brief.ts)
  *   ARB-200  supplier CSV template, parser, validator and export (suppliers.ts)
+ *   ARB-201  supplier ranking for a locked brief          (sourcing.ts)
  */
 export * from './allowance.js';
 export * from './auth.js';
@@ -35,6 +36,7 @@ export * from './privacy.js';
 export * from './scanners.js';
 export * from './scoring.js';
 export * from './settings.js';
+export * from './sourcing.js';
 export * from './submitting.js';
 export * from './suppliers.js';
 export const PACKAGE_NAME = '@arbitron/core';
