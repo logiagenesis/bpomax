@@ -1248,3 +1248,46 @@ Reason:
   section E).
 - A per-org key is what every later table assumes: each org has its own scores,
   estimates and bids for the same public listing.
+
+## D-046 — The inbox is read every two minutes per connected account from the documented thread and message lists; the account's own marketplace messages are stored as observed, not sent; the operator alert is a plain Telegram card
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-120, session …tJv8)
+
+Decision:
+
+- The `inbox-sync` queue runs on the ingest worker's pattern (D-045): a sync every minute
+  keeps one job scheduler per connected Freelancer.com account, every two minutes, and a
+  poll per account reads `GET /messages/0.1/threads/` for `project` threads updated
+  since five minutes before the last point reached, then `GET /messages/0.1/messages/`
+  for those threads, both cited parameter by parameter in
+  `packages/freelancer/src/messaging.ts`. Two minutes is this product's interval, not a
+  figure from the docs; five minutes of overlap costs a few repeated rows, which the
+  unique keys turn into no-ops, and misses nothing that arrived late.
+- Only `project` threads are read. A bid opens a project thread, and every thread the
+  product acts on has a job behind it; a thread's project context id is matched to
+  `jobs.external_id` within the org to link them. `general` and `contest` threads are
+  left where they are.
+- A message the account itself wrote on Freelancer.com is stored outbound with
+  `messages.origin = 'platform'` (0019). 0003's rule that no outbound message leaves
+  without an approval record now reads "no outbound message the app sends": an observed
+  message was sent by the owner on the site, not by the app, and ARB-122's gate is
+  untouched.
+- A message with no text and attachments is stored as "(N attachments, not
+  downloaded)": the docs list the attachment endpoints, and downloading is not asked for.
+- The thread's status follows its newest message: `awaiting_operator` after a client
+  message, `awaiting_client` after the account's own; a `closed` thread stays closed.
+- The client's handle is the `user_details` projection's `username`, else its
+  `display_name`, else the member id. The threads list's envelope (`result.threads`,
+  `result.users`) is not shown on the docs page and follows the API's other lists; it is
+  the first thing the sandbox run confirms (C-02).
+- The alert is `apps/telegram`'s `notifyInbound`: "New client message / From / About"
+  and up to 400 characters of the text, to every linked owner or operator chat in the
+  org, with no buttons. The worker takes it as a dependency and never imports the bot.
+
+Reason:
+
+- Reading by "updated since" with an overlap and unique keys is idempotent, which docs/01
+  section E requires of every worker, and needs no per-thread cursor.
+- Marking observed messages as such keeps the approval constraint honest without
+  fabricating an approval for a message nobody in the app approved.

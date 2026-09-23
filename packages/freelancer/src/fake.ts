@@ -56,6 +56,38 @@ export interface FakeProject {
   readonly location?: { readonly country?: { readonly code?: string } };
 }
 
+/**
+ * A thread and a message as the messaging walkthrough shows them
+ * (https://developers.freelancer.com/docs/use-cases/messaging), and a member as the
+ * `user_details` projection is read (`messaging.ts`).
+ */
+export interface FakeThread {
+  readonly id: number;
+  readonly context: { readonly type: 'project' | 'contest' | 'general'; readonly id: number };
+  readonly members: readonly number[];
+  readonly owner: number;
+  readonly thread_type?: 'private_chat' | 'group';
+  readonly time_created: number;
+  readonly time_updated: number;
+  readonly folder?: string;
+}
+
+export interface FakeMessage {
+  readonly id: number;
+  readonly thread_id: number;
+  readonly from_user: number;
+  readonly message: string | null;
+  readonly time_created: number;
+  readonly attachments?: readonly { readonly filename: string }[];
+  readonly parent_id?: number | null;
+}
+
+export interface FakeMember {
+  readonly id: number;
+  readonly username: string;
+  readonly display_name?: string;
+}
+
 /** The documented example headers: 50 per minute, 1 000 per hour. */
 export const FAKE_RATE_LIMIT = '50, 50;window=60, 1000;window=3600';
 
@@ -76,6 +108,12 @@ export interface FakeFreelancer {
   setProjects(projects: readonly FakeProject[]): void;
   /** The next `count` API calls answer 429, as when a rate-limit window is used up. */
   rateLimitNextCalls(count: number): void;
+  /** The inbox: threads, their messages, and the members `user_details` describes. */
+  setThreads(threads: readonly FakeThread[]): void;
+  setMessages(messages: readonly FakeMessage[]): void;
+  setMembers(members: readonly FakeMember[]): void;
+  /** A message arriving later, as a client writing back; bumps its thread's time_updated. */
+  addMessage(message: FakeMessage): void;
   close(): Promise<void>;
 }
 
@@ -124,7 +162,22 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
   const refresh = new Map<string, FakeUser>();
   const calls: FakeCall[] = [];
   let projects: readonly FakeProject[] = [];
+  let threads: FakeThread[] = [];
+  let messages: FakeMessage[] = [];
+  let members: readonly FakeMember[] = [];
   let rateLimitedCalls = 0;
+
+  const bearer = (request: IncomingMessage): FakeUser | undefined => {
+    const header = request.headers['freelancer-oauth-v1'];
+    return typeof header === 'string' ? access.get(header) : undefined;
+  };
+  const notAuthenticated = (response: ServerResponse) =>
+    apiError(
+      response,
+      401,
+      'You must be logged in to perform this request',
+      'RestExceptionCodes.NOT_AUTHENTICATED',
+    );
 
   const issueCode = (redirectUri: string, user: FakeUser = current) => {
     const code = token('code');
@@ -306,6 +359,98 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
         return;
       }
 
+      if (request.method === 'GET' && url.pathname === '/api/messages/0.1/threads/') {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        // The caller's own threads, filtered as the docs describe: context_type, and
+        // from_updated_time inclusive on time_updated.
+        const from = query.from_updated_time ? Number(query.from_updated_time) : null;
+        const wantsUsers = url.searchParams.has('user_details');
+        const matching = threads
+          .filter((thread) => thread.members.includes(user.id))
+          .filter((thread) => !query.context_type || thread.context.type === query.context_type)
+          .filter((thread) => from === null || thread.time_updated >= from)
+          .sort((a, b) => b.time_updated - a.time_updated);
+        const limit = Math.min(Number(query.limit) || 100, 100);
+        const offset = Number(query.offset) || 0;
+        const page = matching.slice(offset, offset + limit);
+        const users: Record<string, FakeMember> = {};
+        if (wantsUsers) {
+          for (const thread of page) {
+            for (const id of thread.members) {
+              const member = members.find((m) => m.id === id);
+              if (member) users[String(id)] = member;
+            }
+          }
+        }
+        json(response, 200, {
+          status: 'success',
+          result: {
+            threads: page.map((thread) => ({
+              id: thread.id,
+              thread: {
+                id: thread.id,
+                context: thread.context,
+                members: thread.members,
+                owner: thread.owner,
+                thread_type: thread.thread_type ?? 'private_chat',
+                time_created: thread.time_created,
+                read_privacy: 'members',
+                write_privacy: 'members',
+              },
+              time_updated: thread.time_updated,
+              time_read: null,
+              is_read: false,
+              is_muted: false,
+              folder: thread.folder ?? 'inbox',
+              message_count: null,
+              message_unread_count: null,
+            })),
+            users: wantsUsers ? users : null,
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/messages/0.1/messages/') {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        const wanted = url.searchParams.getAll('threads[]').map(Number);
+        const from = query.from_updated_time ? Number(query.from_updated_time) : null;
+        const mine = new Set(
+          threads.filter((thread) => thread.members.includes(user.id)).map((t) => t.id),
+        );
+        const matching = messages
+          .filter((message) => mine.has(message.thread_id))
+          .filter((message) => wanted.length === 0 || wanted.includes(message.thread_id))
+          .filter((message) => from === null || message.time_created >= from)
+          .sort((a, b) => b.time_created - a.time_created);
+        const limit = Math.min(Number(query.limit) || 100, 100);
+        const offset = Number(query.offset) || 0;
+        json(response, 200, {
+          status: 'success',
+          result: {
+            messages: matching.slice(offset, offset + limit).map((message) => ({
+              message_source: 'default_msg',
+              attachments: message.attachments ?? [],
+              client_message_id: null,
+              parent_id: message.parent_id ?? null,
+              time_created: message.time_created,
+              thread_id: message.thread_id,
+              remove_reason: null,
+              from_user: message.from_user,
+              message: message.message,
+              id: message.id,
+            })),
+            threads: null,
+            users: null,
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
       apiError(response, 404, `The fake has no ${url.pathname}`, 'RestExceptionCodes.NOT_FOUND');
     })();
   });
@@ -333,6 +478,23 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
     },
     rateLimitNextCalls(count) {
       rateLimitedCalls = count;
+    },
+    setThreads(list) {
+      threads = [...list];
+    },
+    setMessages(list) {
+      messages = [...list];
+    },
+    setMembers(list) {
+      members = list;
+    },
+    addMessage(message) {
+      messages.push(message);
+      threads = threads.map((thread) =>
+        thread.id === message.thread_id
+          ? { ...thread, time_updated: Math.max(thread.time_updated, message.time_created) }
+          : thread,
+      );
     },
     close: () =>
       new Promise<void>((resolve, reject) =>
