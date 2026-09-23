@@ -19,6 +19,11 @@ const MODEL = 'claude-opus-5';
 const NOW = new Date('2026-09-23T10:00:00Z');
 let db: PGlite;
 let thread: string;
+/** Stands in for the brief-build queue: what the discovery worker hands on, and when. */
+const briefJobs: { threadId: string }[] = [];
+const briefQueue = {
+  add: (_name: string, data: { threadId: string }) => Promise.resolve(briefJobs.push(data)),
+} as never;
 
 class ScriptedTransport implements LlmTransport {
   readonly requests: LlmRequest[] = [];
@@ -160,7 +165,7 @@ describe('a client reply with a session', () => {
       }),
     ]);
     const run = await runDiscovery(
-      { db, transport, model: MODEL, now: () => NOW },
+      { db, transport, model: MODEL, now: () => NOW, briefQueue },
       { messageId: id },
     );
     expect(run).toMatchObject({
@@ -168,6 +173,8 @@ describe('a client reply with a session', () => {
       captured: ['budget', 'deadline'],
       completeness: 50,
     });
+    // Half way is below the brief builder's threshold: nothing handed on yet.
+    expect(briefJobs).toEqual([]);
     const stored = await loadDiscoverySession(db, thread);
     expect(stored?.answers.outcome?.answer).toBe('An online shop');
     // The asked-but-unanswered three come after the never-asked ones; still three.
@@ -209,9 +216,11 @@ describe('a client reply with a session', () => {
       }),
     ]);
     const run = await runDiscovery(
-      { db, transport, model: MODEL, now: () => NOW },
+      { db, transport, model: MODEL, now: () => NOW, briefQueue },
       { messageId: id },
     );
+    // Past the threshold, the thread is handed to the brief builder (ARB-131).
+    expect(briefJobs).toEqual([{ threadId: thread }]);
     expect(run).toMatchObject({
       status: 'updated',
       completeness: 100,
