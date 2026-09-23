@@ -1031,6 +1031,7 @@ export type Database = {
           external_message_id: string | null;
           id: string;
           org_id: string;
+          origin: string;
           redacted_at: string | null;
           sent_at: string | null;
           thread_id: string;
@@ -1045,6 +1046,7 @@ export type Database = {
           external_message_id?: string | null;
           id?: string;
           org_id: string;
+          origin?: string;
           redacted_at?: string | null;
           sent_at?: string | null;
           thread_id: string;
@@ -1059,6 +1061,7 @@ export type Database = {
           external_message_id?: string | null;
           id?: string;
           org_id?: string;
+          origin?: string;
           redacted_at?: string | null;
           sent_at?: string | null;
           thread_id?: string;
@@ -1272,6 +1275,7 @@ export type Database = {
           external_user_id: string;
           external_username: string | null;
           id: string;
+          inbox_synced_to: string | null;
           last_sync_at: string | null;
           monthly_bid_allowance: number | null;
           org_id: string;
@@ -1290,6 +1294,7 @@ export type Database = {
           external_user_id: string;
           external_username?: string | null;
           id?: string;
+          inbox_synced_to?: string | null;
           last_sync_at?: string | null;
           monthly_bid_allowance?: number | null;
           org_id: string;
@@ -1308,6 +1313,7 @@ export type Database = {
           external_user_id?: string;
           external_username?: string | null;
           id?: string;
+          inbox_synced_to?: string | null;
           last_sync_at?: string | null;
           monthly_bid_allowance?: number | null;
           org_id?: string;
