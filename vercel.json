@@ -3,5 +3,10 @@
   "framework": null,
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "sh scripts/build-web-vercel.sh",
-  "outputDirectory": "apps/web/dist"
+  "outputDirectory": "apps/web/dist",
+  "git": {
+    "deploymentEnabled": {
+      "claude/**": false
+    }
+  }
 }
