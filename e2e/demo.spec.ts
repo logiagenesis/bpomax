@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/dashboard.html', 'Figures are up to date.', true],
   ['/feed.html', /^Loaded \d+ jobs\.$/, true],
-  ['/approvals.html', /^Loaded \d+ bids?\.$/, true],
+  ['/approvals.html', /^Loaded \d+ bids?( and \d+ repl(y|ies))?\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
   ['/audit-log.html', /^Loaded \d+ events?\.$/, false],
@@ -52,16 +52,24 @@ test('an approval is kept for the tab and appears in the audit log; reset brings
   page,
 }) => {
   await page.goto('/approvals.html');
-  await expect(page.locator('#status')).toHaveText('Loaded 2 bids.');
+  await expect(page.locator('#status')).toHaveText('Loaded 2 bids and 1 reply.');
   await page.getByRole('button', { name: 'Approve Shopify store rebuild (sample)' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
   await expect(page.locator('#status')).toContainText('Approved');
   await page.goto('/audit-log.html');
   await expect(page.locator('#rows tr').first()).toContainText('proposal.approved');
   await page.goto('/approvals.html');
+  await expect(page.locator('#status')).toHaveText('Loaded 1 bid and 1 reply.');
+  // The sample reply (ARB-122) is approved the same way and logged the same way.
+  await page.getByRole('button', { name: 'Approve reply to acme-shop (sample)' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.locator('#status')).toContainText('Approved the reply to “acme-shop (sample)”');
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('message.approved');
+  await page.goto('/approvals.html');
   await expect(page.locator('#status')).toHaveText('Loaded 1 bid.');
   await page.getByRole('button', { name: 'Reset the sample data' }).click();
-  await expect(page.locator('#status')).toHaveText('Loaded 2 bids.');
+  await expect(page.locator('#status')).toHaveText('Loaded 2 bids and 1 reply.');
 });
 
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({

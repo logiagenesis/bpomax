@@ -15,6 +15,7 @@
  *   ARB-044  submission rules: approval, live gate, payload (submitting.ts)
  *   ARB-061  settings, plan and approval form rules      (settings.ts)
  *   ARB-121  auto-reply rule and the offline test       (auto-reply.ts)
+ *   ARB-122  outbound message draft rule and state       (messaging.ts)
  *   ARB-131  brief schema
  */
 export * from './allowance.js';
@@ -24,6 +25,7 @@ export * from './drafting.js';
 export * from './estimating.js';
 export * from './events.js';
 export * from './margin.js';
+export * from './messaging.js';
 export * from './money.js';
 export * from './privacy.js';
 export * from './scanners.js';

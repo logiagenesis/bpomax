@@ -20,6 +20,7 @@ import {
   parseFeeTable,
   validateAutoReply,
   validateMarginRules,
+  validateMessageDraft,
   validatePlanRecord,
   validateScanner,
 } from '@arbitron/core';
@@ -34,7 +35,7 @@ const SESSION_KEY = 'arbitron.session';
 /**
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
- *   events: Row[], connectPending?: boolean, autoReply?: Row | null }} Store
+ *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[] }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -271,6 +272,29 @@ function initialStore() {
     ],
     jobs: [shop, landing, wp, scam, fresh],
     proposals: [bidShop, bidLanding, sent],
+    // ARB-122: one reply waiting for approval, drafted for the sample client's message.
+    outbound: [
+      {
+        id: 'd0d0d0d0-0000-4000-8000-000000000040',
+        threadId: 'd0d0d0d0-0000-4000-8000-000000000041',
+        externalThreadId: '5001',
+        clientHandle: 'acme-shop (sample)',
+        jobId: bidShop.job_id,
+        jobTitle: bidShop.job_title,
+        body: 'Thanks for your message. Yes, we can start on Monday, and I will send a short plan today. (sample)',
+        state: 'queued',
+        approvedBy: null,
+        approvedByName: null,
+        approvedVia: null,
+        sentAt: null,
+        rejectedAt: null,
+        failureReason: null,
+        externalMessageId: null,
+        createdAt: ago(0, 1),
+        updatedAt: ago(0, 1),
+        lastInbound: { body: 'Hi, can you start on Monday? (sample)', sentAt: ago(0, 2) },
+      },
+    ],
     events: [
       event('proposal.submitted', {
         created_at: ago(2),
@@ -477,6 +501,66 @@ function api(method, url, body) {
     row.proposal_status = 'queued';
     logEvent(store, 'proposal.draft_requested', { subject_table: 'jobs', subject_id: row.id });
     return respond(202, { action: 'drafting', jobId: row.id });
+  }
+
+  // ARB-122 in the demo: replies waiting for approval, kept in the tab; nothing is sent.
+  const outbound = store.outbound ?? [];
+  if (key === 'GET /v1/outbound-messages') {
+    const state = url.searchParams.get('status') ?? 'queued';
+    return respond(200, { messages: outbound.filter((m) => state === 'all' || m.state === state) });
+  }
+  if (method === 'POST' && /^\/v1\/outbound-messages\/[^/]+\/(approve|reject)$/.test(path)) {
+    const row = outbound.find((m) => m.id === idIn('/v1/outbound-messages/'));
+    if (!row) return respond(404, { error: 'no such message' });
+    const action = path.endsWith('/approve') ? 'approve' : 'reject';
+    if (action === 'approve' && row.state !== 'queued')
+      return respond(409, { error: `This message is ${row.state}.` });
+    if (action === 'reject' && !String(body?.reason ?? '').trim()) {
+      return respond(422, {
+        error: 'the request was not accepted',
+        errors: [{ field: 'reason', message: 'must not be empty' }],
+      });
+    }
+    if (action === 'reject' && (row.state === 'sent' || row.state === 'rejected'))
+      return respond(409, { error: `This message is ${row.state}.` });
+    if (action === 'approve') {
+      row.state = 'approved';
+      row.approvedBy = USER;
+      row.approvedByName = 'Demo Owner';
+      row.approvedVia = 'web';
+    } else {
+      row.state = 'rejected';
+      row.rejectedAt = new Date().toISOString();
+      row.failureReason = body.reason;
+      row.approvedBy = null;
+      row.approvedByName = null;
+      row.approvedVia = null;
+    }
+    row.updatedAt = new Date().toISOString();
+    logEvent(store, action === 'approve' ? 'message.approved' : 'message.rejected', {
+      subject_table: 'messages',
+      subject_id: row.id,
+      payload: { via: 'web', ...(action === 'reject' ? { reason: body.reason } : {}) },
+    });
+    return respond(200, { message: row, ...(action === 'approve' ? { queued: false } : {}) });
+  }
+  if (method === 'PATCH' && /^\/v1\/outbound-messages\/[^/]+$/.test(path)) {
+    const row = outbound.find((m) => m.id === idIn('/v1/outbound-messages/'));
+    if (!row) return respond(404, { error: 'no such message' });
+    if (row.state === 'sent') return respond(409, { error: 'This message has already been sent.' });
+    const validated = validateMessageDraft(body);
+    if (!validated.ok)
+      return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+    row.body = validated.value.text;
+    row.state = 'queued';
+    row.approvedBy = null;
+    row.approvedByName = null;
+    row.approvedVia = null;
+    row.rejectedAt = null;
+    row.failureReason = null;
+    row.updatedAt = new Date().toISOString();
+    logEvent(store, 'message.edited', { subject_table: 'messages', subject_id: row.id });
+    return respond(200, { message: row });
   }
 
   if (key === 'GET /v1/proposals') {

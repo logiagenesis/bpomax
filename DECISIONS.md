@@ -1326,3 +1326,41 @@ Reason:
   concurrent workers; undoing on failure is what keeps a failed send from counting.
 - "Offline" as "nothing has left the org for the period" needs no presence tracking
   and reads the same rows the inbox sync already keeps.
+
+## D-048 — An outbound message is drafted on its thread, waits on the approvals page beside the bids, and leaves only through the send-message worker's live gate; its state is read from its columns
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-122, session …tJv8)
+
+Decision:
+
+- A reply is an app-written outbound message (`origin = 'app'`, 0019) on a thread,
+  drafted with `POST /v1/threads/:id/messages` by an owner or operator. Its state is
+  not a column: sent when `sent_at` is set, else rejected when `rejected_at` is set,
+  else failed when `failure_reason` is set, else approved when `approved_by` is set,
+  else queued (`outboundMessageState` in `@arbitron/core`; 0021 adds the two columns).
+- The approvals page lists queued replies beside queued bids, with the last client
+  message quoted, and the same three actions with the bids' rules (D-033): approve
+  names the person (0009's restrictive policy makes it the caller's own name) and hands
+  the message to the `send-message` queue; edit clears the approval, and a rejection
+  too, because the old approval covered the old words; reject records its reason; a sent
+  message can be changed by none of them. Each is an event: `message.drafted`,
+  `message.approved`, `message.edited`, `message.rejected`, `message.sent`.
+- The `send-message` worker (a queue not in docs/01 section E, added as the retention
+  queue was) sends one approved message: rejected or unapproved is skipped and said so;
+  the live gate (D-032) with either switch off leaves it unsent with
+  `external.blocked_by_live_mode` carrying the text and the thread; live, the documented
+  `POST /messages/0.1/threads/{thread_id}/messages/` call, then `sent_at`, the
+  marketplace's id and the thread's status. A rate limit, a 5xx or a network failure
+  goes back to the queue; a bad token or another 4xx is final and is written to the row
+  as its failure, with what to do next.
+- 0003's constraint is the last line: `sent_at` on an app message without
+  `approved_by` and `approved_via` is refused by the database, whoever writes it, and
+  the tests show it.
+
+Reason:
+
+- Deriving the state from the columns that already hold the facts means no column can
+  disagree with them, and the auto-reply's rows (D-047) read correctly without change.
+- One worker per outbound path keeps the live gate in one place per path, on the submit
+  worker's pattern, so a reviewer finds it where they expect it.

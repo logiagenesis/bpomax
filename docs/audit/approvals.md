@@ -1,16 +1,18 @@
-# Control audit — approvals.html (ARB-061)
+# Control audit — approvals.html (ARB-061, ARB-122)
 
 Per docs/05 section 1. Every control on the page, and the Playwright test (in
 `e2e/approvals.spec.ts`) that exercises it. The API is an in-memory copy, at the network
 edge, of `apps/api/src/routes/proposals.ts` (tested against real Postgres in
 `routes/pages.test.ts`): `GET /v1/proposals`, `POST …/:id/approve`, `POST …/:id/reject`,
-`PATCH …/:id`, `POST /v1/proposals/bulk`.
+`PATCH …/:id`, `POST /v1/proposals/bulk`; and of `routes/messages.ts` (ARB-122, tested in
+`routes/messages.test.ts`): `GET /v1/outbound-messages`, `POST …/:id/approve`,
+`POST …/:id/reject`, `PATCH …/:id`.
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Link, nav links ×5, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Approvals | — | — | — | — | Yes | shows each waiting bid… | ✅ |
 | Select | Show | Waiting / approved / sent / rejected / failed / everything | Sends `status=`; address bar updated | — | — | — | Never | Yes | the filter shows other states… | ✅ |
-| Button (submit) | Apply filter | Load the list | `GET /v1/proposals?status=` | Spinner, aria-busy, disabled | "Loaded N bids." / "Nothing is waiting for approval." | API message | While busy | Yes | the filter shows other states… | ✅ |
+| Button (submit) | Apply filter | Load the list | `GET /v1/proposals?status=` and `GET /v1/outbound-messages?status=` (`submitted` asked for as `sent`) | Spinner, aria-busy, disabled | "Loaded N bids." / "Loaded N bids and M replies." / "Loaded M replies." / "Nothing is waiting for approval." | API message | While busy | Yes | the filter shows other states…; a waiting reply is shown beside the bids… | ✅ |
 | Button | Refresh | Ask again | Same request | as Apply | as Apply | as Apply | While busy | Yes | refresh asks again | ✅ |
 | Checkbox | Select all shown | Select every selectable bid | Ticks every enabled row box; count updated | — | "N selected." | — | When no row is selectable (viewer, or nothing queued) | Yes | select all, then bulk approve… | ✅ |
 | Checkbox (per bid) | Select <job> | Add this bid to the selection | Count updated; bulk buttons enabled | — | "N selected." | — | Unless the bid is queued and the person may approve | Yes | one selected bid, bulk rejected…; a viewer sees the queue… | ✅ |
@@ -23,6 +25,17 @@ edge, of `apps/api/src/routes/proposals.ts` (tested against real Postgres in
 | Button | Cancel | Discard the edit | Original text back, editor closed, focus returned to Edit | — | — | — | Never | Yes | cancelling an edit puts the original text back | ✅ |
 | Button (per bid) | Reject <job> | Ask a reason, then reject | Modal form; empty reason keeps the dialog open; `POST …/reject {reason}` | Spinner, aria-busy, disabled | "Rejected “<job>”." | API message | Unless the person may approve and the bid is neither sent nor already rejected | Yes | reject asks for a reason, will not take an empty one, and records it; cancelling a rejection sends nothing | ✅ |
 
+| Button (per reply) | Approve reply to <client> | Confirm, then approve | Modal naming the client and job; cancel sends nothing; `POST /v1/outbound-messages/:id/approve`; approval names the signed-in person (`approved_via = web`, RLS-enforced); the send-message worker is handed the reply and holds the live gate | Spinner, aria-busy, disabled | "Approved the reply to “<client>”. The sender has it." | API message | Unless queued and the person may approve (title says why); while busy | Yes | a waiting reply is shown beside the bids…; a viewer sees a waiting reply and can change nothing about it | ✅ |
+| Button (per reply) | Edit reply to <client> | Open the text for editing | Textarea shown with the current words, focused | — | — | — | Unless the person may approve and the reply is not sent | Yes | a reply can be edited, which clears its approval… | ✅ |
+| Textarea | Reply text | The new words | Checked with `validateMessageDraft` (same rule as the API) | — | — | "Must not be empty." / length | as Edit | Yes | a reply can be edited… | ✅ |
+| Button (submit) | Save text | Save the new words | `PATCH /v1/outbound-messages/:id {body}`; reply back to waiting with its approval (or rejection) cleared; list refreshed, message kept | Spinner, aria-busy, disabled | "Saved the new text for the reply to “<client>”. It needs approval again." | API message; field error attached | While busy | Yes | a reply can be edited… | ✅ |
+| Button | Cancel | Discard the edit | Original text back, editor closed, focus returned to Edit | — | — | — | Never | Yes | (same control as the bids' Cancel) | ✅ |
+| Button (per reply) | Reject reply to <client> | Ask a reason, then reject | Modal form; `POST /v1/outbound-messages/:id/reject {reason}` | Spinner, aria-busy, disabled | "Rejected the reply to “<client>”." | API message | Unless the person may approve and the reply is neither sent nor already rejected | Yes | a reply can be edited, which clears its approval, and rejected with a reason | ✅ |
+
+Replies (ARB-122): each card shows who it is to, the job, the client's last message with
+its time, when it was drafted, the approver once approved, and the text. Replies are not
+selectable for the bulk actions, which stay bids-only.
+
 Figures (docs/05 section 3): price, days and milestone count; score with verdict; the
 estimate with its method; the projected margin in the deal currency with its percentage,
 and in rand at the rate the evaluation stored, with that rate's timestamp
@@ -33,6 +46,8 @@ shows who approved it and via which channel.
 Destructive actions (docs/05 section 1.3): Approve (single and bulk) asks for
 confirmation and is logged by the API as `proposal.approved` naming the person; Reject
 asks for a reason and is logged as `proposal.rejected` with it. A paused org is shown
-with a banner and in the approval message.
+with a banner and in the approval message. A reply's Approve and Reject are the same,
+logged as `message.approved` and `message.rejected`; the send itself is `message.sent`
+by the worker, or `external.blocked_by_live_mode` while live mode is off.
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.
