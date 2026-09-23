@@ -68,7 +68,7 @@ Blocker references point to 02-BLOCKERS.md.
 |---|---|---|---|---|---|---|
 | ARB-300 | Upwork read-only job ingest via official API | 299 | B-14, T-04 | Jobs ingested with source=upwork; no browser automation anywhere in codebase (grep check in CI) | TODO | |
 | ARB-310 | Delivery orders, milestones, supplier handover checklist | 299 | T-05 | Milestone totals reconcile to agreed cost | DONE (the clause is a test in core and against Postgres: milestones summed in whole cents must equal the agreed cost before a supplier is assigned, in `validateDeliveryOrderEdit` and in 0026's `milestones_reconcile` check; the order opens from Choose on the sourcing page with the brief's handover checklist and moves forward only; the pipeline page shows it. T-05 applies to paying the supplier, ARB-311, not to this ticket. D-058) | 0409480 |
-| ARB-311 | Payments in/out with FX rate used; realised margin | 310 | B-10 | Realised margin matches hand calculation in tests | TODO | |
+| ARB-311 | Payments in/out with FX rate used; realised margin | 310 | B-10 | Realised margin matches hand calculation in tests | IN PROGRESS (session …tJv8) | |
 | ARB-312 | Retainer tracking and monthly total | 311 | — | Dashboard retainer total equals sum of active retainers | TODO | |
 | ARB-320 | Analytics rollup and page (reply rate, win rate, cost per reply, realised margin by category/template/supplier/scanner) | 311 | — | Figures verified against raw SQL in tests | TODO | |
 | ARB-330 | MCP server with tools per 01-I; README setup for Claude Desktop/Code | 299 | — | Each tool callable in an automated test | TODO | |
