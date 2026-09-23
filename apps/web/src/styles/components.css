@@ -70,6 +70,15 @@ code {
 }
 
 /* Layout */
+/*
+ * The hidden attribute always wins. Without this, any component that sets its own
+ * display (.btn, .badge, .cluster, .grid, .check, .switch) shows even when hidden,
+ * because an author rule outranks the browser's own [hidden] rule.
+ */
+[hidden] {
+  display: none !important;
+}
+
 .container {
   width: 100%;
   max-width: var(--content-width);

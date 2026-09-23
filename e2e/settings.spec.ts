@@ -226,6 +226,8 @@ test('shows what is set and what still blocks live mode, from the API alone', as
   await expect(page.locator('#connect-hint')).toContainText('B-03 and B-04');
   await expect(page.locator('#scanner-rows tr')).toHaveCount(1);
   await expect(page.locator('#scanner-rows tr').first()).toContainText('ZA web builds');
+  // Nothing is being edited, so there is nothing to cancel: the button must not show.
+  await expect(page.getByRole('button', { name: 'Cancel edit' })).toBeHidden();
   await expect(page.locator('#telegram-state')).toContainText('not linked yet');
   await expect(page.getByRole('link', { name: 'Settings' })).toHaveAttribute(
     'aria-current',

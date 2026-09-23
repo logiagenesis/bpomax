@@ -108,3 +108,17 @@ B-12, T-06, or a figure the owner must supply). Every Phase 2 to 4 ticket depend
 ARB-099. The highest-value answers remain T-02, D-02 and D-03 (the margin engine), then
 B-06 (sign-in and the generated types) and B-11/B-12 (the preview link Phase 1 needs).
 
+
+## 23/09/2026 — session …V4PPWs (resumed after its usage limit)
+
+- The ARB-061 claim this session pushed at 19:51 UTC was taken over under D-034 while it
+  was paused, and ARB-061 shipped green on main. This session's own unfinished pages
+  (17 Playwright failures open) were not pushed, because that would have overwritten
+  finished work. They are kept on a local branch, `arb-061-alternative` (`b28e9af`), which
+  dies with this container. Nothing in them is missing from main.
+- Fixed on ARB-061: "Cancel edit" on the settings page showed while nothing was being
+  edited. `.btn` sets its own display, which outranks the browser's rule for the `hidden`
+  attribute. One global `[hidden]` rule now wins for every component. The settings spec
+  asserts the button is hidden on load, and that assertion fails without the fix.
+
+No unblocked tickets remain; the list in the entry above still holds.
