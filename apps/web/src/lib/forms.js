@@ -21,7 +21,8 @@ export function showFieldErrors(form, errors, prefix = '') {
     const input = form.querySelector(`#${CSS.escape(id)}`);
     const slot = form.querySelector(`#${CSS.escape(`${id}-error`)}`);
     if (!(slot instanceof HTMLElement)) continue;
-    slot.textContent = error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.';
+    const text = error.message.charAt(0).toUpperCase() + error.message.slice(1);
+    slot.textContent = text.endsWith('.') ? text : `${text}.`;
     slot.hidden = false;
     if (input instanceof HTMLElement) input.setAttribute('aria-invalid', 'true');
     placed = true;

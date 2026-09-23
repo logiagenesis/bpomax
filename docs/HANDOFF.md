@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 31 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203); 16 are TODO (099, 299 and Phases 3 and 4). Nothing is BLOCKED
+- **Board:** 32 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203); 15 are TODO (099, 299, the rest of Phase 3, Phase 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `0c570dd` (PR #19, ARB-204, merged). The ARB-210 PR is open
+- **CI:** green on `main` at `ee8e819` (PR #20, ARB-210, merged). The ARB-310 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-210 merges, **ARB-310** (delivery orders, milestones, the
-  supplier handover checklist). ARB-299 waits like ARB-099. See section 6.
+- **Next ticket:** after ARB-310 merges, **ARB-311** (payments in and out with the FX rate
+  used; realised margin). ARB-299 waits like ARB-099. See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `0c570dd` = PR #19, ARB-204 reprice with a candidate's quote                           |
-| Open PR                | ARB-210 sourcing and suppliers pages; posts on approvals, from `claude/beautiful-tesla-b6goej` |
-| Local checks at ARB-210 | lint, format, typecheck green; 895 unit tests (80 files) green; 179 + 23 Playwright tests green |
+| Last merge             | `ee8e819` = PR #20, ARB-210 sourcing and suppliers pages; posts on approvals           |
+| Open PR                | ARB-310 delivery orders and the pipeline page, from `claude/beautiful-tesla-b6goej`    |
+| Local checks at ARB-310 | lint, format, typecheck green; 914 unit tests (82 files) green; 195 + 25 Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210 |
+| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310 |
 | BUILT-PENDING-CREDENTIALS | 8     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12) |
-| TODO                      | 16    | 099, 299, then Phases 3 and 4 (300 to 499)                  |
+| TODO                      | 15    | 099, 299, 300, 311–399, Phase 4                             |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -62,6 +62,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-203 | Sourcing projects on Freelancer.com: the documented employer calls and stand-in endpoints, a sender behind the live gate, bids collected as candidates (0025), budget rule on approval, Collect bids now, 3 Playwright tests (BUILT-PENDING-CREDENTIALS, C-02) | D-055 |
 | ARB-204 | Reprice: a candidate's quote as a `candidate_quote` estimate judged by the ARB-041 engine, the employer fee on our own project's bids, `margin.repriced` events, the Telegram breach card, a reprice per new or changed bid, the Reprice button and Margin column, demo, 5 + 2 Playwright tests | D-056 |
 | ARB-210 | Sourcing and suppliers pages re-walked (every control has a row and a test, checked by script; keyboard tests); sourcing posts on the approvals page with Approve, Edit link and Close; `GET /v1/sourcing-posts`; demo | D-057 |
+| ARB-310 | Delivery orders: Choose on the sourcing page opens one at the quote; milestones reconciled in core and by 0026's check; the handover checklist from the brief; forward-only moves; the pipeline page (board by stage) with the order; demo; 16 + 2 Playwright tests | D-058 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -110,15 +111,22 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-310 — delivery orders, milestones, supplier handover checklist.** Claim it on the
-board first. Depends on ARB-299, which (like ARB-099) waits on the Phase 2 tickets that
-are BUILT-PENDING-CREDENTIALS; under D-036 the build carries on into Phase 3 meanwhile.
-Blocker T-05 (read the row in docs/02-BLOCKERS.md before writing anything, and build the
-rest behind it). Acceptance: "Milestone totals reconcile to agreed cost". Read docs/01
-sections E to G and the `delivery_orders` and `payments` tables already in migration 0005
-(there is no milestones table yet) before designing; the brief's acceptance criteria are the natural
-handover checklist. Then ARB-311 (payments with the FX rate used, realised margin; B-10),
-ARB-312, ARB-320, ARB-330 and ARB-340.
+**ARB-311 — payments in and out with the FX rate used; realised margin.** Claim it on the
+board first. Blocker B-10 (the FX provider); acceptance: "Realised margin matches hand
+calculation in tests". The `payments` table exists (0005) with `direction`, the amount,
+`fx_rate_used`, `fx_rate_at`, `amount_zar_minor` and a check that a converted amount shows
+its rate. Build: recording a payment in (from the client, against the pipeline item) and
+out (to the supplier, against a delivery order's milestone) by hand on the pipeline page's
+delivery order, with the rate typed or taken from the FX provider behind config (a
+stand-in in tests; with none, a non-ZAR payment needs the rate typed, never a default);
+realised margin per job = payments in − payments out − the platform fee, in ZAR at the
+stored rates, worked in core and hand-calculated in tests; the job moves to Paid when the
+client's payments reach the agreed value. A payment out to a supplier abroad waits on T-05
+(docs/02): record it, but say on the page that T-05 is open. The dashboard's month-to-date
+revenue in and out and realised margin (ARB-060) should then read these rows. Then ARB-312
+(retainers, and the pipeline page's retainer toggle), ARB-320, ARB-330, ARB-340, and
+ARB-300 (the Upwork ingest; read Upwork's official API docs through Firecrawl first, cite
+every endpoint, and add the CI grep that no browser automation exists).
 
 ## 7. Loose ends
 

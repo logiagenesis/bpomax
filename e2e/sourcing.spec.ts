@@ -223,6 +223,11 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
         if (action === 'collect') return route.fulfill({ status: 202, json: { queued: true } });
         return route.fulfill({ json: { post: row, queued: false } });
       },
+      'POST /v1/sourcing-requests/:id/candidates/:candidateId/choose': (_req, route) =>
+        route.fulfill({
+          status: 201,
+          json: { order: { id: 'aaaaaaaa-0000-4000-8000-000000000093', status: 'draft' } },
+        }),
       'POST /v1/sourcing-requests/:id/candidates/:candidateId/reprice': (req, route) => {
         if (options.reprice) return route.fulfill(options.reprice);
         const candidate = req.path.split('/').at(-2) ?? '';
@@ -474,6 +479,53 @@ test('Reprice is closed to a candidate with no quote, with the reason', async ({
   await expect(closed).toHaveAttribute(
     'title',
     'This candidate has no quote yet, so there is nothing to reprice with.',
+  );
+});
+
+test('Choose asks first, opens a delivery order at the quote, and links to it on the pipeline page', async ({
+  page,
+}) => {
+  const requests = await openRequest(page);
+  await page.getByRole('button', { name: 'Choose Thandi Web as the supplier' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Choose Thandi Web?');
+  await expect(dialog).toContainText('their quote of R9 000,00 fixed');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect(requests.filter((r) => r.method === 'POST')).toHaveLength(0);
+  await page.getByRole('button', { name: 'Choose Thandi Web as the supplier' }).click();
+  await dialog.getByRole('button', { name: 'Choose' }).click();
+  await expect(page.locator('#request-status')).toContainText(
+    'Chose Thandi Web. The delivery order is open on the pipeline page.',
+  );
+  await expect(page.getByRole('link', { name: 'Open the delivery order' })).toHaveAttribute(
+    'href',
+    'pipeline.html?order=aaaaaaaa-0000-4000-8000-000000000093',
+  );
+  expect(requests.filter((r) => r.method === 'POST').map((r) => r.path)).toEqual([
+    `/v1/sourcing-requests/${REQUEST}/candidates/${THANDI}/choose`,
+  ]);
+});
+
+test('Choose is closed to a viewer, a candidate with no quote, and a request with a supplier chosen', async ({
+  page,
+}) => {
+  await openRequest(page, { role: 'viewer' });
+  await expect(
+    page.getByRole('button', { name: 'Choose Thandi Web as the supplier' }),
+  ).toHaveAttribute('title', 'Your role can view sourcing but not change it.');
+  const noQuote = candidates().map((c) => (c.id === NORD ? { ...c, quotedPriceMinor: null } : c));
+  await serve(page, { partial: { candidates: noQuote } });
+  await page.goto(`/sourcing.html?request=${REQUEST}`);
+  await expect(
+    page.getByRole('button', { name: 'Choose Studio Nord as the supplier' }),
+  ).toHaveAttribute('title', 'This candidate has no quote yet, so there is no cost to agree.');
+  await serve(page, { partial: { status: 'chosen' } });
+  await page.goto(`/sourcing.html?request=${REQUEST}`);
+  const closed = page.getByRole('button', { name: 'Choose Thandi Web as the supplier' });
+  await expect(closed).toBeDisabled();
+  await expect(closed).toHaveAttribute(
+    'title',
+    'This request is supplier chosen, so a supplier cannot be chosen on it.',
   );
 });
 

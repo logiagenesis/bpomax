@@ -13,6 +13,7 @@ const SIGNED_IN: [string, RegExp | string, boolean][] = [
   ['/conversations.html', /^Loaded \d+ conversations?\.$/, true],
   ['/suppliers.html', /^Loaded \d+ suppliers?\.$/, true],
   ['/sourcing.html', /^Loaded \d+ sourcing requests?\.$/, true],
+  ['/pipeline.html', /^Loaded \d+ jobs? in the pipeline\.$/, true],
   ['/settings.html', 'Settings loaded.', true],
   // The audit log predates the shared page shell and has no "who" line.
   ['/audit-log.html', /^Loaded \d+ events?\.$/, false],
@@ -244,6 +245,38 @@ test('a sourcing post drafted in the demo waits on the approvals page and is app
     'Approved the Fiverr post for Shopify store rebuild (sample).',
   );
   await expect(card).toHaveCount(0);
+});
+
+test('choosing a supplier in the demo opens a delivery order whose milestones must reconcile before it is assigned', async ({
+  page,
+}) => {
+  await page.goto('/sourcing.html');
+  await page
+    .getByRole('button', { name: 'Open the sourcing request for Shopify store rebuild (sample)' })
+    .click();
+  await page.getByRole('button', { name: 'Choose Thandi Web (sample) as the supplier' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Choose' }).click();
+  await page.getByRole('link', { name: 'Open the delivery order' }).click();
+  await expect(page.locator('#delivery-status')).toHaveText(
+    'Opened the delivery order for Shopify store rebuild (sample).',
+  );
+  await expect(page.locator('#delivery-figures')).toContainText('R1 500,00');
+  // Split the R1 500,00 into R500,00 + R900,00 = R1 400,00: refused on the page.
+  await page.getByRole('button', { name: 'Add a milestone' }).click();
+  await page.getByLabel('Milestone 1 amount').fill('500.00');
+  await page.getByLabel('Milestone 2 title').fill('Second half');
+  await page.getByLabel('Milestone 2 amount').fill('900.00');
+  await page.getByRole('button', { name: 'Save cost and milestones' }).click();
+  await expect(page.locator('#order-milestones-error')).toContainText('They must be equal.');
+  await page.getByLabel('Milestone 2 amount').fill('1000.00');
+  await page.getByRole('button', { name: 'Save cost and milestones' }).click();
+  await expect(page.locator('#delivery-status')).toHaveText('Saved the cost and milestones.');
+  await page.getByRole('button', { name: 'Assign the supplier' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Assign' }).click();
+  await expect(page.locator('#delivery-status')).toHaveText('Assigned the supplier.');
+  await expect(page.getByRole('button', { name: 'Start the work' })).toBeDisabled();
+  await page.goto('/audit-log.html');
+  await expect(page.locator('#rows tr').first()).toContainText('delivery.status_changed');
 });
 
 test('the settings rules are the real ones: live mode stays off until every rule is set', async ({

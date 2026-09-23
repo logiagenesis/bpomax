@@ -57,6 +57,10 @@ export const EVENT_TYPES = [
   'supplier.imported',
   'supplier.candidate_added',
   'delivery.order_created',
+  'delivery.order_edited',
+  'delivery.status_changed',
+  'delivery.handover_ticked',
+  'delivery.milestone_changed',
   'payment.recorded',
   // governance
   'telegram.linked',

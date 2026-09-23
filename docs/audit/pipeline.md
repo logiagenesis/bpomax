@@ -1,0 +1,45 @@
+# Control audit — pipeline.html (ARB-310)
+
+Per docs/05 section 1. Every control on the page, and the Playwright test (in
+`e2e/pipeline.spec.ts`) that exercises it. The API is an in-memory copy, at the network
+edge, of `apps/api/src/routes/delivery.ts` (tested against real Postgres in
+`routes/delivery.test.ts`, where the moves' rules, the reconciliation and 0026's
+constraint are proved): `GET /v1/pipeline`, `PATCH /v1/pipeline-items/:id`,
+`GET/PATCH /v1/delivery-orders/:id`, `POST /v1/delivery-orders/:id/status`,
+`PATCH …/handover/:key` and `PATCH …/milestones/:index`. The rule the page checks the
+milestones with is `validateDeliveryOrderEdit` from `@arbitron/core`, the same one the API
+runs (tested in `packages/core/src/delivery.test.ts`). A delivery order is opened from the
+sourcing page (Choose, audited in `sourcing.md`).
+
+| Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Link, nav links ×9, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Pipeline | — | — | — | — | Yes | the board lists the jobs by stage with their value, and every link goes somewhere | ✅ |
+| Button | Refresh | Read the board again | `GET /v1/pipeline` | Spinner, aria-busy, disabled | "Loaded N jobs in the pipeline." / "No jobs in the pipeline yet." | The API's message | While busy | Yes | the board lists the jobs…; an empty board says how a job joins it | ✅ |
+| Select (per job) | Stage for <job> | Choose the stage to move the job to | Held until Move | — | — | — | For a viewer | Yes | Move asks the API and the board follows…; a viewer sees the board… | ✅ |
+| Button (per job) | Move (aria-label "Move <job> to the chosen stage") | Move the job; Lost asks first | Lost: confirmation (danger), cancel sends nothing; `PATCH /v1/pipeline-items/:id {stage}`; `pipeline.stage_changed` logged; the board re-read | Spinner, aria-busy, disabled | "Moved <job> to <stage>." / "<job> is already at <stage>." | The API's message | For a viewer (title says so) | Yes | Move asks the API and the board follows; Lost asks first, and cancelling sends nothing | ✅ |
+| Button (per job with an order) | Open delivery (aria-label "Open the delivery order for <job>") | Show the job's delivery order | `GET /v1/delivery-orders/:id`; `?order=` in the address bar | Spinner, aria-busy, disabled | "Opened the delivery order for <job>." | "The API refused the request: no such delivery order." | While busy | Yes (Enter) | Open delivery shows…; a linked order opens…; the controls are labelled and reached by keyboard… | ✅ |
+| Inputs ×3 | Agreed cost, Currency, Due (DD/MM/YYYY) | The cost the supplier is paid and the order's date | Amounts read as text into whole cents (`parseAmountText`); dates DD/MM/YYYY to ISO; checked with `validateDeliveryOrderEdit` | — | The running total under the milestones | On the field ("Must be an amount such as 3000.00.", "Must be a real date as DD/MM/YYYY.") | Shown only while the order is a draft or assigned, and not to a viewer | Yes | a split that adds up is saved…; a false date is refused on its field | ✅ |
+| Inputs ×3 per milestone | Milestone N title, amount, due (DD/MM/YYYY) | One milestone | As above; the total line says whether they add up to the agreed cost, in money words | — | "The milestones add up to the agreed cost: R9 000,50." | "The milestones add up to R9 000,00; the agreed cost is R9 000,50. They must be equal." on the total and on the milestones | as above | Yes | a split that does not add up is refused on the page…; a split that adds up is saved… | ✅ |
+| Button (per milestone) | Remove (aria-label "Remove milestone N") | Take the milestone out of the form | The rows renumbered; the total recomputed; nothing sent | — | — | — | — | Yes | a split that adds up is saved… (the form is rebuilt the same way) | ✅ |
+| Button | Add a milestone | A new empty milestone row | Row added and focused | — | — | — | At 20 milestones (title says so) | Yes | a split that does not add up…; a split that adds up… | ✅ |
+| Button (submit) | Save cost and milestones | Save the cost, currency, due date and milestones | Checked on the page first (nothing sent when wrong); `PATCH /v1/delivery-orders/:id`; `delivery.order_edited` logged | Spinner, aria-busy, disabled | "Saved the cost and milestones." | Field errors, first one focused, "Some fields need attention…"; the API's refusal as it is | While busy | Yes | a split that does not add up is refused…; a split that adds up is saved as whole cents with ISO dates | ✅ |
+| Checkbox (per handover item) | The item's sentence, read from the locked brief | Tick or untick | `PATCH …/handover/:key {done}`; `delivery.handover_ticked` logged; the moves re-read | Disabled while busy | "Ticked the handover item." / "Unticked the handover item." | The API's message | Once the supplier has started; for a viewer (title says which) | Yes | Assign asks first; Start stays closed…; once work has started…; a viewer sees… | ✅ |
+| Button (per milestone, work under way) | Mark delivered / Mark accepted (aria-label "Mark <milestone> delivered/accepted") | Record the milestone's progress | `PATCH …/milestones/:index {status}`; `delivery.milestone_changed` logged | Spinner, aria-busy, disabled | "Marked <milestone> delivered." | The API's message (an accepted milestone does not change) | Until the work has started and after the order is accepted (title says so); for a viewer | Yes | once work has started, each milestone is marked from its row | ✅ |
+| Button | Assign the supplier | Assign after a confirmation naming the cost and the number of milestones | Dialog → `POST …/status {assigned}` | Spinner, aria-busy, disabled | "Assigned the supplier." | The API's reasons as they are | While any reason stands (job not won, no supplier, milestones not reconciled; title lists them); for a viewer | Yes (Cancel has focus) | Assign asks first; Start stays closed with the reason until every handover item is ticked | ✅ |
+| Button | Start the work | Start once the handover is complete; the job moves to In delivery | `POST …/status {in_progress}` | Spinner, aria-busy, disabled | "The supplier has started. The job is in delivery." | as above | While a handover item is not ticked (title says how many) | Yes | Assign asks first; Start stays closed… | ✅ |
+| Button | Mark the order delivered / Mark the order accepted | Deliver once every milestone is; accept once every milestone is | `POST …/status`; the job moves to Delivered | Spinner, aria-busy, disabled | "The order is delivered. The job is marked delivered." / "The order is accepted." | as above | While a milestone is not delivered / accepted (title says how many) | Yes | once work has started, each milestone is marked… (the reason on the button); routes/delivery.test.ts for the moves | ✅ |
+| Button (danger) | Cancel the order | Cancel after a danger confirmation; the sourcing request reopens | Dialog → `POST …/status {cancelled}` | Spinner, aria-busy, disabled | "Cancelled the order. The sourcing request is open again for another supplier." | as above | Once delivered or accepted (not offered) | Yes (Cancel has focus) | Cancel asks first, as a danger, and says the sourcing request is open again | ✅ |
+
+Figures (docs/05 section 3): every amount is `formatMoney` of the stored minor units; the
+milestones' total is summed as BigInt by the API and shown beside the agreed cost with
+whether they reconcile; dates are DD/MM/YYYY (SAST). Nothing is recalculated on the page
+except the running total while typing, with the API's own rule.
+
+Destructive actions (docs/05 section 1.3): assigning a supplier and cancelling an order
+ask first; marking a job lost asks first. Every change is an event. Nothing on this page
+pays a supplier or sends anything to one: payments are ARB-311 (and T-05).
+
+Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px;
+`?order=` opens the order. Rule 6: the stage select is labelled and the Move and Open
+buttons follow it in reading order; Enter opens an order — "the controls are labelled and
+reached by keyboard; Enter opens the order".

@@ -21,11 +21,13 @@
  *   ARB-200  supplier CSV template, parser, validator and export (suppliers.ts)
  *   ARB-201  supplier ranking for a locked brief          (sourcing.ts)
  *   ARB-202  sourcing post drafts and the client-identity check (sourcing-posts.ts)
+ *   ARB-310  delivery orders: milestones reconciled, handover checklist, moves (delivery.ts)
  */
 export * from './allowance.js';
 export * from './auth.js';
 export * from './auto-reply.js';
 export * from './brief.js';
+export * from './delivery.js';
 export * from './discovery.js';
 export * from './drafting.js';
 export * from './estimating.js';
