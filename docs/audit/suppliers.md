@@ -10,7 +10,7 @@ same one the API runs (tested in `packages/core/src/suppliers.test.ts`).
 
 | Control | Label text | Expected action | Actual action | Loading state | Success state | Error state | Disabled state rule | Keyboard reachable | Playwright test name | Pass |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Link, nav links ×7, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Suppliers | — | — | — | — | Yes | lists suppliers with their rate cards…, and every link goes somewhere | ✅ |
+| Link, nav links ×8, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Suppliers | — | — | — | — | Yes | lists suppliers with their rate cards…, and every link goes somewhere | ✅ |
 | Button | Refresh | Read the database again | `GET /v1/suppliers` | Spinner, aria-busy, disabled | "Loaded N suppliers." / "No suppliers yet." | "Not signed in…" / "Could not reach the API…" / the API's message | While busy | Yes | lists suppliers…; an empty database says what to do next | ✅ |
 | Button | Download the template | Save the CSV template | `GET /v1/suppliers/template.csv`; saved under the name the API gives it | Spinner, aria-busy, disabled | "Downloaded the template. Replace its sample line with your suppliers." | as Refresh | While busy | Yes | Download the template saves the file the API serves | ✅ |
 | Button | Export CSV | Save the database as a CSV with the template's columns | `GET /v1/suppliers.csv`; saved under the API's name; row count from `x-export-rows` | Spinner, aria-busy, disabled | "Exported N suppliers." | as Refresh | While busy | Yes | Export CSV saves the database as the API serves it, and says how many | ✅ |
@@ -31,3 +31,9 @@ adds and updates suppliers by name and rate cards by category and currency, dele
 nothing, and is one event (`supplier.imported`) with the counts.
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.
+
+Rule 6 (keyboard, re-walked for ARB-210): Refresh, Download the template, Export CSV, the
+file input, the paste box, Check the file and Import the file are reached with Tab in
+that order; both inputs have their labels attached; Check the file works with Enter —
+"the controls are reached by keyboard in reading order, labelled, and Check works from
+the keyboard".

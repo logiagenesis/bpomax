@@ -402,4 +402,44 @@ describe('editing and approving', () => {
     });
     expect(other.statusCode).toBe(404);
   });
+
+  it('lists the organisation’s posts by status with their brief, for the approvals page (ARB-210)', async () => {
+    const drafts = await app.inject({
+      method: 'GET',
+      url: '/v1/sourcing-posts',
+      headers: as(AUTH_VIEWER),
+    });
+    expect(drafts.statusCode).toBe(200);
+    expect(
+      drafts
+        .json()
+        .posts.map((p: { platform: string; status: string; briefTitle: string }) => [
+          p.platform,
+          p.status,
+          p.briefTitle,
+        ]),
+    ).toEqual([['freelancer', 'draft', 'Shopify store rebuild for Acme']]);
+    const all = await app.inject({
+      method: 'GET',
+      url: '/v1/sourcing-posts?status=all',
+      headers: as(AUTH_A),
+    });
+    expect(all.json().posts.map((p: { status: string }) => p.status)).toEqual([
+      'draft',
+      'posted',
+      'closed',
+    ]);
+    const bad = await app.inject({
+      method: 'GET',
+      url: '/v1/sourcing-posts?status=queued',
+      headers: as(AUTH_A),
+    });
+    expect(bad.statusCode).toBe(422);
+    const other = await app.inject({
+      method: 'GET',
+      url: '/v1/sourcing-posts?status=all',
+      headers: as(AUTH_B),
+    });
+    expect(other.json().posts ?? []).toEqual([]);
+  });
 });

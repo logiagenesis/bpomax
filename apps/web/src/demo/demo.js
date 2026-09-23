@@ -1268,6 +1268,30 @@ function api(method, url, body) {
       error: 'The post could identify the client. Take out what is named and save again.',
       errors,
     });
+  // ARB-210: every post of the org by status, for the approvals page.
+  if (key === 'GET /v1/sourcing-posts') {
+    const wanted = url.searchParams.get('status') ?? 'draft';
+    if (!['draft', 'approved', 'posted', 'failed', 'closed', 'all'].includes(wanted)) {
+      return respond(422, {
+        error: 'the request was not accepted',
+        errors: [
+          {
+            field: 'status',
+            message: 'must be one of draft, approved, posted, failed, closed, all',
+          },
+        ],
+      });
+    }
+    return respond(200, {
+      posts: posts
+        .filter((row) => wanted === 'all' || row.status === wanted)
+        .map((row) => ({
+          ...describePost(row),
+          briefTitle:
+            sourcing.find((r) => r.id === row.sourcingRequestId)?.briefTitle ?? 'Unknown brief',
+        })),
+    });
+  }
   if (method === 'GET' && /^\/v1\/sourcing-requests\/[^/]+\/posts$/.test(path)) {
     const id = idIn('/v1/sourcing-requests/');
     return respond(200, {
