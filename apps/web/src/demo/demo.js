@@ -42,6 +42,7 @@ import {
   reconcileMilestones,
   transitionBlockers,
   validateDeliveryOrderEdit,
+  validateRetainer,
   parseFeeTable,
   rankSuppliers,
   renderDiscoveryBatch,
@@ -492,6 +493,18 @@ function initialStore() {
       stageChangedAt: ago(0, 3),
     },
     {
+      id: 'd0d0d0d0-0000-4000-8000-000000000093',
+      jobId: 'd0d0d0d0-0000-4000-8000-000000000094',
+      jobTitle: 'Monthly site care (sample)',
+      platform: 'freelancer',
+      stage: 'paid',
+      valueMinor: '450000',
+      currency: 'ZAR',
+      retainer: true,
+      retainerMonthlyMinor: '450000',
+      stageChangedAt: ago(20),
+    },
+    {
       id: 'd0d0d0d0-0000-4000-8000-000000000092',
       jobId: wp.id,
       jobTitle: wp.title,
@@ -893,7 +906,20 @@ function api(method, url, body) {
       replies: 4,
       bids: { queued, submitted, won: 2, lost: 1 },
       winRate: 2 / 3,
-      retainers: [{ currency: 'ZAR', amountMinor: '450000', count: 1 }],
+      // ARB-312: the sum of the tab's active retainers, per currency, as the API sums them.
+      retainers: Object.values(
+        (store.pipeline ?? [])
+          .filter((p) => p.retainer && p.stage !== 'lost' && p.currency)
+          .reduce((acc, p) => {
+            const line = acc[p.currency] ?? { currency: p.currency, amountMinor: '0', count: 0 };
+            line.amountMinor = (
+              BigInt(line.amountMinor) + BigInt(p.retainerMonthlyMinor)
+            ).toString();
+            line.count += 1;
+            acc[p.currency] = line;
+            return acc;
+          }, /** @type {Record<string, Row>} */ ({})),
+      ).sort((a, b) => String(a.currency).localeCompare(String(b.currency))),
     });
   }
 
@@ -1346,14 +1372,58 @@ function api(method, url, body) {
   if (method === 'PATCH' && /^\/v1\/pipeline-items\/[^/]+$/.test(path)) {
     const item = pipeline.find((p) => p.id === path.split('/').pop());
     if (!item) return respond(404, { error: 'no such pipeline item' });
-    if (!PIPELINE_STAGES.includes(body?.stage)) {
+    if (body?.stage === undefined && body?.retainer === undefined)
+      return respond(422, {
+        error: 'the request was not accepted',
+        errors: [{ field: 'stage', message: 'send a stage, a retainer, or both' }],
+      });
+    if (body?.stage !== undefined && !PIPELINE_STAGES.includes(body.stage)) {
       return respond(422, {
         error: 'the request was not accepted',
         errors: [{ field: 'stage', message: `must be one of ${PIPELINE_STAGES.join(', ')}` }],
       });
     }
-    moveStage(item, body.stage);
-    return respond(200, { id: item.id, stage: item.stage });
+    if (body?.retainer !== undefined) {
+      const validated = validateRetainer(body);
+      if (!validated.ok)
+        return respond(422, { error: 'the request was not accepted', errors: validated.errors });
+      const currency =
+        item.currency ?? (typeof body.currency === 'string' ? body.currency.toUpperCase() : null);
+      if (validated.value.retainer && !currency)
+        return respond(422, {
+          error: 'the request was not accepted',
+          errors: [
+            {
+              field: 'currency',
+              message: 'the job has no currency recorded; send the retainer’s currency with it',
+            },
+          ],
+        });
+      const from = { retainer: item.retainer, monthly_minor: item.retainerMonthlyMinor };
+      item.retainer = validated.value.retainer;
+      item.retainerMonthlyMinor =
+        validated.value.retainerMonthlyMinor === null
+          ? null
+          : String(validated.value.retainerMonthlyMinor);
+      item.currency = currency;
+      logEvent(store, 'pipeline.retainer_changed', {
+        subject_table: 'pipeline_items',
+        subject_id: item.id,
+        payload: {
+          via: 'web',
+          from,
+          to: { retainer: item.retainer, monthly_minor: item.retainerMonthlyMinor },
+        },
+      });
+    }
+    if (body?.stage !== undefined) moveStage(item, body.stage);
+    return respond(200, {
+      id: item.id,
+      stage: item.stage,
+      retainer: item.retainer,
+      retainerMonthlyMinor: item.retainerMonthlyMinor,
+      currency: item.currency,
+    });
   }
   if (
     method === 'POST' &&

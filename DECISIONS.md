@@ -1769,3 +1769,27 @@ Decision:
 Why: docs/01 section D (`payments`: direction, amount, currency, fx rate used, paid_at,
 reference) and docs/05 sections 3.4 and 3.5; the ticket's acceptance, "Realised margin
 matches hand calculation in tests".
+
+## D-060 — Retainers: set on the pipeline page with a monthly amount above zero; the dashboard sums the active ones per currency
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-312, session …tJv8)
+
+Decision:
+
+- The pipeline page's retainer toggle (docs/01 section I) sets a job's `retainer` and its
+  monthly amount through `PATCH /v1/pipeline-items/:id`, beside the stage. `validateRetainer`
+  in core is the page's and the API's rule: a retainer has a monthly amount in whole cents
+  above zero; a job that is not one has none. The database already holds that a retainer
+  has an amount (0005). Each change is a `pipeline.retainer_changed` event with the amount
+  before and after.
+- The amount is in the job's own currency. A job with no currency recorded needs the
+  currency sent with the retainer; none is assumed.
+- "Active" is a retainer whose job is not lost, as the dashboard has summed it since
+  ARB-061: per currency, never converted into rand. The acceptance is a test against
+  Postgres comparing the dashboard's total with a hand sum and a raw SQL sum.
+- The demo's dashboard now sums the tab's retainers the same way, from a sample retainer
+  job, instead of a fixed sample line.
+
+Why: docs/01 section I (the pipeline's retainer toggle, the dashboard's retainer total) and
+the ticket's acceptance.

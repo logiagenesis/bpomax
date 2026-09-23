@@ -331,3 +331,33 @@ export function pipelineStageFor(to: DeliveryStatus): string | null {
   if (to === 'delivered') return 'delivered';
   return null;
 }
+
+export interface RetainerEdit {
+  readonly retainer: boolean;
+  /** Whole minor units of the job's currency each month; null when not a retainer. */
+  readonly retainerMonthlyMinor: number | null;
+}
+
+/**
+ * A job's retainer (ARB-312, docs/01 section I: the pipeline's "retainer toggle"): a
+ * retainer has a monthly amount above zero, and a job that is not one has none. The
+ * database holds the first half too (0005's `retainer_has_an_amount`).
+ */
+export function validateRetainer(input: unknown): ValidationResult<RetainerEdit> {
+  const raw = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
+  if (typeof raw.retainer !== 'boolean')
+    return { ok: false, errors: [{ field: 'retainer', message: 'must be true or false' }] };
+  if (!raw.retainer) return { ok: true, value: { retainer: false, retainerMonthlyMinor: null } };
+  const amount = raw.retainerMonthlyMinor;
+  if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount <= 0)
+    return {
+      ok: false,
+      errors: [
+        {
+          field: 'retainerMonthlyMinor',
+          message: 'must be the monthly amount in whole cents above 0',
+        },
+      ],
+    };
+  return { ok: true, value: { retainer: true, retainerMonthlyMinor: amount } };
+}
