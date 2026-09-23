@@ -15,6 +15,7 @@ import {
 } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
+  channelOf,
   currentMembership,
   invalid,
   UUID,
@@ -142,7 +143,11 @@ export function registerBriefRoutes(app: FastifyInstance, options: ServerOptions
           subjectTable: 'briefs',
           subjectId: row.id,
           requestId: request.id,
-          payload: { via: 'web', version: row.version, from: session ? 'discovery' : 'empty' },
+          payload: {
+            via: channelOf(request),
+            version: row.version,
+            from: session ? 'discovery' : 'empty',
+          },
         });
         return row;
       });

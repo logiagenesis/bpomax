@@ -63,11 +63,11 @@ export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
 export interface SubmittableProposal {
   readonly status: ProposalStatus;
   readonly approvedBy: string | null;
-  readonly approvedVia: 'telegram' | 'web' | 'auto' | null;
+  readonly approvedVia: 'telegram' | 'web' | 'auto' | 'mcp' | null;
 }
 
 export type ApprovalCheck =
-  | { readonly ok: true; readonly via: 'telegram' | 'web' | 'auto' }
+  | { readonly ok: true; readonly via: 'telegram' | 'web' | 'auto' | 'mcp' }
   | {
       readonly ok: false;
       readonly reason: 'not_approved' | 'already_submitted' | 'approval_incomplete';

@@ -63,6 +63,15 @@ export interface ServerOptions {
   readonly fx?: { quote(from: string, to: string): Promise<FxQuote> } | null;
 }
 
+/**
+ * The channel a request came through: `mcp` when the MCP server sends
+ * `x-arbitron-channel: mcp` (ARB-330), `web` otherwise. It labels an approval; the person
+ * approving is always the signed-in one, whatever the channel.
+ */
+export function channelOf(request: FastifyRequest): 'web' | 'mcp' {
+  return request.headers['x-arbitron-channel'] === 'mcp' ? 'mcp' : 'web';
+}
+
 export interface FieldProblem {
   readonly field: string;
   readonly message: string;

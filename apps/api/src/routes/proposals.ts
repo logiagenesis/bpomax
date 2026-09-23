@@ -2,6 +2,7 @@ import { canApprove, validateProposalEdit, validateRejection } from '@arbitron/c
 import { recordEvent, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
+  channelOf,
   currentMembership,
   invalid,
   UUID,
@@ -100,14 +101,15 @@ async function approveOne(
   me: Membership,
   id: string,
   requestId: string,
+  via: 'web' | 'mcp' = 'web',
 ): Promise<ProposalRow> {
   const before = await loadProposal(tx, id);
   if (!before) throw refuse(404, 'no such bid');
   if (before.status !== 'queued') notQueued(before.status);
   const { rows } = await tx.query<{ id: string }>(
-    `update proposals set status = 'approved', approved_by = $2, approved_via = 'web'
+    `update proposals set status = 'approved', approved_by = $2, approved_via = $3::approval_channel
      where id = $1 and status = 'queued' returning id`,
-    [id, me.userId],
+    [id, me.userId, via],
   );
   if (!rows[0]) throw refuse(403, 'you do not have permission to approve bids in this org');
   await recordEvent(tx, {
@@ -117,7 +119,7 @@ async function approveOne(
     subjectTable: 'proposals',
     subjectId: id,
     requestId,
-    payload: { via: 'web', amount_minor: Number(before.amount_minor), currency: before.currency },
+    payload: { via, amount_minor: Number(before.amount_minor), currency: before.currency },
   });
   return (await loadProposal(tx, id))!;
 }
@@ -185,12 +187,55 @@ export function registerProposalRoutes(app: FastifyInstance, options: ServerOpti
     try {
       const result = await withUser(options.db, authUserId, async (tx) => {
         const me = await approver(tx);
-        const proposal = await approveOne(tx, me, id, request.id);
+        const proposal = await approveOne(tx, me, id, request.id, channelOf(request));
         return { proposal, biddingPaused: await isPaused(tx) };
       });
       if (options.enqueue?.submit)
         await options.enqueue.submit({ proposalId: id, requestId: request.id });
       return reply.send({ ...result, queued: Boolean(options.enqueue?.submit) });
+    } catch (error) {
+      return reply.code(statusOf(error)).send({ error: messageOf(error) });
+    }
+  });
+
+  /**
+   * Hands an approved bid to the sender again (ARB-330's submit_bid): after a pause, a
+   * failure the platform may not repeat, or a queue that was down at approval. The submit
+   * worker still holds the live gate and the allowance (ARB-044); nothing is sent here, and
+   * a bid that is not approved is refused.
+   */
+  app.post('/v1/proposals/:id/submit', async (request, reply) => {
+    const authUserId = await options.authenticate(request);
+    if (!authUserId) return reply.code(401).send({ error: 'not signed in' });
+    const { id } = request.params as { id: string };
+    if (!UUID.test(id)) return reply.code(400).send({ error: 'id is not a uuid' });
+    try {
+      await withUser(options.db, authUserId, async (tx) => {
+        const me = await approver(tx);
+        const before = await loadProposal(tx, id);
+        if (!before) throw refuse(404, 'no such bid');
+        if (before.status === 'queued')
+          throw refuse(409, 'This bid is waiting for approval. Approve it first.');
+        if (before.status === 'submitted') throw refuse(409, 'This bid has already been sent.');
+        if (before.status !== 'approved')
+          throw refuse(409, `This bid is ${before.status}, so it is not sent.`);
+        if (!options.enqueue?.submit)
+          throw refuse(
+            503,
+            'The sender is not running here, so the bid cannot be handed to it now.',
+          );
+        await recordEvent(tx, {
+          orgId: me.orgId,
+          type: 'proposal.submit_requested',
+          actorUserId: me.userId,
+          subjectTable: 'proposals',
+          subjectId: id,
+          requestId: request.id,
+          payload: { via: channelOf(request) },
+        });
+      });
+      await options.enqueue!.submit!({ proposalId: id, requestId: request.id });
+      return reply.code(202).send({ queued: true });
     } catch (error) {
       return reply.code(statusOf(error)).send({ error: messageOf(error) });
     }

@@ -1826,3 +1826,38 @@ Decision:
 Why: docs/01 section A step 9 ("realised margin, reply rate and win rate per category,
 template, supplier and search") and the ticket's acceptance, "Figures verified against raw
 SQL in tests".
+
+## D-062 — MCP server: its own app over the API with the operator's token; approvals recorded as `mcp`; submit_bid hands an approved bid back
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-330, session …tJv8)
+
+Decision:
+
+- The MCP server is `apps/mcp`, on the official TypeScript SDK (`@modelcontextprotocol/sdk`
+  1.30.1), speaking stdio. Each of the eleven tools in docs/01 section I is one HTTP call
+  to an existing API route with the operator's own Supabase token, so roles, RLS, the
+  approval rules and the live gate are the API's, unchanged. The MCP server holds no
+  database connection and no service key.
+- It sends `x-arbitron-channel: mcp`; the API's `channelOf` reads it to label the
+  approval (`approval_channel` gains `mcp`, 0029) and the `via` of the events the tools
+  cause. The approver is always the token's person; the header only labels the channel,
+  so sending it from elsewhere changes a label, never who approved. The sender treats an
+  `mcp` approval as a person's, like `web` and `telegram`, not as an automatic one.
+- `approve_item` takes a kind (bid, reply, sourcing post) and calls that item's approve
+  route. `submit_bid` is separate: `POST /v1/proposals/:id/submit` hands an already
+  approved bid to the sender again (after a pause, a queue that was down, or a refusal the
+  platform may not repeat); a bid waiting for approval is refused. `enqueueSubmit` now
+  clears a finished job with the same id first, since BullMQ otherwise ignored the add and
+  the bid never ran; the worker already refuses to send a bid twice.
+- Two routes were added for the tools: `GET /v1/jobs/:id` (the job with its latest
+  estimate in full) and `POST /v1/jobs/:id/score`. `estimate_delivery` reports only the
+  stored estimate and margin, and says when there is none; it never works one out itself.
+- A sign-in token expires. A long-lived credential for MCP (a personal access token or a
+  device sign-in) is not built: it would be a new way into the API and needs the owner's
+  say. Until then the README tells the operator to paste a fresh token.
+
+Why: docs/01 section I lists the tools; ARB-330's acceptance is "Each tool callable in an
+automated test" (`apps/mcp/src/server.test.ts` calls all eleven through the SDK against
+the real API and Postgres), and docs/01's rule that every outbound action needs a named
+person's approval holds whichever client asks.

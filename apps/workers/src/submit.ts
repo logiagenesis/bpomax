@@ -70,7 +70,7 @@ interface ProposalRow {
   job_id: string;
   status: 'draft' | 'queued' | 'approved' | 'rejected' | 'submitted' | 'failed';
   approved_by: string | null;
-  approved_via: 'telegram' | 'web' | 'auto' | null;
+  approved_via: 'telegram' | 'web' | 'auto' | 'mcp' | null;
   body: string;
   amount_minor: string;
   currency: string;
@@ -394,7 +394,17 @@ export function createSubmitProcessor(deps: SubmitDeps) {
     });
 }
 
-/** One submission per proposal: BullMQ drops an add whose id is already queued. */
-export function enqueueSubmit(queue: Queue, data: SubmitJobData) {
-  return queue.add('submit', data, { jobId: `submit__${data.proposalId}` });
+/**
+ * One submission per proposal at a time: BullMQ drops an add whose id is already waiting
+ * or running. A finished job under that id (the queue keeps the recent ones) would drop the
+ * add too, so a bid approved again after an edit, or handed back by submit_bid (ARB-330),
+ * would never run; the finished one is removed first. The worker is safe to run again: a
+ * bid already sent is not sent twice (`already_submitted`, and the external call on record).
+ */
+export async function enqueueSubmit(queue: Queue, data: SubmitJobData) {
+  const jobId = `submit__${data.proposalId}`;
+  const earlier = await queue.getJob(jobId);
+  if (earlier && ((await earlier.isCompleted()) || (await earlier.isFailed())))
+    await earlier.remove();
+  return queue.add('submit', data, { jobId });
 }

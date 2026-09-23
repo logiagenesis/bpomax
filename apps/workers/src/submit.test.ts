@@ -3,7 +3,7 @@ import type { BidPayload } from '@arbitron/core';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
-import { QueueEvents, UnrecoverableError } from 'bullmq';
+import { QueueEvents, UnrecoverableError, type Job } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEAD_LETTER_QUEUE, closeQueues, createQueues, redisConnection } from './queues.js';
 import { startWorker } from './runtime.js';
@@ -65,7 +65,7 @@ async function insertProposal(
   jobId: string,
   fields: {
     status?: string;
-    approvedVia?: 'web' | 'telegram' | 'auto' | null;
+    approvedVia?: 'web' | 'telegram' | 'auto' | 'mcp' | null;
     approvedBy?: string | null;
   } = {},
 ): Promise<string> {
@@ -302,6 +302,20 @@ describe('live, with a client', () => {
     ]);
   });
 
+  it('treats a bid approved through MCP as a person’s approval, not an automatic one', async () => {
+    await setLive(true);
+    await setAllowance(50);
+    // No scanner: an automatic approval would be refused for want of one (no_scanner).
+    const proposalId = await insertProposal(await insertJob('mcp'), { approvedVia: 'mcp' });
+    const placer = new ScriptedPlacer();
+    const result = await submitProposal(
+      { db, liveMode: true, placer, now: () => NOW },
+      { proposalId },
+    );
+    expect(result).toMatchObject({ status: 'submitted' });
+    expect(placer.placed).toHaveLength(1);
+  });
+
   it('is blocked, and sends nothing, without a bid allowance or with it spent', async () => {
     await setLive(true);
     await setAllowance(null);
@@ -516,6 +530,50 @@ describe('on the queue', () => {
       expect(again.id).toBe(queued.id);
       const result = await queued.waitUntilFinished(events, 10_000);
       expect(result).toMatchObject({ status: 'submitted', platformRef: 'bid-1' });
+      expect(placer.placed).toHaveLength(1);
+    } finally {
+      await worker.close();
+      await events.close();
+      for (const queue of Object.values(queues)) await queue.obliterate({ force: true });
+      await closeQueues(queues);
+    }
+  }, 30_000);
+
+  it('runs a bid handed back after its first run finished, and still sends it only once', async () => {
+    await setLive(true);
+    await setAllowance(50);
+    const prefix = `arb-test-${randomUUID()}`;
+    const queues = createQueues({ connection, prefix, attempts: 1, backoffMs: 10 });
+    const events = new QueueEvents('submit', { connection, prefix });
+    await events.waitUntilReady();
+    const placer = new ScriptedPlacer();
+    let live = false;
+    const worker = startWorker(
+      'submit',
+      (job: Job<{ proposalId: string }>) =>
+        submitProposal({ db, liveMode: live, placer, now: () => NOW }, job.data),
+      { connection, prefix, deadLetter: queues[DEAD_LETTER_QUEUE] },
+    );
+    try {
+      const proposalId = await insertProposal(await insertJob('handed-back'));
+      // First run: LIVE_MODE off in the process, so it is blocked and the job finishes.
+      const first = await enqueueSubmit(queues.submit, { proposalId });
+      expect(await first.waitUntilFinished(events, 10_000)).toMatchObject({
+        status: 'blocked',
+        reason: 'live_mode_off',
+      });
+      expect(placer.placed).toHaveLength(0);
+      // Handed back once live: the finished job no longer swallows the add.
+      live = true;
+      const second = await enqueueSubmit(queues.submit, { proposalId });
+      expect(await second.waitUntilFinished(events, 10_000)).toMatchObject({
+        status: 'submitted',
+      });
+      // Handed back again: it runs, finds the bid sent, and sends nothing.
+      const third = await enqueueSubmit(queues.submit, { proposalId });
+      expect(await third.waitUntilFinished(events, 10_000)).toMatchObject({
+        status: 'already_submitted',
+      });
       expect(placer.placed).toHaveLength(1);
     } finally {
       await worker.close();

@@ -22,6 +22,7 @@ export const EVENT_TYPES = [
   'scanner.polled',
   // the pipeline
   'job.ingested',
+  'job.score_requested',
   'job.scored',
   'estimate.created',
   'margin.evaluated',
@@ -31,6 +32,7 @@ export const EVENT_TYPES = [
   'proposal.edited',
   'proposal.approved',
   'proposal.rejected',
+  'proposal.submit_requested',
   'proposal.submitted',
   'pipeline.stage_changed',
   'pipeline.retainer_changed',
