@@ -48,7 +48,7 @@ Blocker references point to 02-BLOCKERS.md.
 
 | ID | Ticket | Depends | Blockers | Acceptance criteria | Status | SHA |
 |---|---|---|---|---|---|---|
-| ARB-120 | Inbox sync: threads and messages from connected account | 099 | T-01 | New sandbox message appears in app within one interval and alerts Telegram | TODO | |
+| ARB-120 | Inbox sync: threads and messages from connected account | 099 | T-01 | New sandbox message appears in app within one interval and alerts Telegram | IN PROGRESS (claimed by session …tJv8 at 09:12 UTC 23/09/2026, on branch `claude/beautiful-tesla-b6goej`: inbox sync against the in-process stand-in of Freelancer.com, every endpoint cited from the official docs (D-036)) | |
 | ARB-121 | Auto-reply once per thread when operator offline | 120 | D-08 | Second inbound message never triggers a second auto-reply (test) | TODO | |
 | ARB-122 | Outbound messages require approval; LIVE_MODE gate | 120 | — | No message leaves without approval event (test) | TODO | |
 | ARB-130 | Discovery sessions: versioned question set, batched questions, completeness % | 122 | — | Completeness updates as answers are captured; questions never sent all at once | TODO | |
