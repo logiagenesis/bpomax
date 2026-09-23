@@ -3,8 +3,9 @@
 Per docs/05 section 1. Every control on the page, and the Playwright test (in
 `e2e/sourcing.spec.ts`) that exercises it. The API is an in-memory copy, at the network
 edge, of `apps/api/src/routes/sourcing.ts` (tested against real Postgres in
-`routes/sourcing.test.ts`): `GET /v1/sourcing-requests`, `GET /v1/sourcing-requests/:id`
-and `PATCH /v1/sourcing-requests/:id/candidates/:candidateId`. The scores shown are the
+`routes/sourcing.test.ts`): `GET /v1/sourcing-requests`, `GET /v1/sourcing-requests/:id`,
+`PATCH /v1/sourcing-requests/:id/candidates/:candidateId` and, for ARB-204,
+`POST /v1/sourcing-requests/:id/candidates/:candidateId/reprice`. The scores shown are the
 ones hand-worked in `packages/core/src/sourcing.test.ts`. A request starts from the
 conversations page (Start sourcing, audited in `conversations.md`).
 
@@ -13,6 +14,7 @@ conversations page (Start sourcing, audited in `conversations.md`).
 | Link, nav links ×8, Sign out | as dashboard.md | as dashboard.md | `aria-current="page"` on Sourcing | — | — | — | — | Yes | lists the requests with where each stands, and every link goes somewhere | ✅ |
 | Button | Refresh | Read the requests again | `GET /v1/sourcing-requests` | Spinner, aria-busy, disabled | "Loaded N sourcing requests." / "No sourcing requests yet." | "Not signed in…" / "Could not reach the API…" / the API's message | While busy | Yes | lists the requests…; an empty list says what to do | ✅ |
 | Button (per request) | Open (aria-label "Open the sourcing request for <brief>") | Show the ranking | `GET /v1/sourcing-requests/:id`; row marked `aria-current`; `?request=` in the address bar | Spinner, aria-busy, disabled | "Opened the sourcing request for <brief>: N suppliers ranked, M not ranked." | The API's message as it is ("…no such sourcing request.") | While busy | Yes | Open shows the ranking in order…; a linked view opens its request; a request the API cannot find says so | ✅ |
+| Button (per candidate) | Reprice (aria-label "Reprice the bid with <supplier>’s quote") | Judge the bid's margin with this candidate's quote as the supplier cost | `POST …/candidates/:id/reprice` (202); the reprice worker writes a `candidate_quote` estimate and a margin evaluation (ARB-204, D-056); the request re-read; the Margin cell shows the stored margin and whether it clears the rule, or "Not priced: <reason>" with the rules named | Spinner, aria-busy, disabled | "Asked for the bid to be priced with <supplier>’s quote. The margin shows in the row once the worker has run; reopen the request to see it." | The API's refusal as it is (503 while the workers are not running, B-12; 409 with no quote or no job) | For a viewer (title says so); a candidate with no quote (title says so); while busy | Yes | Reprice asks the API for the candidate’s quote, then shows the margin…; a reprice blocked by an unanswered rule says which rule…; the API’s refusal to reprice is shown as it is; Reprice is closed to a viewer…; Reprice is closed to a candidate with no quote… | ✅ |
 | Button (per candidate) | Shortlist / Remove (aria-label "Shortlist <supplier>" / "Remove <supplier> from the shortlist") | Add the supplier to the shortlist, or take it off | `PATCH …/candidates/:id` with `{ shortlisted }`; the request's status follows (open ↔ shortlisting); the list re-read | Spinner, aria-busy, disabled | "Shortlisted <supplier>." / "Removed <supplier> from the shortlist." | The API's refusal as it is | Once a supplier is chosen or the request is closed (title says which); for a viewer (title says so); while busy | Yes | Shortlist and Remove ask the API…; the API's refusal is shown as it is; a request with a supplier chosen keeps its shortlist fixed…; a viewer can read everything but not shortlist | ✅ |
 
 
@@ -37,7 +39,11 @@ Posts panel (ARB-202, `apps/web/src/sourcing-posts.js`). The API is an in-memory
 Figures (docs/05 section 3): each rate is `formatMoney` of the rate card's stored minor
 units, fixed or an hour as the brief is priced; the score is the stored total out of 100
 with its five stored parts; every reason is the sentence stored with the candidate when it
-was ranked. Nothing is recalculated on the page. The weights are named constants in
+was ranked. The Margin cell is the evaluation the reprice worker stored for the
+candidate's latest priced quote: `formatMoney` of its margin and `formatPercent` of its
+stored percentage, with "Clears the margin rule." or "Below the margin rule."; while a rule
+is unanswered it says "Not priced" and names the rules (docs/02 D-02, D-03, T-02), with no
+figure. Nothing is recalculated on the page. The weights are named constants in
 `@arbitron/core` (rate 40, turnaround 20, quality 20, time zone 10, payment after delivery
 10) and every score is hand-worked in a test.
 

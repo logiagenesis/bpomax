@@ -1627,3 +1627,47 @@ endpoint, field or fee that is not documented or supplied.
 Consequences: the ticket's own clause, a sandbox employer project, waits on B-03 (with the
 `fln:project_create` scope) and B-04 (a sandbox employer account). Going live waits on
 T-01 as for bids.
+
+## D-056 — Repricing with a candidate's quote: a new estimate judged by the same engine, a bid on our own project pays the employer fee, an alert only on a breach
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-204, session …tJv8)
+
+Decision:
+
+- The reprice worker (`apps/workers/src/reprice.ts`) turns a candidate's quote into a
+  `delivery_estimates` row with method `candidate_quote` (low = expected = high = the
+  cost, the candidate and its supplier recorded), for the job behind the request
+  (request → brief → thread → job), and hands that estimate to the ARB-041 margin worker
+  unchanged. The same rules, the same blocks while a rule is missing (D-029), no default.
+  A blocked reprice keeps the estimate and writes no evaluation.
+- One estimate per candidate and cost: running it again at the same cost changes nothing
+  ("unchanged"); a changed quote writes a new estimate and a new evaluation, so the
+  history of a candidate's prices is kept.
+- A bid on our own Freelancer.com project (a candidate with a bid id, ARB-203) costs its
+  quote plus the employer's project fee, which docs/02 T-02 names ("for employers (when
+  we post sourcing projects)"). The fee is the fee table's `freelancer`/`fixed`/`employer`
+  rule, applied as the engine applies any fee (`feeOn` in core: the percentage, or the
+  minimum when that is more). Without that rule nothing is priced and the block names it;
+  a minimum in another currency needs the FX provider (B-10). A supplier from the
+  database is priced at its rate card as quoted: no channel fee is assumed for Upwork or
+  Fiverr, which the owner has not supplied.
+- Every reprice is one `margin.repriced` event on the candidate: the quote, the cost, the
+  employer fee's line with its source page when there is one, and the margin before (the
+  job's latest evaluation) and after; or the block or skip with its reason.
+- A margin that fails the rule sends a plain card to every linked owner or operator chat
+  (`apps/telegram/src/reprice.ts`, the ARB-050 bot's send, behind its token, B-09). A
+  passing margin sends nothing; the event is the record either way.
+- A reprice is asked for when a bid is collected new or at a changed price (the bid
+  collector's `repriceQueue`), and from the Reprice button on the sourcing page's
+  candidate row (`POST /v1/sourcing-requests/:id/candidates/:candidateId/reprice`, 202,
+  503 while the workers are not running). The row shows the candidate's latest stored
+  margin, or "Not priced" with the rules named.
+
+Why: docs/01 section E ("reprice — candidate quote received — recomputes estimate and
+margin with the real quote") and the ticket's acceptance ("Margin recalculated and change
+logged; alert fires on breach"); rule 6: no fee or figure that is not supplied.
+
+Consequences: until T-02 (both sides), D-02 and D-03 are answered, every reprice records
+`blocked` naming them, as the margin engine does for bids. The alert reaches Telegram once
+B-09 is set; the worker runs where the other workers run (B-12).

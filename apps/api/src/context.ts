@@ -23,6 +23,12 @@ export interface Enqueue {
   /** ARB-203: post an approved Freelancer.com sourcing post, and read its bids. */
   readonly sourcingPost?: (data: { postId: string; requestId?: string }) => Promise<unknown>;
   readonly sourcingCollect?: (data: { postId: string; requestId?: string }) => Promise<unknown>;
+  /** ARB-204: price a candidate's quote against the job's margin rule. */
+  readonly reprice?: (data: {
+    candidateId: string;
+    quoteMinor: string;
+    requestId?: string;
+  }) => Promise<unknown>;
 }
 
 export interface ServerOptions {

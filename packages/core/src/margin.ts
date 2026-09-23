@@ -200,6 +200,23 @@ export function percentOf(amountMinor: number, percent: number): number {
   return Number(divRoundHalfUp(BigInt(amountMinor) * milli, 100_000n));
 }
 
+/**
+ * A platform's fee on an amount under one fee rule: the rule's percentage, or its minimum
+ * when that is more. `minimumMinor` is the rule's minimum already in the amount's currency
+ * (the caller converts it at a stored rate), or null when the rule has none. The margin
+ * engine applies the same rule to the client's price (the freelancer side); the reprice
+ * worker applies it to a bid on our own project (the employer side, ARB-204).
+ */
+export function feeOn(
+  amountMinor: number,
+  rule: Pick<FeeRule, 'percent'>,
+  minimumMinor: number | null,
+): { readonly feeMinor: number; readonly minimumApplied: boolean } {
+  const byPercent = percentOf(amountMinor, rule.percent);
+  const minimumApplied = minimumMinor !== null && minimumMinor > byPercent;
+  return { feeMinor: minimumApplied ? minimumMinor : byPercent, minimumApplied };
+}
+
 /** How many decimals an FX rate carries: `margin_evaluations.fx_rate_used` is numeric(18, 8). */
 export const FX_RATE_SCALE = 8;
 
@@ -298,10 +315,11 @@ interface Lines {
 }
 
 function linesAt(price: number, inputs: MarginInputs, abroad: boolean): Lines {
-  const feeByPercent = percentOf(price, inputs.fee.percent);
-  const feeMinimumApplied =
-    inputs.feeMinimumMinor !== null && inputs.feeMinimumMinor > feeByPercent;
-  const fee = feeMinimumApplied ? inputs.feeMinimumMinor! : feeByPercent;
+  const { feeMinor: fee, minimumApplied: feeMinimumApplied } = feeOn(
+    price,
+    inputs.fee,
+    inputs.feeMinimumMinor,
+  );
   const buffer = abroad ? percentOf(price, inputs.fxBufferPercent) : 0;
   const margin = price - fee - inputs.supplierCostMinor - buffer - inputs.toolCostMinor;
   const marginHome = abroad ? convertMinor(margin, inputs.fxToHome!) : margin;

@@ -12,9 +12,9 @@ import {
 /**
  * ARB-201: the sourcing page. The API is an in-memory copy, at the network edge, of
  * routes/sourcing.ts (tested against real Postgres in routes/sourcing.test.ts):
- * GET /v1/sourcing-requests, GET /v1/sourcing-requests/:id and
- * PATCH /v1/sourcing-requests/:id/candidates/:candidateId. The scores are the ones
- * hand-worked in packages/core/src/sourcing.test.ts.
+ * GET /v1/sourcing-requests, GET /v1/sourcing-requests/:id,
+ * PATCH /v1/sourcing-requests/:id/candidates/:candidateId and its /reprice (ARB-204). The
+ * scores are the ones hand-worked in packages/core/src/sourcing.test.ts.
  */
 const REQUEST = 'aaaaaaaa-0000-4000-8000-000000000071';
 const THANDI = 'aaaaaaaa-0000-4000-8000-000000000081';
@@ -135,13 +135,38 @@ interface Options {
   posts?: Record<string, unknown>[];
   /** The API's answer to a post edit, in place of the stand-in's own. */
   postEdit?: { status: number; json: unknown };
+  /** A candidate's margin and last reprice, by candidate id (ARB-204). */
+  margins?: Record<string, { margin: unknown; reprice: unknown }>;
+  /** The API's answer to Reprice, in place of the stand-in's own. */
+  reprice?: { status: number; json: unknown };
 }
+
+/** What the reprice worker leaves for Thandi Web's R9 000,00 against a R10 300,00 budget. */
+const THANDI_PRICED = {
+  margin: {
+    evaluationId: 'e1',
+    currency: 'ZAR',
+    marginMinor: '30000',
+    marginPct: '2.913',
+    passed: false,
+    reason: 'margin 2.913% is below the 20.000% minimum',
+    at: '2026-09-23T12:40:00Z',
+  },
+  reprice: { outcome: 'ok', reason: null, message: null, detail: [], at: '2026-09-23T12:40:00Z' },
+};
 
 async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
   await signedIn(page);
   let shortlisted: string[] = [];
   const posts = [...(options.posts ?? [])];
-  const current = () => request(shortlisted, options.partial ?? {});
+  const margins = { ...(options.margins ?? {}) };
+  const current = () => {
+    const r = request(shortlisted, options.partial ?? {});
+    return {
+      ...r,
+      candidates: r.candidates.map((c) => ({ ...c, ...(margins[c.id] ?? {}) })),
+    };
+  };
   const summary = () => {
     const { candidates: _candidates, ...rest } = current();
     return rest;
@@ -197,6 +222,12 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
         if (action === 'close') Object.assign(row, { status: 'closed' });
         if (action === 'collect') return route.fulfill({ status: 202, json: { queued: true } });
         return route.fulfill({ json: { post: row, queued: false } });
+      },
+      'POST /v1/sourcing-requests/:id/candidates/:candidateId/reprice': (req, route) => {
+        if (options.reprice) return route.fulfill(options.reprice);
+        const candidate = req.path.split('/').at(-2) ?? '';
+        if (candidate === THANDI) margins[THANDI] = THANDI_PRICED;
+        return route.fulfill({ status: 202, json: { queued: true } });
       },
       'PATCH /v1/sourcing-requests/:id/candidates/:candidateId': (req, route) => {
         if (options.patch) return route.fulfill(options.patch);
@@ -365,6 +396,85 @@ test('a viewer can read everything but not shortlist', async ({ page }) => {
     await expect(button).toBeDisabled();
     await expect(button).toHaveAttribute('title', 'Your role can view sourcing but not change it.');
   }
+});
+
+test('Reprice asks the API for the candidate’s quote, then shows the margin it gives against the rule', async ({
+  page,
+}) => {
+  const requests = await openRequest(page);
+  const row = page.locator(`#candidate-rows tr[data-id="${THANDI}"]`);
+  await expect(row).toContainText('Not priced yet');
+  await page.getByRole('button', { name: 'Reprice the bid with Thandi Web’s quote' }).click();
+  await expect(page.locator('#request-status')).toHaveText(
+    'Asked for the bid to be priced with Thandi Web’s quote. The margin shows in the row once the worker has run; reopen the request to see it.',
+  );
+  const asked = requests.filter((r) => r.method === 'POST' && r.path.endsWith('/reprice'));
+  expect(asked.map((r) => r.path)).toEqual([
+    `/v1/sourcing-requests/${REQUEST}/candidates/${THANDI}/reprice`,
+  ]);
+  // Hand-worked in THANDI_PRICED: R300,00 is 2,9% of the budget, below the rule.
+  const figure = row.locator('[data-margin]');
+  await expect(figure).toHaveText('R300,00 (2,9%)');
+  await expect(figure).toHaveAttribute('data-margin', 'bad');
+  await expect(row).toContainText('Below the margin rule.');
+});
+
+test('a reprice blocked by an unanswered rule says which rule, and invents no figure', async ({
+  page,
+}) => {
+  await openRequest(page, {
+    margins: {
+      [NORD]: {
+        margin: null,
+        reprice: {
+          outcome: 'blocked',
+          reason: 'rules_missing',
+          message: null,
+          detail: ['min_margin_pct (docs/02 D-02)', 'fee_table (docs/02 T-02)'],
+          at: '2026-09-23T12:40:00Z',
+        },
+      },
+    },
+  });
+  const row = page.locator(`#candidate-rows tr[data-id="${NORD}"]`);
+  await expect(row.locator('[data-margin]')).toHaveText('Not priced: a margin rule is not set');
+  await expect(row).toContainText('min_margin_pct (docs/02 D-02); fee_table (docs/02 T-02)');
+  await expect(row).not.toContainText('%)');
+});
+
+test('the API’s refusal to reprice is shown as it is', async ({ page }) => {
+  await openRequest(page, {
+    reprice: {
+      status: 503,
+      json: {
+        error:
+          'The workers are not running here, so the quote cannot be priced now (docs/02 B-12).',
+      },
+    },
+  });
+  await page.getByRole('button', { name: 'Reprice the bid with Studio Nord’s quote' }).click();
+  await expect(page.locator('#request-status')).toHaveText(
+    'The workers are not running here, so the quote cannot be priced now (docs/02 B-12).',
+  );
+});
+
+test('Reprice is closed to a viewer, with the reason', async ({ page }) => {
+  await openRequest(page, { role: 'viewer' });
+  const button = page.getByRole('button', { name: 'Reprice the bid with Thandi Web’s quote' });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAttribute('title', 'Your role can view sourcing but not change it.');
+});
+
+test('Reprice is closed to a candidate with no quote, with the reason', async ({ page }) => {
+  const noQuote = candidates().map((c) => (c.id === NORD ? { ...c, quotedPriceMinor: null } : c));
+  await serve(page, { partial: { candidates: noQuote } });
+  await page.goto(`/sourcing.html?request=${REQUEST}`);
+  const closed = page.getByRole('button', { name: 'Reprice the bid with Studio Nord’s quote' });
+  await expect(closed).toBeDisabled();
+  await expect(closed).toHaveAttribute(
+    'title',
+    'This candidate has no quote yet, so there is nothing to reprice with.',
+  );
 });
 
 test('Draft a post writes the brief’s scope for the chosen platform, with no budget', async ({

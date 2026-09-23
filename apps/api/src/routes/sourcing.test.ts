@@ -1,4 +1,4 @@
-import { insertBriefVersion, listEvents, lockBrief } from '@arbitron/db';
+import { insertBriefVersion, listEvents, lockBrief, recordEvent } from '@arbitron/db';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
@@ -350,5 +350,149 @@ describe('reading and shortlisting', () => {
     });
     expect(viewer.statusCode).toBe(403);
     expect(await listEvents(db, { type: 'sourcing.shortlisted' })).toHaveLength(2);
+  });
+});
+
+describe('repricing a candidate (ARB-204)', () => {
+  it('asks the reprice worker for a candidate with a quote; says why when it cannot', async () => {
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/v1/sourcing-requests/${requestId}`,
+      headers: as(AUTH_A),
+    });
+    const [first, second] = detail.json().request.candidates as { id: string }[];
+    const url = (id: string) => `/v1/sourcing-requests/${requestId}/candidates/${id}/reprice`;
+
+    const noWorkers = await app.inject({
+      method: 'POST',
+      url: url(first!.id),
+      headers: as(AUTH_A),
+    });
+    expect(noWorkers.statusCode).toBe(503);
+    expect(noWorkers.json().error).toMatch(/B-12/);
+
+    const queued: unknown[] = [];
+    const withQueue = buildServer({
+      db,
+      authenticate: (request) => {
+        const header = request.headers['x-test-auth-user'];
+        return typeof header === 'string' ? header : null;
+      },
+      now: () => NOW,
+      enqueue: {
+        reprice: (data) => {
+          queued.push(data);
+          return Promise.resolve();
+        },
+      },
+    });
+    await withQueue.ready();
+    const asked = await withQueue.inject({
+      method: 'POST',
+      url: url(first!.id),
+      headers: as(AUTH_A),
+    });
+    expect(asked.statusCode).toBe(202);
+    expect(queued).toEqual([
+      { candidateId: first!.id, quoteMinor: '900000', requestId: expect.any(String) },
+    ]);
+
+    const viewer = await withQueue.inject({
+      method: 'POST',
+      url: url(first!.id),
+      headers: as(AUTH_VIEWER),
+    });
+    expect(viewer.statusCode).toBe(403);
+    const other = await withQueue.inject({
+      method: 'POST',
+      url: url(first!.id),
+      headers: as(AUTH_B),
+    });
+    expect(other.statusCode).toBe(404);
+
+    await db.query(`update supplier_candidates set quoted_price_minor = null where id = $1`, [
+      second!.id,
+    ]);
+    const noQuote = await withQueue.inject({
+      method: 'POST',
+      url: url(second!.id),
+      headers: as(AUTH_A),
+    });
+    expect(noQuote.statusCode).toBe(409);
+    expect(noQuote.json().error).toBe(
+      'This candidate has no quote yet, so there is nothing to reprice with.',
+    );
+    expect(queued).toHaveLength(1);
+    await withQueue.close();
+  });
+
+  it('shows each candidate’s latest priced margin and the last reprice’s outcome', async () => {
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/v1/sourcing-requests/${requestId}`,
+      headers: as(AUTH_A),
+    });
+    const [first, second] = detail.json().request.candidates as { id: string }[];
+    expect(detail.json().request.candidates[0]).toMatchObject({ margin: null, reprice: null });
+
+    // What the reprice worker leaves: an estimate from the quote, its evaluation, an event.
+    const estimate = await db.query<{ id: string }>(
+      `insert into delivery_estimates (org_id, job_id, category_slug, method, currency, low_minor, expected_minor,
+                                       high_minor, supplier_candidate_id)
+       values ($1, $2, 'wordpress', 'candidate_quote', 'ZAR', 900000, 900000, 900000, $3) returning id`,
+      [ORG_A, JOB, first!.id],
+    );
+    const evaluation = await db.query<{ id: string }>(
+      `insert into margin_evaluations (org_id, job_id, delivery_estimate_id, currency, client_budget_minor,
+         platform_fee_minor, supplier_cost_minor, fx_buffer_minor, margin_minor, margin_pct, min_margin_pct,
+         min_margin_zar_minor, passed, reason)
+       values ($1, $2, $3, 'ZAR', 1200000, 120000, 900000, 0, 180000, 15.000, 20.000, 50000, false,
+               'margin 15.000% is below the 20.000% minimum') returning id`,
+      [ORG_A, JOB, estimate.rows[0]!.id],
+    );
+    await recordEvent(db, {
+      orgId: ORG_A,
+      type: 'margin.repriced',
+      actorKind: 'system',
+      subjectTable: 'supplier_candidates',
+      subjectId: first!.id,
+      outcome: 'ok',
+      payload: { candidate: 'Thandi Web' },
+    });
+    await recordEvent(db, {
+      orgId: ORG_A,
+      type: 'margin.repriced',
+      actorKind: 'system',
+      subjectTable: 'supplier_candidates',
+      subjectId: second!.id,
+      outcome: 'blocked',
+      payload: { reason: 'rules_missing', detail: ['fee_table (docs/02 T-02)'] },
+    });
+
+    const after = await app.inject({
+      method: 'GET',
+      url: `/v1/sourcing-requests/${requestId}`,
+      headers: as(AUTH_VIEWER),
+    });
+    const [a, b] = after.json().request.candidates;
+    expect(a).toMatchObject({
+      margin: {
+        evaluationId: evaluation.rows[0]!.id,
+        currency: 'ZAR',
+        marginMinor: '180000',
+        marginPct: '15.000',
+        passed: false,
+        reason: 'margin 15.000% is below the 20.000% minimum',
+      },
+      reprice: { outcome: 'ok' },
+    });
+    expect(b).toMatchObject({
+      margin: null,
+      reprice: {
+        outcome: 'blocked',
+        reason: 'rules_missing',
+        detail: ['fee_table (docs/02 T-02)'],
+      },
+    });
   });
 });

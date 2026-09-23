@@ -4,7 +4,7 @@ import { createTestDatabase } from '@arbitron/db/testing';
 import { exchangeCode, freelancerConfig, type FreelancerConfig } from '@arbitron/freelancer';
 import { startFakeFreelancer, type FakeFreelancer } from '@arbitron/freelancer/fake';
 import type { PGlite } from '@electric-sql/pglite';
-import { UnrecoverableError } from 'bullmq';
+import { UnrecoverableError, type Queue } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   collectAllSourcingBids,
@@ -276,7 +276,16 @@ describe('collecting the bids', () => {
       { id: 901, bidder_id: 501, amount: 9000.5, period: 5 },
       { id: 902, bidder_id: 502, amount: 7500, period: 14 },
     ]);
-    expect(await collectSourcingBids(deps, { postId: posted })).toEqual({
+    // ARB-204: a new bid, or a changed price, is handed to the reprice queue; nothing else is.
+    const queued: { data: unknown; jobId: string | undefined }[] = [];
+    const repriceQueue = {
+      add: (_name: string, data: unknown, opts?: { jobId?: string }) => {
+        queued.push({ data, jobId: opts?.jobId });
+        return Promise.resolve({});
+      },
+    } as unknown as Queue;
+    const withReprice = { ...deps, repriceQueue };
+    expect(await collectSourcingBids(withReprice, { postId: posted })).toEqual({
       status: 'collected',
       added: 2,
       updated: 0,
@@ -323,11 +332,23 @@ describe('collecting the bids', () => {
       { id: 901, bidder_id: 501, amount: 8800, period: 4 },
       { id: 902, bidder_id: 502, amount: 7500, period: 14 },
     ]);
-    expect(await collectAllSourcingBids(deps)).toEqual({ posts: 1 });
+    expect(await collectAllSourcingBids(withReprice)).toEqual({ posts: 1 });
     expect((await candidates())[0]).toMatchObject({
       quoted_price_minor: '880000',
       turnaround_days: 4,
     });
+    const ids = (
+      await db.query<{ id: string; external_bid_id: string }>(
+        `select id, external_bid_id from supplier_candidates where sourcing_request_id = $1 order by external_bid_id`,
+        [requestId],
+      )
+    ).rows.map((r) => r.id);
+    expect(queued.map((q) => q.jobId)).toEqual([
+      `reprice__${ids[0]!}__900050`,
+      `reprice__${ids[1]!}__750000`,
+      `reprice__${ids[0]!}__880000`,
+    ]);
+    expect(queued[0]?.data).toEqual({ candidateId: ids[0] });
     expect(await candidates()).toHaveLength(2);
     expect(await listEvents(db, { type: 'supplier.candidate_added' })).toHaveLength(2);
   });
