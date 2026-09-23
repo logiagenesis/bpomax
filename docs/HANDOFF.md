@@ -7,16 +7,16 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 34 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203); 13 are TODO (099, 299, the rest of Phase 3, Phase 4). Nothing is BLOCKED
+- **Board:** 35 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203); 12 are TODO (099, 299, 300, 330, 340, 399, Phase 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `257dd7e` (PR #22, ARB-311, merged). The ARB-312 PR is open
+- **CI:** green on `main` at `1279e60` (PR #23, ARB-312, merged). The ARB-320 PR is open
   from `claude/beautiful-tesla-b6goej` and merges when green.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next ticket:** after ARB-312 merges, **ARB-320** (the analytics rollup and page).
-  ARB-299 waits like ARB-099. See section 6.
+- **Next ticket:** after ARB-320 merges, **ARB-330** (the MCP server). ARB-299 waits like
+  ARB-099. See section 6.
 
 ## 1. State of `main`
 
@@ -24,18 +24,18 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `257dd7e` = PR #22, ARB-311 payments and realised margin                               |
-| Open PR                | ARB-312 retainers, from `claude/beautiful-tesla-b6goej`                                |
-| Local checks at ARB-312 | lint, format, typecheck green; 931 unit tests (85 files) green; 202 + 27 Playwright tests green |
+| Last merge             | `1279e60` = PR #23, ARB-312 retainers                                                  |
+| Open PR                | ARB-320 analytics, from `claude/beautiful-tesla-b6goej`                                |
+| Local checks at ARB-320 | lint, format, typecheck green; 938 unit tests (87 files) green; 209 + 28 Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312 |
+| DONE                      | 30    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320 |
 | BUILT-PENDING-CREDENTIALS | 8     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12) |
-| TODO                      | 13    | 099, 299, 300, 320–399, Phase 4                             |
+| TODO                      | 12    | 099, 299, 300, 330, 340, 399, Phase 4                       |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -65,6 +65,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-310 | Delivery orders: Choose on the sourcing page opens one at the quote; milestones reconciled in core and by 0026's check; the handover checklist from the brief; forward-only moves; the pipeline page (board by stage) with the order; demo; 16 + 2 Playwright tests | D-058 |
 | ARB-311 | Payments: four kinds (0027), realised margin in core as docs/05 3.5 states it, the rate typed or from the FX provider (B-10) and never assumed, Paid when the client has paid the value, T-05's notice on a supplier abroad, the Payments panel on the pipeline page, demo; 6 + 1 Playwright tests | D-059 |
 | ARB-312 | Retainers: the pipeline's retainer toggle checked with `validateRetainer`, logged; the dashboard total tested against a hand sum and raw SQL; the demo dashboard sums the tab's retainers; 2 + 1 Playwright tests | D-060 |
+| ARB-320 | Analytics: the per-job view (0028, security_invoker), grouping in core, `GET /v1/analytics` verified against raw SQL, the analytics page, Analytics in the nav, demo; 7 Playwright tests | D-061 |
 
 ## 4. How to work here (what cost time this session)
 
@@ -113,21 +114,25 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-320 — analytics rollup and page.** Claim it on the board first. Acceptance:
-"Figures verified against raw SQL in tests". docs/01 names the figures: reply rate, win
-rate, cost per reply, and realised margin by category, template, supplier and scanner;
-section E has a `rollup` worker (the queue exists) and section I an analytics page. Read
-docs/01 sections D, E and I before designing, and define each figure's formula in core
-with its denominator stated (a rate with no denominator is "no data", never 0 %). What
-exists to count: proposals (submitted, their scanner via the job and their template via
-`template_id` if the column exists — check 0006), messages in (replies), pipeline items
-(won, lost), payments (realised margin via `realisedMargin`, ARB-311), delivery orders
-(supplier), jobs (category). "Cost per reply" needs a cost the docs/02 items may not
-supply (bid fees, T-03/B-13); if no cost is stored, show it as not available and say
-which input is missing, never an invented figure. Tests: each figure against a raw SQL
-query over fixture rows, hand-worked. Then ARB-330 (the MCP server), ARB-340 (templates
-page), and ARB-300 (Upwork: official docs through Firecrawl first, every endpoint cited,
-and the CI grep that no browser automation exists).
+**ARB-330 — MCP server with the tools of docs/01 section I; README setup for Claude
+Desktop and Claude Code.** Claim it on the board first. Acceptance: "Each tool callable
+in an automated test". The tools are named in docs/01 section I: search_jobs, score_job,
+estimate_delivery, draft_bid, approve_item, submit_bid, get_thread, build_brief,
+create_sourcing_post, list_suppliers, update_pipeline. Build it as a new app
+(`apps/mcp`) on the official MCP TypeScript SDK (`@modelcontextprotocol/sdk`; read its
+README through Firecrawl and pin the version you read), speaking stdio, each tool a thin
+call to the existing API routes with the user's token (so RLS, roles and the live gate
+hold exactly as on the web): search_jobs → `GET /v1/jobs`, score_job → the score route,
+draft_bid → the draft route, approve_item → the approve routes (bids, replies, posts),
+submit_bid → approval only (the submit worker and the live gate send; LIVE_MODE stays
+false), get_thread → `GET /v1/threads/:id`, build_brief → the brief draft route,
+create_sourcing_post → `POST /v1/sourcing-requests/:id/posts`, list_suppliers →
+`GET /v1/suppliers`, update_pipeline → `PATCH /v1/pipeline-items/:id`, estimate_delivery
+→ the estimate route. Test each tool through the SDK's in-memory transport against the
+API with PGlite. The README section says how to add it to Claude Desktop and Claude Code
+(cite the official docs for the config file shape). Then ARB-340 (templates page) and
+ARB-300 (Upwork: official docs through Firecrawl, every endpoint cited, the CI grep that
+no browser automation exists).
 
 ## 7. Loose ends
 
