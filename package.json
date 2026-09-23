@@ -16,11 +16,14 @@
     "test:watch": "vitest",
     "test:e2e": "pnpm build:web:e2e && playwright test --config e2e/playwright.config.ts",
     "build:web": "pnpm --filter @arbitron/web build",
-    "db:reset": "pnpm --filter @arbitron/db db:reset",
-    "db:types": "pnpm --filter @arbitron/db db:types",
+    "db:reset": "sh scripts/db-reset.sh",
+    "db:types": "UPDATE_TYPES=1 vitest run packages/db/src/typegen.test.ts",
     "build:web:e2e": "pnpm --filter @arbitron/web build:e2e",
     "compose:up": "docker compose up -d --wait --wait-timeout 240",
-    "compose:down": "docker compose down"
+    "compose:down": "docker compose down",
+    "db:types:supabase": "pnpm --filter @arbitron/db db:types:supabase",
+    "db:migrate": "sh scripts/db-migrate.sh",
+    "db:seed": "sh scripts/db-seed.sh"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -28,6 +31,7 @@
     "@playwright/test": "^1.57.0",
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
     "vitest": "^3.2.4"

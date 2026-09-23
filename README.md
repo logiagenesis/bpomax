@@ -53,6 +53,10 @@ says which, and which tickets each one holds up.
 
 ```bash
 pnpm compose:up             # Redis on 6379, Postgres on 54322; waits until both are healthy
+pnpm db:reset               # recreate the compose Postgres, apply every migration, then the seed
+pnpm db:migrate             # apply packages/db/migrations to DATABASE_URL
+pnpm db:seed                # service categories (and any owner-supplied price bands); safe to repeat
+pnpm db:types               # regenerate packages/db/src/types.generated.ts from the migrations
 pnpm --filter @arbitron/web dev    # front end on http://localhost:5173
 ```
 

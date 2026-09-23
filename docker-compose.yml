@@ -47,4 +47,6 @@ services:
 
 volumes:
   redis-data:
+  # Named outright so `pnpm db:reset` can drop it whatever the checkout's folder is called.
   postgres-data:
+    name: arbitron-postgres-data

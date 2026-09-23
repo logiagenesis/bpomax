@@ -981,3 +981,34 @@ Reason:
   with `POSTGRES_PASSWORD`. Overriding `POSTGRES_USER` made that script fail (CI run 54:
   role "supabase_admin" does not exist). The database is `postgres` on port 54322, the
   name and port the Supabase CLI uses locally, so one `DATABASE_URL` fits either.
+
+## D-038 — Database types are generated from the migrated schema; `pnpm db:reset` resets the compose Postgres
+
+Date: 23/09/2026
+Decided by: Claude Code (ARB-010, session …V4PPWs)
+
+Decision:
+
+- `packages/db/src/typegen.ts` reads the migrated schema (tables, columns, enums and
+  foreign keys from `information_schema` and `pg_catalog`). From that it writes
+  `packages/db/src/types.generated.ts` in the shape `supabase gen types typescript`
+  emits. `packages/db/src/typegen.test.ts` fails whenever the committed file differs
+  from what the migrations produce. `pnpm db:types` rewrites the file.
+- `pnpm db:types:supabase` is the drop-in for a hosted project. It runs
+  `supabase gen types typescript --linked` and needs B-06.
+- `pnpm db:reset` runs `scripts/db-reset.sh`. That script recreates the compose Postgres
+  with an empty volume (`arbitron-postgres-data`, now named outright), then runs
+  `pnpm db:migrate` and `pnpm db:seed`. It never touches a hosted project.
+- The old script ran `supabase db reset`, which could not work: the repository has no
+  `supabase/` directory, and the migrations live in `packages/db/migrations`.
+- `pnpm db:seed` pipes `buildSeedSql()` (ARB-013) into `psql`. `tsx` is a new root dev
+  dependency so the script can run the TypeScript seed builder.
+
+Reason:
+
+- ARB-010 asks for generated types to be committed. Waiting on B-06 would leave the app
+  typed by hand. The same schema, read back from the database the tests migrate, gives
+  the same types now, and the test keeps them honest after every migration.
+- The migrations apply cleanly to the `supabase/postgres` image in CI (run 55, compose
+  job). `db:reset` itself has not yet run in CI; docs/HANDOFF.md names that as the next
+  step.

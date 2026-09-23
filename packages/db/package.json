@@ -11,9 +11,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > src/types.generated.ts",
-    "db:seed": "node -e \"console.error('Wiring the seed into supabase db reset lands with C-01 (docs/BLOCKERS.md). Until then the seed is applied through buildSeedSql() in packages/db/src/seed.ts, which is covered by seed.test.ts.'); process.exit(1)\""
+    "db:types:supabase": "supabase gen types typescript --linked --schema public > src/types.generated.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2"

@@ -122,3 +122,14 @@ B-06 (sign-in and the generated types) and B-11/B-12 (the preview link Phase 1 n
   asserts the button is hidden on load, and that assertion fails without the fix.
 
 No unblocked tickets remain; the list in the entry above still holds.
+
+## 23/09/2026 — session …V4PPWs (ARB-004, then a handoff on the owner's instruction)
+
+- ARB-004 DONE at `ececea4`. CI runs 53 and 54 failed in the compose job. The
+  `supabase/postgres` image's own init script connects as `supabase_admin`, and
+  `POSTGRES_USER=postgres` had replaced that role. With the image's default kept (and the
+  database `postgres` on 54322, as the Supabase CLI has it), run 55's compose job was
+  green. It also applied all 16 migrations to the real Supabase image.
+- ARB-010 and ARB-013 were partly built and pushed unfinished: the generated types and
+  their drift test, and the `db:migrate`, `db:seed` and `db:reset` scripts (D-038). Work
+  stopped at the owner's instruction. docs/HANDOFF.md holds the exact next steps.
