@@ -1,4 +1,4 @@
-# HANDOFF — 23/09/2026, 17:30 UTC (19:30 SAST)
+# HANDOFF — 23/09/2026, 17:15 UTC (19:15 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -11,12 +11,14 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
   015, 020, 022, 070, 120, 203); 10 are TODO (099, 299, 300, 399, Phase 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `fc4325a` (PR #26, the `withUser` concurrency fix, D-063,
-  merged). The ARB-340 PR is open from `claude/beautiful-tesla-b6goej` and merges when green.
+- **CI:** green on `main` at `c8401e2` (PR #27, ARB-340, merged). No pull request is
+  open and no ticket is claimed: the session stopped on the owner's instruction after
+  ARB-340 merged. ARB-300 was claimed and released untouched (no code of it was pushed).
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next:** after ARB-340 merges, **ARB-300** (Upwork, built against a stand-in and
-  BUILT-PENDING-CREDENTIALS on B-14 and T-04). ARB-299 waits like ARB-099. See section 6.
+- **Next:** **ARB-300** (Upwork, built against a stand-in and BUILT-PENDING-CREDENTIALS
+  on B-14 and T-04); the Upwork documentation is already read and quoted in section 6.
+  ARB-299 waits like ARB-099.
 
 ## 1. State of `main`
 
@@ -24,8 +26,8 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `fc4325a` = PR #26, `withUser` concurrency fix (D-063)                                 |
-| Open PR                | ARB-340 templates page, from `claude/beautiful-tesla-b6goej`                           |
+| Last merge             | `c8401e2` = PR #27, ARB-340 templates page                                             |
+| Open PR                | None                                                                                    |
 | Local checks at ARB-340 | lint, format, typecheck green; 985 unit tests (92 files) green; 220 + 30 Playwright tests green |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
@@ -40,7 +42,7 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
 
-## 3. This session's tickets (all on `main` except the open PR)
+## 3. This session's tickets (all on `main`)
 
 | Ticket  | What landed                                                                                                     | Decisions      |
 | ------- | --------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -120,20 +122,73 @@ ticket it unblocks:
 **ARB-300 — Upwork read-only job ingest via the official API.** Claim it on the board
 first. Acceptance: "Jobs ingested with source=upwork; no browser automation anywhere in
 codebase (grep check in CI)". It waits on B-14 (Upwork API key approval) and T-04 (Upwork
-API terms and the agency/Business Manager rules), so build it against a stand-in and mark
-it BUILT-PENDING-CREDENTIALS. docs/01 section B: Upwork's API is GraphQL with OAuth2;
-RSS was discontinued on 20/08/2024; never automate a logged-in browser session. Read the
-official Upwork API documentation through Firecrawl before writing a single call, and
-cite every query, field and scope in code (the no-guessing rule); anything the docs do
-not state is not written. Add the CI step that fails on any browser-automation
-dependency or import (puppeteer, playwright outside `e2e/` and the dev dependency,
-selenium, webdriver). `jobs.platform` must accept `upwork` (check the enum), with the same
-per-org upsert and score hand-off as the Freelancer.com ingest (ARB-022). Then Phase 4 as
-far as it can be built without D-01, B-13 and B-15; each Phase 4 ticket names what it
-waits on.
+API terms and the agency/Business Manager rules): build it against a stand-in and mark it
+BUILT-PENDING-CREDENTIALS. `jobs.platform` already accepts `upwork` (0002).
+
+What the official documentation says, read on 23/09/2026 through Firecrawl from
+https://www.upwork.com/developer/documentation/graphql/api/docs/index.html (upwork.com is
+not reachable from the container; cite each anchor in code):
+
+- Endpoint `https://api.upwork.com/graphql` (`#welcome`). OAuth 2.0 (RFC 6749):
+  authorise at `GET https://www.upwork.com/ab/account-security/oauth2/authorize`
+  (`response_type=code`, `client_id`, `redirect_uri`; no `scope` parameter is listed),
+  token at `POST https://www.upwork.com/api/v3/oauth2/token` with `authorization_code` or
+  `refresh_token` (`#auth-authorizationCodeGrant-obtainingAccessToken`,
+  `#auth-refreshTokenGrant`). Access token 24 hours, refresh token 2 weeks since last use;
+  `Authorization: Bearer`. Client credentials is for enterprise accounts only.
+  `X-Upwork-API-TenantId` picks the organisation (`#auth-organizationId`).
+- Search: `marketplaceJobPostingsSearch(marketPlaceJobFilter:
+  MarketplaceJobPostingsSearchFilter, searchType: MarketplaceJobPostingSearchType,
+  sortAttributes: [MarketplaceJobPostingSearchSortAttribute])`
+  (`#query-marketplaceJobPostingsSearch`); `searchType` is always `USER_JOBS_SEARCH`;
+  sort `{ field: RECENCY }`. The older `marketplaceJobPostings` is deprecated. Filter
+  fields include `searchExpression_eq`, `skillExpression_eq`, `titleExpression_eq`,
+  `categoryIds_any`, `jobType_eq` (`HOURLY`/`FIXED`), `budgetRange_eq` and `hourlyRate_eq`
+  (`IntRange { rangeStart, rangeEnd }`), `verifiedPaymentOnly_eq`, `locations_any`,
+  `daysPosted_eq`, `pagination_eq` (`Pagination { after: String, first: Int! }`)
+  (`#definition-MarketplaceJobPostingsSearchFilter`).
+- Result: `MarketplaceJobPostingSearchConnection { totalCount, edges, pageInfo }`; edge
+  `MarketplaceJobpostingSearchEdge { cursor, node }` (lower-case p, as written); node
+  `MarketplaceJobPostingSearchResult` with `id`, `title`, `description`, `ciphertext`,
+  `createdDateTime`, `publishedDateTime`, `amount: Money` (null for hourly or unset),
+  `hourlyBudgetMin`/`hourlyBudgetMax: Money`, `skills { name prettyName }`,
+  `totalApplicants`, `category`, `subcategory`, `duration`, `experienceLevel`, and
+  `client { totalSpent: Money, verificationStatus, location { country city timezone },
+  totalHires, totalFeedback }` (`#definition-MarketplaceJobPostingSearchResult`,
+  `#definition-MarketplaceJobPostingSearchClientInfo`). `Money { rawValue: String,
+  currency: String, displayValue: String }` (`#definition-Money`).
+- Permission "Read marketplace Job Postings", and "Common Entities - Read-Only Access" for
+  every key (`#getting-started-application-permissions`). 300 requests a minute per IP,
+  429 beyond; a daily limit of 40,000 requests is part of the key review
+  (`#getting-started-preparation`).
+- **Terms that shape the design:** "Caching is not allowed for more than 24 hours" and "we
+  don't allow storing data for more than 24 hours" (terms at
+  https://www.upwork.com/legal#api). An Upwork job cannot sit in `jobs` like a
+  Freelancer.com one: it needs a 24-hour purge (or keep only what the terms allow) and
+  the owner's reading of T-04 before anything is stored. Record that as a decision and
+  in docs/BLOCKERS.md; do not guess what may be kept.
+- Key approval is reviewed; the stated conditions include identity verification, at
+  least $25,000 lifetime earnings or spend, a 90 % Job Success Score for freelancers and
+  agencies, and not using Upwork's name or marks (`#getting-started-preparation`). Add
+  them to B-14 for the owner.
+
+The CI check: a script (for example `scripts/check-no-browser-automation.sh`) run in the
+unit job, failing on any browser driver in a workspace manifest (only the root's
+`@playwright/test` is allowed, for `e2e/`) and on any import, require or `.launch(` of a
+driver outside `e2e/`; test it on throwaway trees with one planted finding each, and
+build the driver names in the test at run time so the test file is not itself a finding.
+Then Phase 4 as far as it can be built without D-01, B-13 and B-15.
 
 ## 7. Loose ends
 
+- **The workers' own transactions have the problem D-063 fixed in `withUser`.** Ten files
+  (`apps/workers/src/` margin, inbox-sync, draft-bid, auto-reply, ingest, submit,
+  estimate, score, brief-build, discovery, and `apps/telegram/src/engine.ts`) each run
+  `begin … commit` on the shared `db`. On a node-postgres `Pool` each statement can land
+  on a different connection. Before the workers get a production entry point (B-12),
+  export one `inTransaction(db, work)` from `packages/db` with `withUser`'s connection
+  handling (borrow from a pool, PGlite's own transaction, else take turns), pass `tx` into
+  each `work`, and test it as `packages/db/src/client.test.ts` tests `withUser`.
 - Work inside `withUser` must use the `tx` it is given: the outer connection now waits
   for the transaction (on PGlite, for ever), so a slip shows as a hanging test (D-063).
 - A sign-in token for the MCP server expires; a long-lived credential (a personal access
