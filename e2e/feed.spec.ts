@@ -88,6 +88,7 @@ const ALL = [READY, QUEUED, SKIP, FRESH];
 interface Options {
   role?: Role;
   queueBid?: { status: number; json: unknown };
+  jobs?: ReturnType<typeof job>[];
 }
 
 async function open(page: Page, options: Options = {}): Promise<Captured[]> {
@@ -99,9 +100,15 @@ async function open(page: Page, options: Options = {}): Promise<Captured[]> {
         const verdict = request.query.get('verdict');
         const limit = Number(request.query.get('limit') ?? 25);
         const offset = Number(request.query.get('offset') ?? 0);
-        const rows = ALL.filter((row) =>
-          !verdict ? true : verdict === 'unscored' ? row.verdict === null : row.verdict === verdict,
-        ).slice(offset, offset + limit);
+        const rows = (options.jobs ?? ALL)
+          .filter((row) =>
+            !verdict
+              ? true
+              : verdict === 'unscored'
+                ? row.verdict === null
+                : row.verdict === verdict,
+          )
+          .slice(offset, offset + limit);
         return route.fulfill({ json: { jobs: rows, page: { limit, offset } } });
       },
       'POST /v1/jobs/:id/queue-bid': (_request, route) =>
@@ -273,6 +280,20 @@ test('a viewer can read the feed but every Queue bid is off', async ({ page }) =
       'Your role can view the feed but not queue bids.',
     );
   }
+});
+
+test('an Upwork job is read only: Queue bid is off, saying to bid on Upwork itself', async ({
+  page,
+}) => {
+  await open(page, { jobs: [job({ title: 'Upwork build', platform: 'upwork' }), READY] });
+  const upwork = page.getByRole('button', { name: 'Queue bid for Upwork build' });
+  await expect(upwork).toBeDisabled();
+  await expect(upwork).toHaveAttribute(
+    'title',
+    'Upwork jobs are read only here: bid on Upwork itself (docs/01 section B).',
+  );
+  await expect(page.locator('#rows tr').first()).toContainText('upwork');
+  await expect(page.getByRole('button', { name: `Queue bid for ${READY.title}` })).toBeEnabled();
 });
 
 test('at 380 px wide the page does not scroll sideways', async ({ page }) => {

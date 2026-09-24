@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connecting Upwork — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./upwork-callback.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./suppliers.html">Suppliers</a></li>
+            <li><a href="./sourcing.html">Sourcing</a></li>
+            <li><a href="./pipeline.html">Pipeline</a></li>
+            <li><a href="./templates.html">Templates</a></li>
+            <li><a href="./analytics.html">Analytics</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <h1>Connecting Upwork</h1>
+      <div role="status" aria-live="polite" id="status"></div>
+      <p><a href="./settings.html" id="back">Back to Settings</a></p>
+    </main>
+  </body>
+</html>

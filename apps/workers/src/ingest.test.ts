@@ -221,6 +221,7 @@ describe('the schedules', () => {
       added: 2,
       changed: 0,
       removed: 0,
+      purged: 0,
     });
     let keys = (await queues.ingest.getJobSchedulers()).map((s) => [s.key, String(s.every)]);
     expect(keys).toEqual(
@@ -237,6 +238,7 @@ describe('the schedules', () => {
       added: 0,
       changed: 0,
       removed: 0,
+      purged: 0,
     });
     await db.query(`update scanners set poll_interval_seconds = 300 where id = $1`, [SCANNER_ZAR]);
     expect(await syncIngestSchedules(deps)).toMatchObject({ changed: 1 });
@@ -246,6 +248,7 @@ describe('the schedules', () => {
       added: 0,
       changed: 0,
       removed: 1,
+      purged: 0,
     });
     keys = (await queues.ingest.getJobSchedulers()).map((s) => [s.key, String(s.every)]);
     expect(keys).toEqual([[scannerSchedulerId(SCANNER_A), '60000']]);

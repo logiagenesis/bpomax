@@ -1953,3 +1953,48 @@ and one job's rollback undoes the other's writes. The new tests (twenty jobs at 
 every third failing, on PGlite and on one plain connection) fail on the old pattern and
 pass on this. The workers have no production entry point yet (B-12), so nothing deployed
 was exposed.
+
+## D-066 — Upwork: read-only, through the official GraphQL API; its data kept 24 hours at most; no browser, ever
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-300, session …tJv8)
+
+Decision:
+
+- `packages/upwork` calls only what the official GraphQL documentation states, each call
+  citing its section (`docs.ts`): the endpoint `https://api.upwork.com/graphql`; the
+  Authorization Code Grant at `…/ab/account-security/oauth2/authorize` and
+  `…/api/v3/oauth2/token` (and the refresh grant); `user { id name }` to learn whose token
+  it is; and `marketplaceJobPostingsSearch` with `searchType: USER_JOBS_SEARCH`,
+  `sortAttributes: [{ field: RECENCY }]` and `pagination_eq: { after: "0", first: 30 }`
+  (30 is the documentation's own example size; no maximum is stated). Only documented
+  fields are asked for. Anything not stated is not sent: the budget range (its unit and
+  currency are not given) and the client locations (their form is not given) are applied
+  to what comes back, or reported as not applied, as for Freelancer.com (D-045).
+- The callback address is this app's `${APP_URL}/upwork-callback.html`: docs/01 section J
+  names only UPWORK_CLIENT_ID and UPWORK_CLIENT_SECRET, so no new variable is added.
+  UPWORK_BASE_URL points at a stand-in for tests and local development only.
+- The grant without PKCE documents no `state`, so, as for Freelancer.com (D-041), the
+  code is bound to the person who started the connect by a single-use attempt row.
+- An access token lasts 24 hours; it is refreshed when under an hour is left, which also
+  keeps the two-week refresh token in use.
+- Upwork is read only (docs/01 section B: "Submission only via Upwork's agency/Business
+  Manager model"). `readOnlyPlatformReason` in core says so for Upwork and Fiverr: the
+  queue-bid route refuses (422), the feed's Queue bid is off with that reason, the margin
+  worker hands no Upwork job to the drafter, the drafter skips it, and the sender blocks
+  it. The job is still scored, estimated and priced, to judge it.
+- Upwork's terms: "Caching is not allowed for more than 24 hours according to our Terms of
+  Service", and "we don't allow storing data for more than 24 hours". `jobs.fetched_at`
+  (0031) records the last fetch; the ingest's minute-by-minute sync deletes every Upwork
+  job not fetched again within 24 hours, with what hangs off it, and logs
+  `retention.purged` per organisation. Whether derived rows (scores, estimates) may be
+  kept longer is the owner's reading of T-04; until then they go with the job.
+- A client's country is not stored for an Upwork job: `location.country` is a string
+  whose form is not documented, and `jobs.client_country` is an ISO code. The listing's
+  raw node keeps it for the 24 hours.
+- No browser automation anywhere: `scripts/check-no-browser-automation.sh`, run in CI,
+  fails on a browser driver in any workspace manifest (only the root's `@playwright/test`
+  is allowed, for e2e/) and on any import, require or launch of one outside e2e/.
+
+Why: docs/01 rule 7 (no guessing; every endpoint cited), docs/01 section B's Upwork row,
+ARB-300's acceptance, and the Upwork terms quoted in the documentation.

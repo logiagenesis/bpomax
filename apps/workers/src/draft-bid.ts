@@ -7,6 +7,7 @@ import {
   type DraftPortfolioItem,
   type ModelDraft,
   type ScorableJob,
+  readOnlyPlatformReason,
 } from '@arbitron/core';
 import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
@@ -41,9 +42,13 @@ export type DraftResult =
   | { readonly status: 'drafted'; readonly proposalId: string }
   | { readonly status: 'already_drafted'; readonly proposalId: string }
   | { readonly status: 'blocked'; readonly reason: 'no_template'; readonly detail: string }
-  | { readonly status: 'skipped'; readonly reason: 'no_margin' | 'margin_failed' };
+  | {
+      readonly status: 'skipped';
+      readonly reason: 'no_margin' | 'margin_failed' | 'read_only_platform';
+    };
 
 interface JobRow {
+  platform: string;
   id: string;
   org_id: string;
   title: string;
@@ -149,7 +154,7 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
     `select id, org_id, title, description, budget_min_minor::text, budget_max_minor::text,
             currency, hourly, skills, client_country, client_payment_verified,
             client_spend_minor::text, client_rating::text, bid_count, average_bid_minor::text,
-            category_slug
+            category_slug, platform::text as platform
      from jobs where id = $1`,
     [data.jobId],
   );
@@ -167,6 +172,17 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
       payload: { jobId: job.id, ...payload },
     });
   };
+
+  // Upwork and Fiverr are read only here (docs/01 section B, D-066): no bid is drafted.
+  const readOnly = readOnlyPlatformReason(job.platform);
+  if (readOnly) {
+    await note('skipped', {
+      reason: 'read_only_platform',
+      platform: job.platform,
+      detail: readOnly,
+    });
+    return { status: 'skipped', reason: 'read_only_platform' };
+  }
 
   const evaluations = await db.query<EvaluationRow>(
     data.marginEvaluationId

@@ -1,0 +1,22 @@
+{
+  "name": "@arbitron/upwork",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Upwork GraphQL API client, read only (OAuth, the job search, the current user) and a stand-in of it for tests",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fake": "./src/fake.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@arbitron/core": "workspace:*",
+    "@arbitron/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^26.6.2"
+  }
+}

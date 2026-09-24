@@ -38,6 +38,21 @@ export const MAX_MILESTONES = 5;
 export const MAX_CITATIONS = 3;
 
 /**
+ * Where a bid may be drafted and sent from here (ARB-300, docs/01 section B). Upwork is
+ * read only: "Submission only via Upwork's agency/Business Manager model", and never a
+ * logged-in browser session. Fiverr has no verified buyer API. So a job on either is
+ * scored and priced like any other, and bid on at the marketplace itself.
+ */
+export const BID_PLATFORMS = ['freelancer'] as const;
+
+/** Why a bid cannot be drafted here for a job on `platform`, or null when it can. */
+export function readOnlyPlatformReason(platform: string): string | null {
+  if ((BID_PLATFORMS as readonly string[]).includes(platform)) return null;
+  const name = platform === 'upwork' ? 'Upwork' : platform === 'fiverr' ? 'Fiverr' : platform;
+  return `${name} jobs are read only here: bid on ${name} itself (docs/01 section B).`;
+}
+
+/**
  * The JSON schema the model is held to. `portfolio_item_ids` is an enum of the offered
  * ids, so a made-up reference is rejected before it is read; with nothing offered the
  * list must be empty. The body may not carry a URL: links come from the cited items,

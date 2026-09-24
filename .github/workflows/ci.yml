@@ -49,6 +49,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: No browser automation (ARB-300)
+        run: sh scripts/check-no-browser-automation.sh
+
       - name: Check formatting
         run: pnpm format:check
 

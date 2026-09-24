@@ -1,4 +1,4 @@
-# HANDOFF — 23/09/2026, 17:15 UTC (19:15 SAST)
+# HANDOFF — 24/09/2026, 08:00 UTC (10:00 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -7,18 +7,19 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 37 of 55 tickets are DONE; 8 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203); 10 are TODO (099, 299, 300, 399, Phase 4). Nothing is BLOCKED
+- **Board:** 37 of 55 tickets are DONE; 9 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203, 300); 9 are TODO (099, 299, 399, Phase 4). Nothing is BLOCKED
   outright any more: every Phase 1 ticket is built against a stand-in and waits only on
   the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `c8401e2` (PR #27, ARB-340, merged). No pull request is
-  open and no ticket is claimed: the session stopped on the owner's instruction after
-  ARB-340 merged. ARB-300 was claimed and released untouched (no code of it was pushed).
+- **CI:** green on `main` at `5b3c9a2` (PR #28, the workers' transactions, D-065). The
+  ARB-300 PR is open from `claude/beautiful-tesla-b6goej` and merges when green. On the
+  owner's instruction of 24/09/2026 every PR comes from that one branch; claims are
+  pushed to `main` as a one-file commit built with git plumbing, never another branch.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next:** **ARB-300** (Upwork, built against a stand-in and BUILT-PENDING-CREDENTIALS
-  on B-14 and T-04); the Upwork documentation is already read and quoted in section 6.
-  ARB-299 waits like ARB-099.
+- **Next:** Phase 4 in order (ARB-400 to ARB-440), each built against fakes where it
+  waits on D-01, B-13 or B-15. The phase audits (099, 299, 399, 499) wait on every ticket
+  of their phase being DONE. See section 6.
 
 ## 1. State of `main`
 
@@ -26,9 +27,9 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `c8401e2` = PR #27, ARB-340 templates page                                             |
-| Open PR                | None                                                                                    |
-| Local checks at ARB-340 | lint, format, typecheck green; 985 unit tests (92 files) green; 220 + 30 Playwright tests green |
+| Last merge             | `5b3c9a2` = PR #28, the workers' transactions (D-065)                                  |
+| Open PR                | ARB-300 Upwork read-only ingest, from `claude/beautiful-tesla-b6goej`                 |
+| Local checks at ARB-300 | lint, format, typecheck, the browser check green; 1028 unit tests (97 files); 228 + 31 Playwright tests |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
@@ -36,8 +37,8 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
 | DONE                      | 37    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330, 340 |
-| BUILT-PENDING-CREDENTIALS | 8     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12) |
-| TODO                      | 10    | 099, 299, 300, 399, 400–440, 499                            |
+| BUILT-PENDING-CREDENTIALS | 9     | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12), 300 (C-04) |
+| TODO                      | 9     | 099, 299, 399, 400–440, 499                                 |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -68,11 +69,19 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-311 | Payments: four kinds (0027), realised margin in core as docs/05 3.5 states it, the rate typed or from the FX provider (B-10) and never assumed, Paid when the client has paid the value, T-05's notice on a supplier abroad, the Payments panel on the pipeline page, demo; 6 + 1 Playwright tests | D-059 |
 | ARB-312 | Retainers: the pipeline's retainer toggle checked with `validateRetainer`, logged; the dashboard total tested against a hand sum and raw SQL; the demo dashboard sums the tab's retainers; 2 + 1 Playwright tests | D-060 |
 | ARB-320 | Analytics: the per-job view (0028, security_invoker), grouping in core, `GET /v1/analytics` verified against raw SQL, the analytics page, Analytics in the nav, demo; 7 Playwright tests | D-061 |
+| ARB-300 | Upwork read only: `packages/upwork` (every call cited), the ingest for Upwork scanners, the connect flow, a 24-hour purge (0031, Upwork's terms), no bid drafted or sent for Upwork, `scripts/check-no-browser-automation.sh` in CI; 30 + 5 tests (BUILT-PENDING-CREDENTIALS, C-04) | D-066 |
+| (fix)   | Every transaction through `inTransaction` (the ten workers and the Telegram link), with a guard test | D-065 |
 | (fix)   | `withUser` borrows a pool connection, uses PGlite's own transaction, or takes turns on one client, so concurrent requests each run as their own user; 3 tests that fail on the old one | D-063 |
 | ARB-340 | Templates page: sends and replies counted by the `template_variant_stats` view (0030, the never-written counters dropped), verified against raw SQL; the drafter's even A/B split; a sent variant's words locked; the page, Templates in the nav, demo; 11 + 1 Playwright tests | D-064 |
 | ARB-330 | MCP server (`apps/mcp`, SDK 1.30.1, stdio): the eleven tools over the API with the operator's token, approvals recorded as `mcp` (0029), `GET /v1/jobs/:id`, `POST /v1/jobs/:id/score`, `POST /v1/proposals/:id/submit`, `enqueueSubmit` re-runs a finished job, README setup for Claude Code and Claude Desktop; 24 tests | D-062 |
 
 ## 4. How to work here (what cost time this session)
+
+- **One branch only (owner, 24/09/2026):** work on `claude/beautiful-tesla-b6goej`; never
+  create another branch. Per ticket: fast-forward it to `origin/main`, claim with a
+  one-file commit built on `origin/main` by plumbing (`git read-tree`, `git update-index
+  --cacheinfo`, `git commit-tree`, `git push origin <sha>:main`), build and commit on the
+  branch, push it, open the PR, merge when green, then `git merge --ff-only origin/main`.
 
 - **Branch and PR:** `git fetch origin main && git checkout -B claude/<name> origin/main`,
   build, commit with the docs/05 checklist in the body, `git push -u origin <branch>`,
@@ -119,65 +128,16 @@ ticket it unblocks:
 
 ## 6. The exact next ticket
 
-**ARB-300 — Upwork read-only job ingest via the official API.** Claim it on the board
-first. Acceptance: "Jobs ingested with source=upwork; no browser automation anywhere in
-codebase (grep check in CI)". It waits on B-14 (Upwork API key approval) and T-04 (Upwork
-API terms and the agency/Business Manager rules): build it against a stand-in and mark it
-BUILT-PENDING-CREDENTIALS. `jobs.platform` already accepts `upwork` (0002).
-
-What the official documentation says, read on 23/09/2026 through Firecrawl from
-https://www.upwork.com/developer/documentation/graphql/api/docs/index.html (upwork.com is
-not reachable from the container; cite each anchor in code):
-
-- Endpoint `https://api.upwork.com/graphql` (`#welcome`). OAuth 2.0 (RFC 6749):
-  authorise at `GET https://www.upwork.com/ab/account-security/oauth2/authorize`
-  (`response_type=code`, `client_id`, `redirect_uri`; no `scope` parameter is listed),
-  token at `POST https://www.upwork.com/api/v3/oauth2/token` with `authorization_code` or
-  `refresh_token` (`#auth-authorizationCodeGrant-obtainingAccessToken`,
-  `#auth-refreshTokenGrant`). Access token 24 hours, refresh token 2 weeks since last use;
-  `Authorization: Bearer`. Client credentials is for enterprise accounts only.
-  `X-Upwork-API-TenantId` picks the organisation (`#auth-organizationId`).
-- Search: `marketplaceJobPostingsSearch(marketPlaceJobFilter:
-  MarketplaceJobPostingsSearchFilter, searchType: MarketplaceJobPostingSearchType,
-  sortAttributes: [MarketplaceJobPostingSearchSortAttribute])`
-  (`#query-marketplaceJobPostingsSearch`); `searchType` is always `USER_JOBS_SEARCH`;
-  sort `{ field: RECENCY }`. The older `marketplaceJobPostings` is deprecated. Filter
-  fields include `searchExpression_eq`, `skillExpression_eq`, `titleExpression_eq`,
-  `categoryIds_any`, `jobType_eq` (`HOURLY`/`FIXED`), `budgetRange_eq` and `hourlyRate_eq`
-  (`IntRange { rangeStart, rangeEnd }`), `verifiedPaymentOnly_eq`, `locations_any`,
-  `daysPosted_eq`, `pagination_eq` (`Pagination { after: String, first: Int! }`)
-  (`#definition-MarketplaceJobPostingsSearchFilter`).
-- Result: `MarketplaceJobPostingSearchConnection { totalCount, edges, pageInfo }`; edge
-  `MarketplaceJobpostingSearchEdge { cursor, node }` (lower-case p, as written); node
-  `MarketplaceJobPostingSearchResult` with `id`, `title`, `description`, `ciphertext`,
-  `createdDateTime`, `publishedDateTime`, `amount: Money` (null for hourly or unset),
-  `hourlyBudgetMin`/`hourlyBudgetMax: Money`, `skills { name prettyName }`,
-  `totalApplicants`, `category`, `subcategory`, `duration`, `experienceLevel`, and
-  `client { totalSpent: Money, verificationStatus, location { country city timezone },
-  totalHires, totalFeedback }` (`#definition-MarketplaceJobPostingSearchResult`,
-  `#definition-MarketplaceJobPostingSearchClientInfo`). `Money { rawValue: String,
-  currency: String, displayValue: String }` (`#definition-Money`).
-- Permission "Read marketplace Job Postings", and "Common Entities - Read-Only Access" for
-  every key (`#getting-started-application-permissions`). 300 requests a minute per IP,
-  429 beyond; a daily limit of 40,000 requests is part of the key review
-  (`#getting-started-preparation`).
-- **Terms that shape the design:** "Caching is not allowed for more than 24 hours" and "we
-  don't allow storing data for more than 24 hours" (terms at
-  https://www.upwork.com/legal#api). An Upwork job cannot sit in `jobs` like a
-  Freelancer.com one: it needs a 24-hour purge (or keep only what the terms allow) and
-  the owner's reading of T-04 before anything is stored. Record that as a decision and
-  in docs/BLOCKERS.md; do not guess what may be kept.
-- Key approval is reviewed; the stated conditions include identity verification, at
-  least $25,000 lifetime earnings or spend, a 90 % Job Success Score for freelancers and
-  agencies, and not using Upwork's name or marks (`#getting-started-preparation`). Add
-  them to B-14 for the owner.
-
-The CI check: a script (for example `scripts/check-no-browser-automation.sh`) run in the
-unit job, failing on any browser driver in a workspace manifest (only the root's
-`@playwright/test` is allowed, for `e2e/`) and on any import, require or `.launch(` of a
-driver outside `e2e/`; test it on throwaway trees with one planted finding each, and
-build the driver names in the test at run time so the test file is not itself a finding.
-Then Phase 4 as far as it can be built without D-01, B-13 and B-15.
+**ARB-400 — Public sign-up, org creation, onboarding.** Claim it on the board first (a
+one-file commit on `origin/main`, pushed to `main`, as in section 4). Acceptance: "New
+org isolated from Logi-Ink org (RLS tests)". It waits on D-01 (the public product
+decision) and B-15; build the mechanism against the Supabase auth shim, test the
+isolation of a second org under RLS, and mark it BUILT-PENDING-CREDENTIALS if the owner's
+answers are still missing. Then ARB-410 (plans and limits: the figures are D-12's, never
+invented), ARB-420 (Paystack and Stripe in test mode against stand-ins, B-15), ARB-430
+(affiliates) and ARB-440 (the marketing site: factual copy only, D-01 and the brand
+assets). The phase audits (ARB-099, 299, 399, 499) each need every ticket of their phase
+DONE, and so wait on the credentials.
 
 ## 7. Loose ends
 

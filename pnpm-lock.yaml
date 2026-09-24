@@ -47,6 +47,9 @@ importers:
       '@arbitron/freelancer':
         specifier: workspace:*
         version: link:../../packages/freelancer
+      '@arbitron/upwork':
+        specifier: workspace:*
+        version: link:../../packages/upwork
       '@fastify/cors':
         specifier: ^11.3.0
         version: 11.3.0
@@ -125,6 +128,9 @@ importers:
       '@arbitron/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      '@arbitron/upwork':
+        specifier: workspace:*
+        version: link:../../packages/upwork
       bullmq:
         specifier: ^5.81.5
         version: 5.81.5
@@ -179,6 +185,22 @@ importers:
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+
+  packages/upwork:
+    dependencies:
+      '@arbitron/core':
+        specifier: workspace:*
+        version: link:../core
+      '@arbitron/db':
+        specifier: workspace:*
+        version: link:../db
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
 
 packages:
 

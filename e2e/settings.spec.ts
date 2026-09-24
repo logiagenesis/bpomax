@@ -44,6 +44,7 @@ interface Options {
   environmentLiveMode?: boolean;
   bands?: Record<string, unknown>[];
   freelancer?: { configured: boolean; environment: string | null; reason: string | null };
+  upwork?: { configured: boolean; environment: string | null; reason: string | null };
   autoReply?: Record<string, unknown> | null;
 }
 
@@ -145,6 +146,7 @@ async function open(page: Page, options: Options = {}) {
             telegramLinked: false,
             role,
             ...(options.freelancer ? { freelancer: options.freelancer } : {}),
+            ...(options.upwork ? { upwork: options.upwork } : {}),
           },
         }),
       'GET /v1/auto-reply': (_request, route) => route.fulfill({ json: { autoReply } }),
@@ -160,6 +162,15 @@ async function open(page: Page, options: Options = {}) {
         };
         return route.fulfill({ json: { autoReply } });
       },
+      'POST /v1/platform-accounts/upwork/connect': (_request, route) =>
+        route.fulfill({
+          status: 201,
+          json: {
+            authorizeUrl:
+              'https://www.upwork.com/ab/account-security/oauth2/authorize?response_type=code&client_id=e2e&redirect_uri=x',
+            expiresAt: '2026-09-22T10:10:00Z',
+          },
+        }),
       'POST /v1/platform-accounts/freelancer/connect': (_request, route) =>
         route.fulfill({
           status: 201,
@@ -647,6 +658,41 @@ test('Connect Freelancer.com asks the API and opens the sandbox authorise page i
   await page.getByRole('button', { name: 'Connect Freelancer.com' }).click();
   await expect(page).toHaveURL(/^https:\/\/accounts\.freelancer-sandbox\.com\/oauth\/authorize\?/);
   expect(posts(requests, 'POST', '/v1/platform-accounts/freelancer/connect')).toHaveLength(1);
+});
+
+test('Connect Upwork is off, with the API’s reason, while there is no approved key', async ({
+  page,
+}) => {
+  await open(page, {
+    upwork: {
+      configured: false,
+      environment: null,
+      reason: 'Upwork is not configured: UPWORK_CLIENT_ID is not set. (docs/02 B-14)',
+    },
+  });
+  await expect(page.getByRole('button', { name: 'Connect Upwork' })).toBeDisabled();
+  await expect(page.locator('#connect-upwork-hint')).toHaveText(
+    'Upwork is not configured: UPWORK_CLIENT_ID is not set. (docs/02 B-14)',
+  );
+});
+
+test('Connect Upwork asks the API and opens the Upwork authorise page it names, to read jobs only', async ({
+  page,
+}) => {
+  const requests = await open(page, {
+    upwork: { configured: true, environment: 'production', reason: null },
+  });
+  await expect(page.locator('#connect-upwork-hint')).toHaveText(
+    'Opens Upwork to sign in and approve access, to read jobs only. One account per verified identity.',
+  );
+  await page.route('https://www.upwork.com/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<h1>Upwork consent (stand-in)</h1>' }),
+  );
+  await page.getByRole('button', { name: 'Connect Upwork' }).click();
+  await expect(page).toHaveURL(
+    /^https:\/\/www\.upwork\.com\/ab\/account-security\/oauth2\/authorize\?/,
+  );
+  expect(posts(requests, 'POST', '/v1/platform-accounts/upwork/connect')).toHaveLength(1);
 });
 
 test('a viewer sees Connect and Disconnect but cannot use them', async ({ page }) => {

@@ -2,6 +2,7 @@ import type { FxQuote, Role } from '@arbitron/core';
 import { isRole } from '@arbitron/core';
 import type { Queryable } from '@arbitron/db';
 import type { Fetch, FreelancerConfigResult } from '@arbitron/freelancer';
+import type { Fetch as UpworkFetch, UpworkConfigResult } from '@arbitron/upwork';
 import type { FastifyRequest } from 'fastify';
 
 /**
@@ -56,6 +57,11 @@ export interface ServerOptions {
    * reason, naming docs/02 B-03.
    */
   readonly freelancer?: { readonly config: FreelancerConfigResult; readonly fetch?: Fetch };
+  /**
+   * Upwork (ARB-300): `upworkConfig(process.env)` and a fetch the tests point at the
+   * stand-in. Absent or not ok, connecting is refused with the reason, naming docs/02 B-14.
+   */
+  readonly upwork?: { readonly config: UpworkConfigResult; readonly fetch?: UpworkFetch };
   /**
    * The FX provider (docs/02 B-10), for a payment not in rand whose rate is not typed
    * (ARB-311). Absent until B-10 is answered: the rate must then be typed with the payment.

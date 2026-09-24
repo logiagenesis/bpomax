@@ -359,6 +359,20 @@ describe('POST /v1/jobs/:id/queue-bid', () => {
     await db.exec(`update proposals set status = 'submitted' where id = '${PROPOSAL_SENT}'`);
   });
 
+  it('refuses an Upwork job: bids go through Upwork itself', async () => {
+    await db.exec(`update jobs set platform = 'upwork' where id = '${JOB_U}'`);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${JOB_U}/queue-bid`,
+      headers: as(AUTH_A),
+    });
+    await db.exec(`update jobs set platform = 'freelancer' where id = '${JOB_U}'`);
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error).toBe(
+      'Upwork jobs are read only here: bid on Upwork itself (docs/01 section B).',
+    );
+  });
+
   it('refuses a viewer, another org, and a server with no queue', async () => {
     enqueue.draft.mockClear();
     const viewer = await app.inject({

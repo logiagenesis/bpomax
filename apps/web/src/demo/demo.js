@@ -79,7 +79,7 @@ const SESSION_KEY = 'arbitron.session';
  *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
  *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[],
  *   sourcing?: Row[], posts?: Row[], pipeline?: Row[], orders?: Row[], payments?: Row[],
- *   templates?: Row[] }} Store
+ *   templates?: Row[], upworkConnectPending?: boolean }} Store
  */
 
 const ORG = 'd0d0d0d0-0000-4000-8000-000000000001';
@@ -2644,6 +2644,7 @@ function api(method, url, body) {
       telegramLinked: store.telegramLinked,
       role: 'owner',
       freelancer: { configured: true, environment: 'demo', reason: null },
+      upwork: { configured: true, environment: 'demo', reason: null },
     });
   }
   // ARB-020 in the demo: "connecting" goes straight to the callback page with a sample
@@ -2679,6 +2680,42 @@ function api(method, url, body) {
       subject_table: 'platform_accounts',
       subject_id: account.id,
       payload: { via: 'web', note: 'demo: nothing reached Freelancer.com' },
+    });
+    return respond(201, { account });
+  }
+  // ARB-300 in the demo: the same for Upwork, which is used to read jobs only.
+  if (key === 'POST /v1/platform-accounts/upwork/connect') {
+    store.upworkConnectPending = true;
+    logEvent(store, 'account.connect_started', {
+      payload: { via: 'web', platform: 'upwork', note: 'demo' },
+    });
+    return respond(201, {
+      authorizeUrl: './upwork-callback.html?code=demo-code',
+      expiresAt: new Date(Date.now() + 600_000).toISOString(),
+    });
+  }
+  if (key === 'POST /v1/platform-accounts/upwork/callback') {
+    if (!store.upworkConnectPending) {
+      return respond(409, {
+        error:
+          'No connection is waiting for this code, or it is more than ten minutes old. Start again from Settings.',
+      });
+    }
+    store.upworkConnectPending = false;
+    let account = store.accounts.find((a) => a.platform === 'upwork');
+    if (!account) {
+      account = { id: uuid(), platform: 'upwork', scopes: [], lastSyncAt: null };
+      store.accounts.push(account);
+    }
+    Object.assign(account, {
+      externalUserId: 'sample-upwork-account',
+      externalUsername: 'Sample Upwork account (demo)',
+      status: 'connected',
+    });
+    logEvent(store, 'account.connected', {
+      subject_table: 'platform_accounts',
+      subject_id: account.id,
+      payload: { via: 'web', platform: 'upwork', note: 'demo: nothing reached Upwork' },
     });
     return respond(201, { account });
   }

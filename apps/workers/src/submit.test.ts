@@ -302,6 +302,22 @@ describe('live, with a client', () => {
     ]);
   });
 
+  it('sends nothing to a read-only marketplace, however it was approved', async () => {
+    await setLive(true);
+    await setAllowance(50);
+    const jobId = await insertJob('upwork');
+    await db.query(`update jobs set platform = 'upwork' where id = $1`, [jobId]);
+    const proposalId = await insertProposal(jobId);
+    const placer = new ScriptedPlacer();
+    const result = await submitProposal(
+      { db, liveMode: true, placer, now: () => NOW },
+      { proposalId },
+    );
+    expect(result).toMatchObject({ status: 'blocked', reason: 'read_only_platform' });
+    expect(placer.placed).toEqual([]);
+    expect((await proposalState(proposalId)).status).toBe('approved');
+  });
+
   it('treats a bid approved through MCP as a person’s approval, not an automatic one', async () => {
     await setLive(true);
     await setAllowance(50);

@@ -1,4 +1,4 @@
-import { canWrite } from '@arbitron/core';
+import { canWrite, readOnlyPlatformReason } from '@arbitron/core';
 import { recordEvent, withUser } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import { channelOf, currentMembership, UUID, type ServerOptions } from '../context.js';
@@ -124,6 +124,8 @@ export function registerJobRoutes(app: FastifyInstance, options: ServerOptions):
         const { rows } = await tx.query<FeedRow>(`${FEED_SQL} where j.id = $1`, [id]);
         const job = rows[0];
         if (!job) throw refuse(404, 'no such job');
+        const readOnly = readOnlyPlatformReason(job.platform);
+        if (readOnly) throw refuse(422, readOnly);
 
         if (
           job.proposal_status &&

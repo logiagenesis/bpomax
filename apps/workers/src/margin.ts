@@ -7,6 +7,7 @@ import {
   type FxQuote,
   type MarginEvaluation,
   type Platform,
+  readOnlyPlatformReason,
 } from '@arbitron/core';
 import { inTransaction, recordEvent, type Queryable } from '@arbitron/db';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
@@ -314,7 +315,8 @@ export async function evaluateJobMargin(
   });
 
   // Only a committed, passed evaluation is drafted from.
-  if (deps.draftQueue && evaluation.passed) {
+  // Upwork and Fiverr are read only here (D-066): a passed margin there is not drafted from.
+  if (deps.draftQueue && evaluation.passed && !readOnlyPlatformReason(job.platform)) {
     await enqueueDraft(deps.draftQueue, {
       jobId: job.id,
       marginEvaluationId: evaluationId,

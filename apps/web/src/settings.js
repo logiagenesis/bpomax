@@ -604,6 +604,52 @@ connectButton.addEventListener('click', () => {
   );
 });
 
+// ------------------------------------------------------------ connect Upwork
+const connectUpworkButton = /** @type {HTMLButtonElement} */ (byId('connect-upwork'));
+const connectUpworkHint = byId('connect-upwork-hint');
+
+/**
+ * ARB-300: live once the API has an approved Upwork key (docs/02 B-14). The account is
+ * used to read jobs only; Upwork sends the browser back to upwork-callback.html.
+ * @param {{ configured: boolean, environment: string | null, reason: string | null } | undefined} upwork
+ */
+function renderConnectUpwork(upwork) {
+  if (!upwork?.configured) {
+    connectUpworkButton.disabled = true;
+    if (upwork?.reason) connectUpworkHint.textContent = upwork.reason;
+    return;
+  }
+  const allowed = canWrite(role);
+  connectUpworkButton.disabled = !allowed;
+  connectUpworkButton.title = allowed ? '' : 'Your role cannot connect accounts.';
+  connectUpworkHint.textContent =
+    upwork.environment === 'demo'
+      ? 'Demo: returns at once with a sample account. Nothing reaches Upwork.'
+      : upwork.environment === 'production'
+        ? 'Opens Upwork to sign in and approve access, to read jobs only. One account per verified identity.'
+        : 'Opens a stand-in of Upwork, not the real site (UPWORK_BASE_URL). One account per verified identity.';
+}
+
+connectUpworkButton.addEventListener('click', () => {
+  void runAction(
+    connectUpworkButton,
+    status,
+    async () => {
+      try {
+        const body = /** @type {{ authorizeUrl: string }} */ (
+          await apiSend('POST', '/v1/platform-accounts/upwork/connect')
+        );
+        location.assign(body.authorizeUrl);
+        return true;
+      } catch (e) {
+        bail(e);
+        return false;
+      }
+    },
+    { success: 'Opening Upwork…' },
+  );
+});
+
 // ----------------------------------------------------------------- scanners
 /**
  * @typedef {{ id: string, name: string, platform: string, filters: { keywords?: string[] }, poll_interval_seconds: number,
@@ -977,6 +1023,7 @@ async function load() {
           accounts.append(none);
         }
         renderConnect(body.freelancer);
+        renderConnectUpwork(body.upwork);
         telegramState.textContent = body.telegramLinked
           ? 'Your Telegram chat is linked. A new code moves the link to the chat that sends it.'
           : 'Your Telegram chat is not linked yet. Create a code and send it to the bot as /start <code>.';
