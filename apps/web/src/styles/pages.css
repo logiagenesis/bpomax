@@ -61,3 +61,49 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* The landing page (ARB-440): the product's own words, nothing else. */
+.landing__hero {
+  padding-block: var(--space-8) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+.landing__lead {
+  max-width: 44rem;
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+.landing__section {
+  padding-block: var(--space-6);
+}
+.landing__steps {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  padding-left: 1.25rem;
+}
+.landing__steps h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-base);
+}
+.landing__steps p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.landing__points {
+  max-width: 48rem;
+}
+.landing__points li + li {
+  margin-top: var(--space-2);
+}
+.landing__points dt {
+  font-weight: var(--font-weight-bold);
+}
+.landing__points dd {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+}
+.landing__footer {
+  border-top: 1px solid var(--color-border);
+  padding-block: var(--space-4);
+  color: var(--color-text-muted);
+}

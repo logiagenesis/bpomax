@@ -24,13 +24,15 @@
     "compose:down": "docker compose down",
     "db:types:supabase": "pnpm --filter @arbitron/db db:types:supabase",
     "db:migrate": "sh scripts/db-migrate.sh",
-    "db:seed": "sh scripts/db-seed.sh"
+    "db:seed": "sh scripts/db-seed.sh",
+    "lighthouse": "node e2e/lighthouse.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
     "eslint": "^9.39.1",
+    "lighthouse": "^13.5.0",
     "prettier": "^3.6.2",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",

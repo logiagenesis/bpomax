@@ -3,28 +3,158 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Arbitron</title>
+    <title>Arbitron — freelance jobs found, priced and bid on with your approval</title>
+    <meta
+      name="description"
+      content="Arbitron finds freelance marketplace jobs that match your saved searches, scores them, prices the delivery, checks your margin and drafts a bid for you to approve."
+    />
+    <meta property="og:title" content="Arbitron" />
+    <meta
+      property="og:description"
+      content="Freelance jobs found, scored, priced against your margin rules and bid on with your approval."
+    />
+    <!-- No icon file until the owner supplies one (docs/03, item 4); this stops a request for one. -->
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles/app.css" />
     <script type="module" src="./landing.js"></script>
   </head>
   <body>
-    <main class="container stack" style="padding-block: var(--space-8)">
-      <h1>Arbitron</h1>
-      <p>Freelance-marketplace arbitrage, run by Logi-Ink. Sign in to see the dashboard.</p>
-      <p class="cluster">
-        <a class="btn btn--primary" href="./login.html">Sign in</a>
-        <a class="btn btn--secondary" href="./signup.html">Create an account</a>
-      </p>
-      <p>
-        <a href="./dashboard.html">Dashboard</a> · <a href="./feed.html">Feed</a> ·
-        <a href="./approvals.html">Approvals</a> ·
-        <a href="./conversations.html">Conversations</a> ·
-        <a href="./suppliers.html">Suppliers</a> · <a href="./sourcing.html">Sourcing</a> ·
-        <a href="./pipeline.html">Pipeline</a> · <a href="./templates.html">Templates</a> ·
-        <a href="./analytics.html">Analytics</a> · <a href="./settings.html">Settings</a> ·
-        <a href="./audit-log.html">Audit log</a> · <a href="./style-guide.html">Style guide</a> ·
-        <a href="./privacy.html">Privacy notice</a> · <a href="./terms.html">Terms of service</a>
-      </p>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./index.html">Arbitron</a>
+        <nav aria-label="Site">
+          <ul class="nav">
+            <li><a href="./index.html#how-it-works">How it works</a></li>
+            <li><a href="./index.html#safeguards">Safeguards</a></li>
+            <li><a href="./index.html#marketplaces">Marketplaces</a></li>
+            <li><a href="./login.html">Sign in</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="landing">
+      <section class="landing__hero" aria-labelledby="hero-heading">
+        <div class="container stack">
+          <h1 id="hero-heading">Arbitron</h1>
+          <p class="landing__lead">
+            Finds freelance marketplace jobs that match your saved searches, scores each one, prices
+            what delivering it would cost, checks the margin against your own rules, and drafts a
+            bid for you to approve.
+          </p>
+          <p class="cluster">
+            <a class="btn btn--primary" href="./signup.html">Create an account</a>
+            <a class="btn btn--secondary" href="./login.html">Sign in</a>
+          </p>
+        </div>
+      </section>
+
+      <section class="container stack landing__section" aria-labelledby="how-it-works">
+        <h2 id="how-it-works">How it works</h2>
+        <ol class="landing__steps">
+          <li>
+            <h3>Find</h3>
+            <p>Your saved searches pull in new jobs from the marketplaces you connect.</p>
+          </li>
+          <li>
+            <h3>Qualify</h3>
+            <p>
+              Each job is scored for fit, client quality, competition and red flags, with the
+              reasons.
+            </p>
+          </li>
+          <li>
+            <h3>Price</h3>
+            <p>
+              Delivery is estimated from your own rates, your suppliers or market bands, and the
+              margin is worked out after platform fees, supplier cost and your FX buffer.
+            </p>
+          </li>
+          <li>
+            <h3>Contact</h3>
+            <p>
+              Only jobs that clear your margin rule get a draft bid, written from your own
+              templates.
+            </p>
+          </li>
+          <li>
+            <h3>Brief</h3>
+            <p>
+              When a client replies, a discovery conversation turns their answers into a structured
+              brief.
+            </p>
+          </li>
+          <li>
+            <h3>Source</h3>
+            <p>
+              Decide who delivers: your own team, an AI-assisted build, or a supplier, ranked from
+              your database or found through a sourcing post.
+            </p>
+          </li>
+          <li>
+            <h3>Deliver</h3>
+            <p>Won work is tracked through milestones, supplier handover, delivery and payment.</p>
+          </li>
+          <li>
+            <h3>Learn</h3>
+            <p>
+              Reply rate, win rate and realised margin per category, template, supplier and search.
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="container stack landing__section" aria-labelledby="safeguards">
+        <h2 id="safeguards">Safeguards</h2>
+        <ul class="landing__points">
+          <li>
+            Every bid, message and sourcing post waits for your approval, on the web or in Telegram.
+            The only exceptions are ones you switch on yourself: auto-send for a saved search, which
+            starts off and has a daily cap, and a first reply you write for when you are away.
+          </li>
+          <li>
+            Live mode starts switched off, and cannot be switched on until your margin rules, fee
+            table and data-retention period are set. While it is off, nothing is sent: what would
+            have been sent is logged instead.
+          </li>
+          <li>
+            No fee or price is guessed. Margins use the fee table you enter from each platform's own
+            fee page, with its address and date.
+          </li>
+          <li>
+            Marketplaces are reached through their official APIs only. Arbitron never drives a
+            browser signed in to a marketplace.
+          </li>
+          <li>Your organisation's data is kept apart from every other organisation's.</li>
+          <li>Every state change and outside call is written to an audit log you can read.</li>
+        </ul>
+      </section>
+
+      <section class="container stack landing__section" aria-labelledby="marketplaces">
+        <h2 id="marketplaces">Marketplaces</h2>
+        <dl class="landing__points">
+          <dt>Freelancer.com</dt>
+          <dd>
+            Find jobs, bid, message clients and post sourcing projects, through its official API and
+            the account you connect.
+          </dd>
+          <dt>Upwork</dt>
+          <dd>
+            Read jobs only, through its official API, once Upwork approves the API key. Bids on
+            Upwork are made on Upwork itself.
+          </dd>
+        </dl>
+      </section>
     </main>
+
+    <footer class="landing__footer">
+      <div class="container cluster">
+        <span>Built by Logi-Ink.</span>
+        <a href="./privacy.html">Privacy notice</a>
+        <a href="./terms.html">Terms of service</a>
+        <a href="./signup.html">Create an account</a>
+        <a href="./login.html">Sign in</a>
+      </div>
+    </footer>
   </body>
 </html>

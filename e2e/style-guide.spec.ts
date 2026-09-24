@@ -163,7 +163,8 @@ test('every link goes somewhere', async ({ page }) => {
   await expect(page).toHaveURL(/#type$/);
   await page.getByRole('link', { name: 'Arbitron' }).click();
   await expect(page).toHaveURL(/\/(index\.html)?$/);
-  await page.getByRole('link', { name: 'Style guide' }).click();
+  // The landing page (ARB-440) does not list the style guide; the way back is Back.
+  await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Style guide' })).toBeVisible();
 });
 
