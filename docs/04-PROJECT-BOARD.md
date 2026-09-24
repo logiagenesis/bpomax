@@ -79,7 +79,7 @@ Blocker references point to 02-BLOCKERS.md.
 
 | ID | Ticket | Depends | Blockers | Acceptance criteria | Status | SHA |
 |---|---|---|---|---|---|---|
-| ARB-400 | Public sign-up, org creation, onboarding | 399 | D-01, B-15 | New org isolated from Logi-Ink org (RLS tests) | TODO | |
+| ARB-400 | Public sign-up, org creation, onboarding | 399 | D-01, B-15 | New org isolated from Logi-Ink org (RLS tests) | IN PROGRESS (session …tJv8) | |
 | ARB-410 | Plans, limits, usage counters, 80%/100% alerts | 400 | D-12, B-13 | Limit reached blocks action with message; alerts sent | TODO | |
 | ARB-420 | Paystack (ZAR) and Stripe (USD) billing with webhooks | 410 | B-15 | Test-mode checkout activates plan; failed payment downgrades after grace period | TODO | |
 | ARB-430 | Affiliates and attribution | 420 | — | Referral code tracked from click to paid subscription | TODO | |
