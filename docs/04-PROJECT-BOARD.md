@@ -80,7 +80,7 @@ Blocker references point to 02-BLOCKERS.md.
 | ID | Ticket | Depends | Blockers | Acceptance criteria | Status | SHA |
 |---|---|---|---|---|---|---|
 | ARB-400 | Public sign-up, org creation, onboarding | 399 | D-01, B-15 | New org isolated from Logi-Ink org (RLS tests) | BUILT-PENDING-CREDENTIALS (The acceptance clause is proven: `packages/db/src/signup.test.ts` creates a new org through `app.create_org` (migration 0032) and shows, on every tenant table in both directions under the real `authenticated` role, that it and Logi-Ink cannot see, add to, change or remove each other's rows; 123 tests. Sign-up sends Supabase's documented request, onboarding lists six steps read from the org's rows, one self-service org per person (D-067). Open: public sign-up stays closed until the owner publishes approved terms of service (D-16, D-068), and it needs the Supabase project (B-06; the hosted round trip is V-03). The product keeps the working name until D-01. B-15 is ARB-420's.) | 5bd783b |
-| ARB-410 | Plans, limits, usage counters, 80%/100% alerts | 400 | D-12, B-13 | Limit reached blocks action with message; alerts sent | TODO | |
+| ARB-410 | Plans, limits, usage counters, 80%/100% alerts | 400 | D-12, B-13 | Limit reached blocks action with message; alerts sent | IN PROGRESS (session …tJv8) | |
 | ARB-420 | Paystack (ZAR) and Stripe (USD) billing with webhooks | 410 | B-15 | Test-mode checkout activates plan; failed payment downgrades after grace period | TODO | |
 | ARB-430 | Affiliates and attribution | 420 | — | Referral code tracked from click to paid subscription | TODO | |
 | ARB-440 | Marketing site (static, Vite) — factual copy only, no fake scarcity | 400 | D-01, 03 assets | Copy audit passes; Lighthouse ≥ 90 on all categories | TODO | |
