@@ -49,11 +49,23 @@ export function usagePeriod(now: Date): BidPeriod {
 /** A monthly limit per metric: a whole number, or null for no limit on that plan. */
 export type PlanLimits = Readonly<Record<PlanMetric, number | null>>;
 
+/**
+ * What a plan costs, per currency, and the provider's own reference for it (ARB-420):
+ * rand through Paystack, its plan code; US dollars through Stripe, its recurring Price.
+ * The figures and references are the owner's (docs/02 D-12, B-15); a currency left out is
+ * simply not on sale.
+ */
+export interface PlanPrices {
+  readonly ZAR?: { readonly amountMinor: number; readonly paystackPlanCode: string };
+  readonly USD?: { readonly amountMinor: number; readonly stripePriceId: string };
+}
+
 export interface Plan {
   readonly code: string;
   readonly name: string;
   readonly active: boolean;
   readonly limits: PlanLimits;
+  readonly prices: PlanPrices;
 }
 
 /**
@@ -108,10 +120,58 @@ export function validatePlan(input: unknown): ValidationResult<Plan> {
         });
     }
   }
+  const prices: { ZAR?: PlanPrices['ZAR']; USD?: PlanPrices['USD'] } = {};
+  const rawPrices = plan.prices ?? {};
+  if (typeof rawPrices !== 'object' || rawPrices === null || Array.isArray(rawPrices)) {
+    errors.push({ field: 'prices', message: 'must be an object keyed by currency' });
+  } else {
+    const given = rawPrices as Record<string, unknown>;
+    for (const key of Object.keys(given)) {
+      if (key !== 'ZAR' && key !== 'USD') {
+        errors.push({
+          field: `prices.${key}`,
+          message: 'is not sold: rand goes through Paystack and US dollars through Stripe',
+        });
+      }
+    }
+    const amountOf = (currency: 'ZAR' | 'USD', value: Record<string, unknown>) => {
+      const amount = value.amountMinor;
+      if (typeof amount === 'number' && Number.isInteger(amount) && amount > 0) return amount;
+      errors.push({
+        field: `prices.${currency}.amountMinor`,
+        message: 'must be a whole number of cents above 0',
+      });
+      return 0;
+    };
+    const zar = given.ZAR as Record<string, unknown> | undefined;
+    if (zar !== undefined) {
+      const amountMinor = amountOf('ZAR', zar ?? {});
+      const code = typeof zar?.paystackPlanCode === 'string' ? zar.paystackPlanCode.trim() : '';
+      if (!code) {
+        errors.push({
+          field: 'prices.ZAR.paystackPlanCode',
+          message: 'must be the plan code from the Paystack dashboard',
+        });
+      }
+      prices.ZAR = { amountMinor, paystackPlanCode: code };
+    }
+    const usd = given.USD as Record<string, unknown> | undefined;
+    if (usd !== undefined) {
+      const amountMinor = amountOf('USD', usd ?? {});
+      const id = typeof usd?.stripePriceId === 'string' ? usd.stripePriceId.trim() : '';
+      if (!id) {
+        errors.push({
+          field: 'prices.USD.stripePriceId',
+          message: 'must be the recurring Price id from the Stripe dashboard',
+        });
+      }
+      prices.USD = { amountMinor, stripePriceId: id };
+    }
+  }
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
-    value: { code, name, active: active as boolean, limits: limits as PlanLimits },
+    value: { code, name, active: active as boolean, limits: limits as PlanLimits, prices },
   };
 }
 
@@ -126,7 +186,13 @@ export type OrgPlan =
     }
   | {
       readonly kind: 'none';
-      readonly reason: 'no_subscription' | 'cancelled' | 'unknown_plan' | 'no_plans';
+      readonly reason:
+        | 'no_subscription'
+        | 'cancelled'
+        | 'unknown_plan'
+        | 'no_plans'
+        /** ARB-420: a payment failed and the grace period ran out. */
+        | 'grace_ended';
     };
 
 function dayForPeople(isoDay: string): string {
@@ -162,6 +228,8 @@ export function noPlanMessage(reason: Extract<OrgPlan, { kind: 'none' }>['reason
       return "This organisation's plan is no longer offered. Choose a plan in Settings to continue.";
     case 'cancelled':
       return "This organisation's plan has ended. Choose a plan in Settings to continue.";
+    case 'grace_ended':
+      return "A payment for this organisation's plan failed and the grace period has ended. Pay what is owed with the payment provider, or choose a plan in Settings, to continue.";
     default:
       return 'This organisation has no plan yet. Choose a plan in Settings to continue.';
   }

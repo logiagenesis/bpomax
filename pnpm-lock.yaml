@@ -38,6 +38,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@arbitron/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@arbitron/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -144,6 +147,12 @@ importers:
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+
+  packages/billing:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
 
   packages/core:
     devDependencies:

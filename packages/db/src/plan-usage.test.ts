@@ -140,6 +140,18 @@ describe('on a plan', () => {
     expect(await counter('bids_drafted')).toEqual({ used: 10, limit_value: 10 });
   });
 
+  it('ends the plan once a failed payment s grace period is over (ARB-420)', async () => {
+    await db.exec(`update subscriptions set status = 'past_due', grace_until = '2026-09-30T08:00:00Z'
+                   where org_id = '${CUSTOMER}'`);
+    const before = await loadOrgPlan(db, CUSTOMER, new Date('2026-09-30T07:59:00Z'));
+    expect(before?.orgPlan).toMatchObject({ kind: 'plan', status: 'past_due' });
+    const after = await loadOrgPlan(db, CUSTOMER, new Date('2026-09-30T08:00:00Z'));
+    expect(after?.orgPlan).toEqual({ kind: 'none', reason: 'grace_ended' });
+    await db.exec(
+      `update subscriptions set status = 'active', grace_until = null where org_id = '${CUSTOMER}'`,
+    );
+  });
+
   it.each([
     [
       'cancelled',

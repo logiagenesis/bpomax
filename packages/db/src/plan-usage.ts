@@ -25,21 +25,27 @@ export interface OrgPlanRow {
   readonly orgPlan: OrgPlan;
 }
 
-export async function loadOrgPlan(db: Queryable, orgId: string): Promise<OrgPlanRow | null> {
+export async function loadOrgPlan(
+  db: Queryable,
+  orgId: string,
+  now: Date = new Date(),
+): Promise<OrgPlanRow | null> {
   const { rows } = await db.query<{
     org_name: string;
     billing_exempt: boolean;
     subscription_plan: string | null;
     status: string | null;
+    grace_until: Date | string | null;
     plan_code: string | null;
     plan_name: string | null;
     plan_active: boolean | null;
     limits: unknown;
+    prices: unknown;
     plan_count: number;
   }>(
     `select o.name as org_name, o.billing_exempt, s.plan as subscription_plan, s.status,
-            p.code as plan_code, p.name as plan_name, p.active as plan_active, p.limits,
-            (select count(*)::int from plans) as plan_count
+            s.grace_until, p.code as plan_code, p.name as plan_name, p.active as plan_active,
+            p.limits, p.prices, (select count(*)::int from plans) as plan_count
        from orgs o
        left join subscriptions s on s.org_id = o.id
        left join plans p on p.code = s.plan
@@ -53,6 +59,15 @@ export async function loadOrgPlan(db: Queryable, orgId: string): Promise<OrgPlan
     if (row.plan_count === 0) return { kind: 'none', reason: 'no_plans' };
     if (!row.subscription_plan || !row.status) return { kind: 'none', reason: 'no_subscription' };
     if (row.status === 'cancelled') return { kind: 'none', reason: 'cancelled' };
+    // ARB-420: a failed payment's grace period that has run out ends the plan, whether or
+    // not the daily sweep has recorded it yet.
+    if (
+      row.status === 'past_due' &&
+      row.grace_until !== null &&
+      new Date(row.grace_until).getTime() <= now.getTime()
+    ) {
+      return { kind: 'none', reason: 'grace_ended' };
+    }
     if (!row.plan_code) return { kind: 'none', reason: 'unknown_plan' };
     // A retired plan (`active` false) still holds for the orgs already on it; it is only
     // withdrawn from sale (ARB-420).
@@ -61,6 +76,7 @@ export async function loadOrgPlan(db: Queryable, orgId: string): Promise<OrgPlan
       name: row.plan_name,
       active: row.plan_active,
       limits: row.limits,
+      prices: row.prices,
     });
     if (!parsed.ok) return { kind: 'none', reason: 'unknown_plan' };
     return {
@@ -96,7 +112,7 @@ export interface PlanUsageInput {
 /** How the org stands for one more of `metric`, without taking it. */
 export async function planUsage(db: Queryable, input: PlanUsageInput): Promise<UsageVerdict> {
   const now = input.now ?? new Date();
-  const loaded = await loadOrgPlan(db, input.orgId);
+  const loaded = await loadOrgPlan(db, input.orgId, now);
   const orgPlan: OrgPlan = loaded?.orgPlan ?? { kind: 'none', reason: 'no_subscription' };
   const used = await usedThisMonth(db, input.orgId, input.metric, now);
   return checkUsage({
@@ -126,7 +142,7 @@ export async function reservePlanUsage(db: Queryable, input: PlanUsageInput): Pr
   const now = input.now ?? new Date();
   const amount = input.amount ?? 1;
   const period = usagePeriod(now);
-  const loaded = await loadOrgPlan(db, input.orgId);
+  const loaded = await loadOrgPlan(db, input.orgId, now);
   const orgPlan: OrgPlan = loaded?.orgPlan ?? { kind: 'none', reason: 'no_subscription' };
   const orgName = loaded?.orgName ?? '';
   const planName = orgPlan.kind === 'plan' ? orgPlan.plan.name : null;

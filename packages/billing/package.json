@@ -1,0 +1,17 @@
+{
+  "name": "@arbitron/billing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Paystack (ZAR) and Stripe (USD) for the SaaS plans: checkout, transaction and subscription reads, webhook signatures, and stand-ins of both for tests",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fake": "./src/fake.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2"
+  }
+}

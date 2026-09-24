@@ -1040,6 +1040,24 @@ function api(method, url, body) {
       ],
     });
   }
+  // ARB-420 in the demo: the sample org is the house org, and no plan is published (D-12).
+  if (key === 'GET /v1/billing') {
+    return respond(200, {
+      role: 'owner',
+      houseOrg: true,
+      state: { kind: 'exempt' },
+      subscription: null,
+      plans: [],
+      graceDays: null,
+      providers: {
+        paystack: { configured: false, environment: null, reason: 'The demo takes no payments.' },
+        stripe: { configured: false, environment: null, reason: 'The demo takes no payments.' },
+      },
+    });
+  }
+  if (key === 'POST /v1/billing/checkout') {
+    return respond(409, { error: 'This is the house organisation: it is not billed.' });
+  }
   if (key === 'POST /v1/orgs') {
     return respond(409, {
       error: 'You are already a member of an organisation. Sign in to use it.',

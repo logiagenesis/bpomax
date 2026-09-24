@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
           terms: 'src/terms.html',
           signup: 'src/signup.html',
           onboarding: 'src/onboarding.html',
+          billing: 'src/billing.html',
           'freelancer-callback': 'src/freelancer-callback.html',
           'upwork-callback': 'src/upwork-callback.html',
         },

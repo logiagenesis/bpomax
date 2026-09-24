@@ -835,6 +835,14 @@ test.describe('plan and usage (ARB-410)', () => {
     );
   });
 
+  test('links to the billing page (ARB-420)', async ({ page }) => {
+    await open(page);
+    await expect(page.getByRole('link', { name: 'Choose or pay for the plan' })).toHaveAttribute(
+      'href',
+      './billing.html',
+    );
+  });
+
   test('a customer with no plan is told why nothing metered runs', async ({ page }) => {
     await open(page, {
       usage: {

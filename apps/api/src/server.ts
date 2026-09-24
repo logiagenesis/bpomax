@@ -6,6 +6,7 @@ import { registerTemplateRoutes } from './routes/templates.js';
 import { registerUpworkAccountRoutes } from './routes/upwork-accounts.js';
 import { registerUsageRoutes } from './routes/usage.js';
 import { registerAutoReplyRoutes } from './routes/auto-reply.js';
+import { registerBillingRoutes } from './routes/billing.js';
 import { registerBriefRoutes } from './routes/briefs.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
 import { registerDeliveryRoutes } from './routes/delivery.js';
@@ -54,6 +55,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerMeRoutes(app, options);
   registerOrgRoutes(app, options);
   registerUsageRoutes(app, options);
+  registerBillingRoutes(app, options);
   registerDashboardRoutes(app, options);
   registerJobRoutes(app, options);
   registerProposalRoutes(app, options);
