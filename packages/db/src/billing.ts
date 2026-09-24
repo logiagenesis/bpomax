@@ -113,6 +113,24 @@ export async function activatePlan(
     ],
   );
   await db.query(`update billing_checkouts set status = 'completed' where id = $1`, [checkout.id]);
+  // ARB-430: the org's first paid plan converts the referral that brought it, once.
+  const converted = await db.query<{ id: string; affiliate_id: string }>(
+    `update attribution set converted_at = now()
+      where org_id = $1 and converted_at is null and affiliate_id is not null
+      returning id, affiliate_id`,
+    [checkout.org_id],
+  );
+  for (const row of converted.rows) {
+    await recordEvent(db, {
+      orgId: checkout.org_id,
+      type: 'affiliate.converted',
+      subjectTable: 'attribution',
+      subjectId: row.id,
+      requestId: input.requestId ?? null,
+      outcome: 'ok',
+      payload: { affiliateId: row.affiliate_id, plan: checkout.plan_code },
+    });
+  }
   await recordEvent(db, {
     orgId: checkout.org_id,
     type: 'billing.plan_activated',

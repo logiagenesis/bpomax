@@ -2,6 +2,7 @@
 import { parseTermsOfService } from '@arbitron/core';
 import { clearFieldErrors, showFieldErrors } from './lib/forms.js';
 import { formatDate } from './lib/format.js';
+import { captureReferral } from './lib/referral.js';
 import { authConfig, readSession, saveSession } from './lib/session.js';
 import { runAction } from './lib/ui.js';
 
@@ -79,6 +80,9 @@ async function loadTerms() {
     ` (version ${parsed.value.version}, approved ${formatDate(`${parsed.value.approvedOn}T12:00:00Z`)})`,
   );
 }
+
+// ARB-430: a referral link may land here as well as on the landing page.
+void captureReferral('signup.html');
 
 if (!config) {
   close(

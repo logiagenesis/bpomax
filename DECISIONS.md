@@ -2152,3 +2152,39 @@ Decision:
 Why: ARB-420's acceptance ("Test-mode checkout activates plan; failed payment downgrades
 after grace period"), docs/01 rule 7 (every endpoint cited), and docs/01 rule 6 (no price,
 plan or grace period invented).
+
+## D-071 — Affiliates: the house org's programme, a click without the visitor, the last link kept, commission recorded not paid
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-430, session …tJv8)
+
+Decision:
+
+- The affiliate programme is the house org's (D-069). Only its owner creates affiliates
+  and sees the report; every other org, and the house org's operators and viewers, are
+  told so (403). Affiliates are `affiliates` rows of the house org, as 0008 already allows
+  an owner to write.
+- A referral link is the site's address with `?ref=<code>` (3 to 40 letters, digits or
+  hyphens). The landing and sign-up pages record the visit once through the public
+  `POST /v1/referrals/clicks`, which stores an `attribution` row with the code's
+  affiliate, the page and the time. It stores no address, no browser details and nothing
+  that identifies the visitor, and it takes the code out of the address so a reload or a
+  shared link does not count twice.
+- The browser keeps only the click's id (localStorage), and the last link followed wins.
+  `POST /v1/orgs` sends it, and `app.create_org` (now 0035) attaches it to the new org, but
+  only while it is attached to no org, so a click cannot move an existing org or be used
+  twice. `affiliate.attributed` is recorded. The browser then forgets the click.
+- The org's first paid plan converts the referral (`activatePlan`, ARB-420):
+  `converted_at` is set once and `affiliate.converted` recorded. The report counts
+  clicks, sign-ups and paid orgs per affiliate from the rows themselves.
+- No attribution window is applied: how long a click counts is part of the commission
+  terms, which are the owner's. The report shows the dates, so the owner can apply their
+  own terms.
+- Commission is recorded as the owner agreed it (a percentage, or none), never
+  defaulted. Paying it is done outside this app; no payout is built.
+- Switching an affiliate off stops new clicks counting (the click answers 404) and keeps
+  what it earned.
+
+Why: ARB-430's acceptance ("Referral code tracked from click to paid subscription"),
+docs/01 rule 6 (no commission or terms invented), and POPIA-minded data minimisation
+(docs/02 T-06): a click needs no personal data to be counted.

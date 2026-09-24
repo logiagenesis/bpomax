@@ -4,6 +4,7 @@
  * Migrations live in packages/db/migrations and are applied with the Supabase CLI.
  * Generated types land in packages/db/src/types.generated.ts (ARB-010).
  */
+export * from './affiliates.js';
 export * from './allowance.js';
 export * from './billing.js';
 export * from './briefs.js';

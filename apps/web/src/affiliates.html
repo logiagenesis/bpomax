@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Affiliates — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./affiliates.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./suppliers.html">Suppliers</a></li>
+            <li><a href="./sourcing.html">Sourcing</a></li>
+            <li><a href="./pipeline.html">Pipeline</a></li>
+            <li><a href="./templates.html">Templates</a></li>
+            <li><a href="./analytics.html">Analytics</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+          </ul>
+        </nav>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Affiliates</h1>
+        <p>
+          Referral links for the affiliate programme, and where each one led: the clicks, the
+          organisations created after one, and those that went on to a paid plan. A click keeps the
+          page and the time, nothing about the visitor. Commission is recorded as agreed; paying it
+          is done outside this app.
+        </p>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <form id="new-affiliate" class="card stack" novalidate aria-labelledby="new-heading" hidden>
+        <h2 id="new-heading">New affiliate</h2>
+        <div class="field">
+          <label class="field__label" for="code">Referral code</label>
+          <input
+            class="input"
+            id="code"
+            name="code"
+            maxlength="40"
+            required
+            aria-describedby="code-hint code-error"
+          />
+          <p class="field__hint" id="code-hint">
+            3 to 40 letters, digits or hyphens. The link is the site address with ?ref= and the
+            code.
+          </p>
+          <p class="field__error" id="code-error" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="ownerEmail">Affiliate's email (optional)</label>
+          <input
+            class="input"
+            id="ownerEmail"
+            name="ownerEmail"
+            type="email"
+            aria-describedby="ownerEmail-error"
+          />
+          <p class="field__error" id="ownerEmail-error" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="commissionPct">Commission (%, optional)</label>
+          <input
+            class="input"
+            id="commissionPct"
+            name="commissionPct"
+            inputmode="decimal"
+            aria-describedby="commissionPct-hint commissionPct-error"
+          />
+          <p class="field__hint" id="commissionPct-hint">
+            As agreed with the affiliate. Left empty, none is recorded.
+          </p>
+          <p class="field__error" id="commissionPct-error" hidden></p>
+        </div>
+        <div class="cluster">
+          <button type="submit" class="btn btn--primary" id="create">Add affiliate</button>
+        </div>
+      </form>
+
+      <section class="card stack" aria-labelledby="list-heading" id="list-section" hidden>
+        <h2 id="list-heading">Referral links</h2>
+        <p id="list-empty" class="section-note" hidden>No affiliates yet.</p>
+        <div class="table-wrap" id="list-table" hidden>
+          <table class="table">
+            <caption class="visually-hidden">
+              Affiliates and where their links led
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Code and link</th>
+                <th scope="col">Affiliate</th>
+                <th scope="col" class="num">Commission</th>
+                <th scope="col" class="num">Clicks</th>
+                <th scope="col" class="num">Sign-ups</th>
+                <th scope="col" class="num">Paid</th>
+                <th scope="col">Last click</th>
+                <th scope="col">Link on</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <p><a href="./settings.html">Back to Settings</a></p>
+    </main>
+  </body>
+</html>

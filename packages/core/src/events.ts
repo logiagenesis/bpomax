@@ -91,6 +91,11 @@ export const EVENT_TYPES = [
   'billing.payment_recovered',
   'billing.cancelled',
   'billing.downgraded',
+  // affiliates (ARB-430)
+  'affiliate.created',
+  'affiliate.updated',
+  'affiliate.attributed',
+  'affiliate.converted',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

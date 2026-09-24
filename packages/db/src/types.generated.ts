@@ -54,7 +54,9 @@ export type Database = {
           created_at: string;
           first_seen_at: string;
           id: string;
+          landing_page: string | null;
           org_id: string | null;
+          signed_up_at: string | null;
           source: string | null;
           updated_at: string;
         };
@@ -64,7 +66,9 @@ export type Database = {
           created_at?: string;
           first_seen_at?: string;
           id?: string;
+          landing_page?: string | null;
           org_id?: string | null;
+          signed_up_at?: string | null;
           source?: string | null;
           updated_at?: string;
         };
@@ -74,7 +78,9 @@ export type Database = {
           created_at?: string;
           first_seen_at?: string;
           id?: string;
+          landing_page?: string | null;
           org_id?: string | null;
+          signed_up_at?: string | null;
           source?: string | null;
           updated_at?: string;
         };

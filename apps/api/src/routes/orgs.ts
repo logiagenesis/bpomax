@@ -1,7 +1,7 @@
 import { onboardingSteps, validateNewOrg } from '@arbitron/core';
 import { withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
-import { currentMembership, invalid, type ServerOptions } from '../context.js';
+import { currentMembership, invalid, UUID, type ServerOptions } from '../context.js';
 import { describeMembership } from './me.js';
 
 /**
@@ -69,10 +69,14 @@ export function registerOrgRoutes(app: FastifyInstance, options: ServerOptions):
 
     try {
       const me = await withUser(options.db, authUserId, async (tx) => {
-        await tx.query(`select app.create_org($1, $2, $3)`, [
+        // ARB-430: the referral click this browser kept, if any; create_org takes it only
+        // while it is attached to no org.
+        const referral = (request.body as { referral?: unknown } | null)?.referral;
+        await tx.query(`select app.create_org($1, $2, $3, $4)`, [
           parsed.value.name,
           parsed.value.countryCode,
           request.id,
+          typeof referral === 'string' && UUID.test(referral) ? referral : null,
         ]);
         return currentMembership(tx);
       });

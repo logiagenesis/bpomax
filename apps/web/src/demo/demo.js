@@ -50,6 +50,7 @@ import {
   parseFeeTable,
   rankSuppliers,
   renderDiscoveryBatch,
+  validateAffiliate,
   validateAutoReply,
   validateBrief,
   validateDiscoveryAnswers,
@@ -77,7 +78,7 @@ const SESSION_KEY = 'arbitron.session';
 /**
  * @typedef {{ version: number, telegramLinked: boolean, biddingPaused: boolean,
  *   settings: Row, accounts: Row[], scanners: Row[], jobs: Row[], proposals: Row[],
- *   events: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
+ *   events: Row[], affiliates?: Row[], connectPending?: boolean, autoReply?: Row | null, outbound?: Row[],
  *   threads?: Row[], inbound?: Row[], discovery?: Row[], briefs?: Row[], suppliers?: Row[],
  *   sourcing?: Row[], posts?: Row[], pipeline?: Row[], orders?: Row[], payments?: Row[],
  *   templates?: Row[], upworkConnectPending?: boolean }} Store
@@ -1057,6 +1058,44 @@ function api(method, url, body) {
   }
   if (key === 'POST /v1/billing/checkout') {
     return respond(409, { error: 'This is the house organisation: it is not billed.' });
+  }
+  // ARB-430 in the demo: the sample org runs the programme; clicks are counted in the tab.
+  if (key === 'POST /v1/referrals/clicks') {
+    const found = (store.affiliates ?? []).find((a) => a.code === body?.code && a.active);
+    if (!found) return respond(404, { error: 'That referral code is not in use.' });
+    found.clicks += 1;
+    found.lastClickAt = new Date().toISOString();
+    return respond(201, { clickId: uuid() });
+  }
+  if (key === 'GET /v1/affiliates') {
+    return respond(200, { affiliates: store.affiliates ?? [] });
+  }
+  if (key === 'POST /v1/affiliates') {
+    const parsed = validateAffiliate(body ?? {});
+    if (!parsed.ok)
+      return respond(422, { error: 'the request was not accepted', errors: parsed.errors });
+    store.affiliates = store.affiliates ?? [];
+    if (store.affiliates.some((a) => a.code.toLowerCase() === parsed.value.code.toLowerCase())) {
+      return respond(409, { error: 'That code is already in use. Choose another.' });
+    }
+    const affiliate = {
+      id: uuid(),
+      ...parsed.value,
+      active: true,
+      createdAt: new Date().toISOString(),
+      clicks: 0,
+      signUps: 0,
+      paid: 0,
+      lastClickAt: null,
+    };
+    store.affiliates.push(affiliate);
+    return respond(201, { affiliate });
+  }
+  if (method === 'PATCH' && path.startsWith('/v1/affiliates/')) {
+    const affiliate = (store.affiliates ?? []).find((a) => a.id === idIn('/v1/affiliates/'));
+    if (!affiliate) return respond(404, { error: 'no such affiliate' });
+    affiliate.active = Boolean(body?.active);
+    return respond(200, { ok: true });
   }
   if (key === 'POST /v1/orgs') {
     return respond(409, {
