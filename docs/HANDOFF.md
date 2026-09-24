@@ -1,4 +1,4 @@
-# HANDOFF — 24/09/2026, 07:25 UTC (09:25 SAST)
+# HANDOFF — 24/09/2026, 08:10 UTC (10:10 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -7,19 +7,19 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 37 of 55 tickets are DONE; 11 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203, 300, 400, 410); 7 are TODO (099, 299, 399, 420, 430, 440,
+- **Board:** 37 of 55 tickets are DONE; 13 are BUILT-PENDING-CREDENTIALS (010, 013,
+  015, 020, 022, 070, 120, 203, 300, 400, 410, 420, 430); 5 are TODO (099, 299, 399, 440,
   499). Nothing is BLOCKED outright: every ticket is built against a stand-in and waits
   only on the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `0ff1b65` (PR #30, ARB-400). The ARB-410 PR is open from
+- **CI:** green on `main` at `f813036` (PR #32, ARB-420). The ARB-430 PR is open from
   `claude/beautiful-tesla-b6goej` and merges when green. On the owner's instruction of
   24/09/2026 every PR comes from that one branch; claims are pushed to `main` as a
   one-file commit built with git plumbing, never another branch.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next:** ARB-420 (Paystack in ZAR and Stripe in USD against stand-ins, B-15), then
-  ARB-430 and ARB-440. The phase audits (099, 299, 399, 499) wait on every ticket of their
-  phase being DONE. See section 6.
+- **Next:** ARB-440 (the marketing site: factual copy only, D-01 and the brand assets,
+  Lighthouse ≥ 90). Then the phase audits (099, 299, 399, 499), which each need every
+  ticket of their phase DONE. See section 6.
 
 ## 1. State of `main`
 
@@ -27,9 +27,9 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `0ff1b65` = PR #30, ARB-400 public sign-up (D-067, D-068)                              |
-| Open PR                | ARB-410 plans and limits, from `claude/beautiful-tesla-b6goej`                        |
-| Local checks at ARB-410 | lint, format, typecheck, the browser check green; 1246 unit tests (105 files); 260 + 36 Playwright tests |
+| Last merge             | `f813036` = PR #32, ARB-420 billing (D-070)                                             |
+| Open PR                | ARB-430 affiliates, from `claude/beautiful-tesla-b6goej`                               |
+| Local checks at ARB-430 | lint, format, typecheck, the browser check green; 1341 unit tests (111 files); 282 + 38 Playwright tests |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
@@ -37,8 +37,8 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
 | DONE                      | 37    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330, 340 |
-| BUILT-PENDING-CREDENTIALS | 11    | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12), 300 (C-04), 400 (D-16, B-06), 410 (D-12, B-13) |
-| TODO                      | 7     | 099, 299, 399, 420, 430, 440, 499                           |
+| BUILT-PENDING-CREDENTIALS | 13    | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12), 300 (C-04), 400 (D-16, B-06), 410 (D-12, B-13), 420 (C-05), 430 (C-05) |
+| TODO                      | 5     | 099, 299, 399, 440, 499                                     |
 
 ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
 credentials; under D-036 the build continues into Phase 2 meanwhile.
@@ -75,6 +75,8 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-340 | Templates page: sends and replies counted by the `template_variant_stats` view (0030, the never-written counters dropped), verified against raw SQL; the drafter's even A/B split; a sent variant's words locked; the page, Templates in the nav, demo; 11 + 1 Playwright tests | D-064 |
 | ARB-400 | Public sign-up: Supabase's documented sign-up request, `app.create_org` (0032) making the org with the person as owner, onboarding with six steps read from the org's rows, the terms page (pending); a new org isolated from Logi-Ink on every tenant table both ways (123 tests) (BUILT-PENDING-CREDENTIALS, D-16) | D-067, D-068 |
 | ARB-410 | Plans and limits: three metered actions per South African month, `plans` (0033, seed empty for D-12), the house org exempt, counters the system's alone, refusals in the worker and at the button (402), 80%/100% alerts to owners by Telegram and `@arbitron/email` (a stand-in until B-13) (BUILT-PENDING-CREDENTIALS) | D-069 |
+| ARB-420 | Billing: `packages/billing` (Paystack and Stripe, every call cited, stand-ins), hosted checkout, signed webhooks re-read against the provider and applied once (0034), the grace period an owner setting, the daily sweep, the Billing page (BUILT-PENDING-CREDENTIALS, C-05) | D-070 |
+| ARB-430 | Affiliates: codes for the house org's owner, a click with no personal data (0035), attribution at org creation, conversion at the first paid plan, the Affiliates page and its funnel (BUILT-PENDING-CREDENTIALS) | D-071 |
 | ARB-330 | MCP server (`apps/mcp`, SDK 1.30.1, stdio): the eleven tools over the API with the operator's token, approvals recorded as `mcp` (0029), `GET /v1/jobs/:id`, `POST /v1/jobs/:id/score`, `POST /v1/proposals/:id/submit`, `enqueueSubmit` re-runs a finished job, README setup for Claude Code and Claude Desktop; 24 tests | D-062 |
 
 ## 4. How to work here (what cost time this session)
@@ -130,25 +132,27 @@ ticket it unblocks:
 | D-16 terms of service (legal wording, published in `apps/web/src/public/terms.json`)        | ARB-400: public sign-up opens                                            |
 | D-12 SaaS plans and their limits (`packages/db/seed/plans.json`)                            | ARB-410 in use; ARB-420 prices                                           |
 | B-13 an email provider and a verified sending domain                                        | ARB-410's email alerts; ARB-420's billing emails                         |
-| B-15 Paystack and Stripe accounts                                                           | ARB-420                                                                  |
+| B-15 Paystack and Stripe accounts, their keys, a plan per product plan in each dashboard, the webhook URLs (C-05) | ARB-420, ARB-430's paid step                                      |
 | D-01 product name and domain                                                                | ARB-400 branding, ARB-440                                                |
 
 ## 6. The exact next ticket
 
-**ARB-420 — Paystack (ZAR) and Stripe (USD) billing with webhooks.** Claim it on the
-board first (a one-file commit on `origin/main`, pushed to `main`, as in section 4).
-Acceptance: "Test-mode checkout activates plan; failed payment downgrades after grace
-period". Every endpoint and webhook signature scheme must be cited from Paystack's and
-Stripe's own documentation (read through Firecrawl if the proxy refuses the host).
-Build both against in-process stand-ins that answer in the documented shapes; plan
-prices are D-12's and the grace period is an owner setting, never a default; the
-webhooks write `subscriptions` as service_role (0033 took the owner's write away). Mark
-it BUILT-PENDING-CREDENTIALS on B-15. Then ARB-430 (affiliates: a referral code tracked
-from click to paid subscription) and ARB-440 (the marketing site: factual copy only, D-01
-and the brand assets, Lighthouse ≥ 90). The phase audits (ARB-099, 299, 399, 499) each
-need every ticket of their phase DONE, and so wait on the credentials.
+**ARB-440 — Marketing site (static, Vite), factual copy only, no fake scarcity.** Claim it
+on the board first (a one-file commit on `origin/main`, pushed to `main`, as in section
+4). Acceptance: "Copy audit passes; Lighthouse ≥ 90 on all categories". Blockers D-01
+(product name and domain) and the docs/03 assets. Build the landing page as part of the
+web app (index.html already records referral clicks, ARB-430): only statements the build
+can stand behind (what the product does, as built), no prices until D-12, no testimonials,
+no counts, no urgency; the working name "Arbitron" until D-01; a copy audit as a test that
+fails on banned patterns; Lighthouse with the pre-installed Chromium. Then the phase
+audits (ARB-099, 299, 399, 499): each needs every ticket of its phase DONE, so each is
+marked BLOCKED with the tickets and credentials it waits on.
 
 ## 7. Loose ends
+
+- Changing plan is not built (D-070): an org with a running subscription is refused a
+  second checkout; the owner ends the first with the provider.
+- Affiliate commission is recorded, not paid (D-071); no attribution window is applied.
 
 - Work inside `withUser` or `inTransaction` must use the `tx` it is given: the outer
   connection waits for the transaction (on PGlite, for ever), so a slip shows as a hanging

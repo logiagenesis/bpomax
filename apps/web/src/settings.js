@@ -918,6 +918,7 @@ async function loadBands() {
 const planState = byId('plan-state');
 const usageRows = byId('usage-rows');
 const usagePeriodNote = byId('usage-period');
+const affiliatesLink = byId('affiliates-link');
 
 /** @type {Record<string, string>} */
 const SUBSCRIPTION_STATUS = { trialing: 'on trial', active: 'active', past_due: 'payment overdue' };
@@ -974,6 +975,8 @@ function renderUsage(usage) {
       return tr;
     }),
   );
+  // ARB-430: the affiliate programme is the house organisation's owner's.
+  affiliatesLink.hidden = !(plan.kind === 'exempt' && role === 'owner');
   usagePeriodNote.textContent = `Counted from ${formatDate(`${usage.period.start}T12:00:00Z`)}, South African time; the counts start again on ${formatDate(`${usage.period.resetsOn}T12:00:00Z`)}.`;
 }
 

@@ -1,6 +1,7 @@
 import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { ServerOptions } from './context.js';
+import { registerAffiliateRoutes } from './routes/affiliates.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerTemplateRoutes } from './routes/templates.js';
 import { registerUpworkAccountRoutes } from './routes/upwork-accounts.js';
@@ -56,6 +57,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerOrgRoutes(app, options);
   registerUsageRoutes(app, options);
   registerBillingRoutes(app, options);
+  registerAffiliateRoutes(app, options);
   registerDashboardRoutes(app, options);
   registerJobRoutes(app, options);
   registerProposalRoutes(app, options);

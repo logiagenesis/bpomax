@@ -2,6 +2,7 @@
 import { validateNewOrg } from '@arbitron/core';
 import { ApiError, apiGet, apiSend } from './lib/api.js';
 import { clearFieldErrors, showFieldErrors } from './lib/forms.js';
+import { clearReferral, readReferral } from './lib/referral.js';
 import { clearSession, loginUrl, readSession, requireSession, signOut } from './lib/session.js';
 import { runAction } from './lib/ui.js';
 
@@ -110,7 +111,10 @@ form.addEventListener('submit', (event) => {
     status,
     async () => {
       try {
-        await apiSend('POST', '/v1/orgs', parsed.value);
+        // ARB-430: the referral click this browser kept, if any, goes with the new org.
+        const referral = readReferral();
+        await apiSend('POST', '/v1/orgs', referral ? { ...parsed.value, referral } : parsed.value);
+        clearReferral();
       } catch (error) {
         if (backToLogin(error)) throw error;
         if (error instanceof ApiError && error.errors.length > 0)

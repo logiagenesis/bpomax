@@ -824,6 +824,7 @@ test.describe('plan and usage (ARB-410)', () => {
       },
     });
     await expect(page.locator('#plan-state')).toHaveText('Plan: Test plan, payment overdue.');
+    await expect(page.locator('#affiliates-link')).toBeHidden();
     await expect(page.locator('#usage-rows tr[data-metric="jobs_scored"] td').nth(3)).toHaveText(
       '80% Near the limit',
     );
@@ -832,6 +833,16 @@ test.describe('plan and usage (ARB-410)', () => {
     );
     await expect(page.locator('#usage-rows tr[data-metric="bids_submitted"] td').nth(3)).toHaveText(
       '6%',
+    );
+  });
+
+  test('shows the house org s owner the affiliate programme, and nobody else (ARB-430)', async ({
+    page,
+  }) => {
+    await open(page);
+    await expect(page.getByRole('link', { name: 'Affiliate programme' })).toHaveAttribute(
+      'href',
+      './affiliates.html',
     );
   });
 
