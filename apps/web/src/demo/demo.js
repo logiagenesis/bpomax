@@ -41,6 +41,7 @@ import {
   findFeeRule,
   handoverChecklist,
   milestoneTotal,
+  onboardingSteps,
   pipelineStageFor,
   reconcileMilestones,
   transitionBlockers,
@@ -988,6 +989,34 @@ function api(method, url, body) {
   };
 
   if (key === 'GET /v1/me') return respond(200, me(store));
+  // ARB-400 in the demo: the sample person already owns the sample org, so onboarding
+  // shows the steps, each read from the tab's own sample rows.
+  if (key === 'GET /v1/onboarding') {
+    const settings = store.settings;
+    return respond(200, {
+      ...me(store),
+      steps: onboardingSteps({
+        marginRulesSet:
+          settings.minMarginPct !== null &&
+          settings.minMarginZarMinor !== null &&
+          settings.fxBufferPct !== null &&
+          settings.feeTable.length > 0,
+        freelancerConnected: store.accounts.some(
+          (a) => a.platform === 'freelancer' && a.status === 'connected',
+        ),
+        scannerCount: store.scanners.length,
+        activeTemplateCount: templatesOf(store).filter(
+          (t) => t.active && t.variants.some((/** @type {Row} */ v) => v.active),
+        ).length,
+        telegramLinked: store.telegramLinked,
+      }),
+    });
+  }
+  if (key === 'POST /v1/orgs') {
+    return respond(409, {
+      error: 'You are already a member of an organisation. Sign in to use it.',
+    });
+  }
   if (key === 'POST /v1/sessions') {
     logEvent(store, 'auth.signed_in', { subject_table: 'users', subject_id: USER });
     return respond(201, me(store));
@@ -2919,6 +2948,16 @@ function auth(method, url, body) {
       user: { id: USER, email: String(body.email) },
     });
   }
+  // ARB-400: sign-up answers as a project that asks for email confirmation does — the
+  // user, no session — so the demo never pretends an account was made.
+  if (method === 'POST' && url.pathname === '/auth/v1/signup') {
+    return json(200, {
+      id: uuid(),
+      aud: 'authenticated',
+      email: String(body?.email ?? ''),
+      email_confirmed_at: null,
+    });
+  }
   if (method === 'POST' && url.pathname === '/auth/v1/logout') return json(204, null);
   if (method === 'GET' && url.pathname === '/auth/v1/user') return json(200, { id: USER });
   return json(404, { msg: 'not in the demo' });
@@ -2947,9 +2986,10 @@ window.fetch = async (input, init = {}) => {
 };
 
 // A signed-in page opened directly gets the sample person's session, so every page can
-// be viewed from its own link. The login page is left alone so it can be seen too.
+// be viewed from its own link. The login and sign-up pages are left alone so they can be
+// seen too.
 const page = location.pathname.split('/').pop() || 'index.html';
-if (page !== 'login.html' && !sessionStorage.getItem(SESSION_KEY)) {
+if (!['login.html', 'signup.html'].includes(page) && !sessionStorage.getItem(SESSION_KEY)) {
   sessionStorage.setItem(
     SESSION_KEY,
     JSON.stringify({

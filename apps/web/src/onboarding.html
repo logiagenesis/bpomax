@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Get set up — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./onboarding.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <div class="cluster">
+          <span class="app-header__who" id="who"></span>
+          <button type="button" class="btn btn--ghost" id="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container page stack">
+      <h1 id="onboarding-heading">Get set up</h1>
+      <div role="status" aria-live="polite" id="status"></div>
+
+      <form
+        id="create-org"
+        class="card stack login"
+        novalidate
+        aria-labelledby="org-heading"
+        hidden
+      >
+        <h2 id="org-heading">Create your organisation</h2>
+        <p id="org-intro">
+          You are signed in, but not a member of an organisation yet. Create one and you become its
+          owner. If someone has invited you to theirs, ask them to add you instead, then sign in
+          again.
+        </p>
+        <div class="field">
+          <label class="field__label" for="name">Organisation name</label>
+          <input
+            class="input"
+            id="name"
+            name="name"
+            autocomplete="organization"
+            maxlength="100"
+            required
+            aria-describedby="name-error"
+          />
+          <p class="field__error" id="name-error" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="countryCode">Country</label>
+          <input
+            class="input"
+            id="countryCode"
+            name="countryCode"
+            autocomplete="country"
+            maxlength="2"
+            value="ZA"
+            required
+            aria-describedby="countryCode-hint countryCode-error"
+          />
+          <p class="field__hint" id="countryCode-hint">
+            The two-letter code, such as ZA for South Africa. Amounts are shown in rand.
+          </p>
+          <p class="field__error" id="countryCode-error" hidden></p>
+        </div>
+        <div class="cluster">
+          <button type="submit" class="btn btn--primary" id="create">Create organisation</button>
+        </div>
+      </form>
+
+      <section id="steps" class="card stack" aria-labelledby="steps-heading" hidden>
+        <h2 id="steps-heading">What is left to set up</h2>
+        <p id="steps-summary" class="section-note"></p>
+        <ol id="step-list" class="stack"></ol>
+        <p><a class="btn btn--primary" href="./dashboard.html">Go to the dashboard</a></p>
+      </section>
+    </main>
+  </body>
+</html>

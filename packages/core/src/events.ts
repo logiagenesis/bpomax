@@ -8,6 +8,7 @@
 export const EVENT_TYPES = [
   // identity and access
   'auth.signed_in',
+  'org.created',
   'auth.member_invited',
   'auth.member_role_changed',
   'auth.member_removed',

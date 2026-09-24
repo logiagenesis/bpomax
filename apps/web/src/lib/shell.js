@@ -8,7 +8,8 @@ import { clearSession, loginUrl, requireSession, signOut } from './session.js';
  *
  * Returns the person's membership from `GET /v1/me`, so a page can grey out what their
  * role may not do (D-013). A 401 from that call means the token is no longer good, and
- * the page goes back to login rather than showing a shell with nothing in it.
+ * the page goes back to login rather than showing a shell with nothing in it; a 403
+ * means the person is in no organisation yet, and the page goes to onboarding.
  *
  * @typedef {{ user: { id: string, email: string | null, fullName: string | null, telegramLinked: boolean },
  *             org: { id: string, name: string, baseCurrency: string },
@@ -44,6 +45,11 @@ export async function mountShell() {
     if (error instanceof ApiError && error.status === 401) {
       clearSession();
       location.replace(loginUrl());
+      return null;
+    }
+    // Signed in but in no organisation (ARB-400): onboarding creates one.
+    if (error instanceof ApiError && error.status === 403) {
+      location.replace('./onboarding.html');
       return null;
     }
     if (who) who.textContent = error instanceof Error ? error.message : String(error);

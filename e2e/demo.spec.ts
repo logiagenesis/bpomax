@@ -37,7 +37,15 @@ for (const [path, status, shell] of SIGNED_IN) {
   });
 }
 
-for (const path of ['/index.html', '/login.html', '/privacy.html', '/style-guide.html']) {
+for (const path of [
+  '/index.html',
+  '/login.html',
+  '/signup.html',
+  '/onboarding.html',
+  '/privacy.html',
+  '/terms.html',
+  '/style-guide.html',
+]) {
   test(`${path} opens with the demo banner`, async ({ page }) => {
     await page.goto(path);
     await expect(page.locator('#demo-banner')).toBeVisible();
@@ -374,4 +382,22 @@ test('connecting Upwork in the demo returns at once with a sample account, to re
   await expect(page.locator('#status')).toHaveText(
     'Connected the Upwork account Sample Upwork account (demo). It is used to read jobs only.',
   );
+});
+
+test('onboarding in the demo reads each step from the tab’s sample rows', async ({ page }) => {
+  await page.goto('/onboarding.html');
+  await expect(page.locator('#steps')).toBeVisible();
+  await expect(page.locator('#step-list li')).toHaveCount(6);
+  // The sample org has a connected account and a template, and no margin rules.
+  await expect(page.locator('li[data-step="margin"] .badge')).toHaveText('To do');
+  await expect(page.locator('li[data-step="freelancer"] .badge')).toHaveText('Done');
+  await expect(page.locator('li[data-step="template"] .badge')).toHaveText('Done');
+});
+
+test('sign-up in the demo stays closed while the terms are pending', async ({ page }) => {
+  await page.goto('/signup.html');
+  await expect(page.locator('#status')).toHaveText(
+    'Sign-up opens once the terms of service are published. Until then, an owner can add you to their organisation.',
+  );
+  await expect(page.getByRole('button', { name: 'Create account' })).toBeDisabled();
 });

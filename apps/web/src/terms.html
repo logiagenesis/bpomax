@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terms of service — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <script type="module" src="./terms.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./index.html">Arbitron</a>
+      </div>
+    </header>
+
+    <main class="container page stack">
+      <h1 id="terms-heading">Terms of service</h1>
+      <div role="status" aria-live="polite" id="status"></div>
+      <p id="terms-pending" class="section-note" hidden>
+        These terms have not been published yet. Their wording is being settled with a legal adviser
+        (docs/BLOCKERS.md D-16), and public sign-up stays closed until they are. An owner can still
+        add you to their organisation.
+      </p>
+      <p id="terms-approval" class="section-note" hidden></p>
+      <article id="terms" class="stack" aria-labelledby="terms-heading" hidden></article>
+      <p><a href="./signup.html">Create an account</a> · <a href="./login.html">Sign in</a></p>
+    </main>
+  </body>
+</html>
