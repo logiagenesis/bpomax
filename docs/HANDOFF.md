@@ -181,16 +181,9 @@ Then Phase 4 as far as it can be built without D-01, B-13 and B-15.
 
 ## 7. Loose ends
 
-- **The workers' own transactions have the problem D-063 fixed in `withUser`.** Ten files
-  (`apps/workers/src/` margin, inbox-sync, draft-bid, auto-reply, ingest, submit,
-  estimate, score, brief-build, discovery, and `apps/telegram/src/engine.ts`) each run
-  `begin … commit` on the shared `db`. On a node-postgres `Pool` each statement can land
-  on a different connection. Before the workers get a production entry point (B-12),
-  export one `inTransaction(db, work)` from `packages/db` with `withUser`'s connection
-  handling (borrow from a pool, PGlite's own transaction, else take turns), pass `tx` into
-  each `work`, and test it as `packages/db/src/client.test.ts` tests `withUser`.
-- Work inside `withUser` must use the `tx` it is given: the outer connection now waits
-  for the transaction (on PGlite, for ever), so a slip shows as a hanging test (D-063).
+- Work inside `withUser` or `inTransaction` must use the `tx` it is given: the outer
+  connection waits for the transaction (on PGlite, for ever), so a slip shows as a hanging
+  test (D-063, D-065). `tests/transactions.test.ts` allows `begin` only in packages/db.
 - A sign-in token for the MCP server expires; a long-lived credential (a personal access
   token or a device sign-in) is not built and needs the owner's say (D-062).
 - A recorded payment cannot be corrected from the page (D-059): no refund or reversal

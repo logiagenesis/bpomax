@@ -1,4 +1,4 @@
-import { recordEvent, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, type Queryable } from '@arbitron/db';
 import {
   AccountNotConnectedError,
   FreelancerError,
@@ -188,18 +188,6 @@ export function messageBody(message: FreelancerMessage): string {
     : '';
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 export async function pollInbox(
   deps: InboxDeps,
   data: { readonly accountId: string; readonly requestId?: string },
@@ -222,8 +210,9 @@ export async function pollInbox(
   const synced = (
     outcome: 'ok' | 'error' | 'skipped',
     payload: Record<string, unknown>,
+    on: Queryable = db,
   ): Promise<string> =>
-    recordEvent(db, {
+    recordEvent(on, {
       orgId: account.org_id,
       type: 'inbox.synced',
       actorKind: 'system',
@@ -369,17 +358,17 @@ export async function pollInbox(
   let newInbound = 0;
   let newOutbound = 0;
   let syncedTo: Date | null = account.inbox_synced_to ? new Date(account.inbox_synced_to) : null;
-  await inTransaction(db, async () => {
+  await inTransaction(db, async (tx) => {
     const threadIds = new Map<string, string>();
     for (const thread of threads) {
       const job = thread.contextId
-        ? await db.query<{ id: string }>(
+        ? await tx.query<{ id: string }>(
             `select id from jobs where org_id = $1 and platform = 'freelancer' and external_id = $2`,
             [account.org_id, thread.contextId],
           )
         : null;
       const handle = clientHandle(thread, users, account.external_user_id);
-      const upserted = await db.query<ThreadRow>(
+      const upserted = await tx.query<ThreadRow>(
         `insert into threads (org_id, job_id, platform, external_thread_id, client_handle)
          values ($1, $2, 'freelancer', $3, $4)
          on conflict (platform, external_thread_id) do update
@@ -403,7 +392,7 @@ export async function pollInbox(
       const threadId = threadIds.get(message.threadId);
       if (!threadId) continue;
       const inbound = message.fromUser !== account.external_user_id;
-      const { rows: inserted } = await db.query<{ id: string }>(
+      const { rows: inserted } = await tx.query<{ id: string }>(
         `insert into messages
            (org_id, thread_id, direction, body, sent_at, external_message_id, origin)
          values ($1, $2, $3, $4, $5, $6, 'platform')
@@ -423,7 +412,7 @@ export async function pollInbox(
       if (!row) continue;
       if (inbound) newInbound += 1;
       else newOutbound += 1;
-      await db.query(
+      await tx.query(
         `update threads
             set last_message_at = greatest(coalesce(last_message_at, $2), $2),
                 status = case when status = 'closed' then status else $3::thread_status end
@@ -435,7 +424,7 @@ export async function pollInbox(
         ],
       );
       if (inbound) {
-        await recordEvent(db, {
+        await recordEvent(tx, {
           orgId: account.org_id,
           type: 'message.received',
           actorKind: 'system',
@@ -455,18 +444,22 @@ export async function pollInbox(
       }
     }
 
-    await db.query(
+    await tx.query(
       `update platform_accounts set inbox_synced_to = $2, last_sync_at = $3 where id = $1`,
       [account.id, syncedTo?.toISOString() ?? null, now.toISOString()],
     );
-    await synced('ok', {
-      threads: threads.length,
-      new_threads: newThreads,
-      messages: messages.length,
-      new_inbound: newInbound,
-      new_outbound: newOutbound,
-      synced_to: syncedTo?.toISOString() ?? null,
-    });
+    await synced(
+      'ok',
+      {
+        threads: threads.length,
+        new_threads: newThreads,
+        messages: messages.length,
+        new_inbound: newInbound,
+        new_outbound: newOutbound,
+        synced_to: syncedTo?.toISOString() ?? null,
+      },
+      tx,
+    );
   });
 
   // 4. After the commit, so the operator's link opens a stored message and the auto-reply

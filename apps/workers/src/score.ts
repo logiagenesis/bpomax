@@ -8,7 +8,7 @@ import {
   type ModelScore,
   type ScorableJob,
 } from '@arbitron/core';
-import { recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
 import { enqueueEstimate } from './estimate.js';
@@ -87,18 +87,6 @@ export function nanoUsdToCentsCeil(nano: number): number {
   return Math.ceil(nano / 10_000_000);
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<ScoreResult> {
   const { db } = deps;
   const requestId = data.requestId ?? null;
@@ -136,8 +124,8 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
     });
   } catch (error) {
     if (error instanceof LlmOutputError) {
-      await inTransaction(db, async () => {
-        await recordLlmCall(db, {
+      await inTransaction(db, async (tx) => {
+        await recordLlmCall(tx, {
           orgId: row.org_id,
           purpose: 'score',
           model: deps.model,
@@ -151,7 +139,7 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
           outcome: 'invalid_output',
           problems: error.problems,
         });
-        await recordEvent(db, {
+        await recordEvent(tx, {
           orgId: row.org_id,
           type: 'job.scored',
           subjectTable: 'jobs',
@@ -177,8 +165,8 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
 
   const score = reconcileScore(result.value, findings);
 
-  const scoreId = await inTransaction(db, async () => {
-    const inserted = await db.query<{ id: string }>(
+  const scoreId = await inTransaction(db, async (tx) => {
+    const inserted = await tx.query<{ id: string }>(
       `insert into job_scores
          (org_id, job_id, score, verdict, reasons, flags, reply_probability, model,
           input_tokens, output_tokens, cost_usd_minor)
@@ -201,7 +189,7 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
     const id = inserted.rows[0]?.id;
     if (!id) throw new Error(`job ${row.id}: the score was not stored`);
 
-    await recordLlmCall(db, {
+    await recordLlmCall(tx, {
       orgId: row.org_id,
       purpose: 'score',
       model: result.model,
@@ -218,7 +206,7 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
       outcome: 'ok',
       problems: result.problems,
     });
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: row.org_id,
       type: 'job.scored',
       subjectTable: 'job_scores',

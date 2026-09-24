@@ -1,6 +1,6 @@
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { withUser, type Queryable } from './client.js';
+import { inTransaction, withUser, type Queryable } from './client.js';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from './fixtures.js';
 import { createTestDatabase } from './testing.js';
 
@@ -113,5 +113,51 @@ describe('withUser at the same time', () => {
     );
     expect(statements.at(-1)).toEqual({ client: 2, sql: 'rollback' });
     expect({ lent, returned }).toEqual({ lent: 2, returned: 2 });
+  });
+});
+
+/**
+ * `inTransaction`, which the workers use (D-065): the worker kind of the same failure.
+ * Before this, each worker ran `begin … commit` on the connection it was handed, so two
+ * jobs at once shared one transaction and one job's rollback undid the other's writes.
+ */
+describe('inTransaction at the same time', () => {
+  /** Twenty jobs at once; every third one fails after writing. */
+  async function jobs(target: Queryable, tag: string) {
+    await db.exec(`create table if not exists tx_probe (id text primary key)`);
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 20 }, (_, i) =>
+        inTransaction(target, async (tx) => {
+          await tx.query('insert into tx_probe (id) values ($1)', [`${tag}-${String(i)}`]);
+          await tx.query('select 1');
+          if (i % 3 === 0) throw new Error(`job ${String(i)} failed`);
+          return i;
+        }),
+      ),
+    );
+    const { rows } = await db.query<{ id: string }>(
+      'select id from tx_probe where id like $1 order by id',
+      [`${tag}-%`],
+    );
+    return { outcomes, stored: new Set(rows.map((r) => r.id)) };
+  }
+
+  function expectOnlyTheGoodOnes(result: Awaited<ReturnType<typeof jobs>>, tag: string) {
+    for (let i = 0; i < 20; i += 1) {
+      const failed = i % 3 === 0;
+      expect(result.outcomes[i]?.status, `job ${String(i)}`).toBe(
+        failed ? 'rejected' : 'fulfilled',
+      );
+      expect(result.stored.has(`${tag}-${String(i)}`), `row ${String(i)}`).toBe(!failed);
+    }
+  }
+
+  it('on PGlite, a failed job undoes only its own writes', async () => {
+    expectOnlyTheGoodOnes(await jobs(db, 'pglite'), 'pglite');
+  });
+
+  it('on one plain connection, the jobs take turns and a failure undoes only its own writes', async () => {
+    const plain: Queryable = { query: (sql, params) => db.query(sql, params) };
+    expectOnlyTheGoodOnes(await jobs(plain, 'plain'), 'plain');
   });
 });

@@ -8,7 +8,7 @@ import {
   type MarginEvaluation,
   type Platform,
 } from '@arbitron/core';
-import { recordEvent, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, type Queryable } from '@arbitron/db';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
 import { enqueueDraft } from './draft-bid.js';
 
@@ -78,18 +78,6 @@ interface SettingsRow {
   min_margin_zar_minor: string | null;
   fx_buffer_pct: string | null;
   fee_table: unknown;
-}
-
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
 }
 
 async function note(
@@ -268,8 +256,8 @@ export async function evaluateJobMargin(
     fxToHome,
   });
 
-  const evaluationId = await inTransaction(db, async () => {
-    const inserted = await db.query<{ id: string }>(
+  const evaluationId = await inTransaction(db, async (tx) => {
+    const inserted = await tx.query<{ id: string }>(
       `insert into margin_evaluations
          (org_id, job_id, delivery_estimate_id, currency, client_budget_minor,
           platform_fee_minor, supplier_cost_minor, fx_buffer_minor, tool_cost_minor,
@@ -299,7 +287,7 @@ export async function evaluateJobMargin(
     );
     const id = inserted.rows[0]?.id;
     if (!id) throw new Error(`job ${job.id}: the margin evaluation was not stored`);
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: job.org_id,
       type: 'margin.evaluated',
       subjectTable: 'margin_evaluations',

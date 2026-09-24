@@ -1,5 +1,5 @@
 import { bidPeriod, canApprove, isRole, type Role } from '@arbitron/core';
-import { bidUsage, recordEvent, type Queryable } from '@arbitron/db';
+import { bidUsage, inTransaction, recordEvent, type Queryable } from '@arbitron/db';
 import { enqueueSubmit } from '@arbitron/workers';
 import type { Queue } from 'bullmq';
 import type { Incoming, IncomingCallback, IncomingMessage, TelegramApi } from './api.js';
@@ -94,19 +94,18 @@ async function link(deps: BotDeps, incoming: IncomingMessage, code: string): Pro
     );
     return;
   }
-  await db.query('begin');
-  try {
+  await inTransaction(db, async (tx) => {
     // A chat belongs to one Telegram account; a new code moves it to the person who made the code.
-    await db.query(
+    await tx.query(
       'update users set telegram_chat_id = null where telegram_chat_id = $1 and id <> $2',
       [incoming.chatId, row.user_id],
     );
-    await db.query('update users set telegram_chat_id = $2 where id = $1', [
+    await tx.query('update users set telegram_chat_id = $2 where id = $1', [
       row.user_id,
       incoming.chatId,
     ]);
-    await db.query('update telegram_link_codes set used_at = now() where id = $1', [row.id]);
-    await recordEvent(db, {
+    await tx.query('update telegram_link_codes set used_at = now() where id = $1', [row.id]);
+    await recordEvent(tx, {
       orgId: row.org_id,
       type: 'telegram.linked',
       actorUserId: row.user_id,
@@ -114,11 +113,7 @@ async function link(deps: BotDeps, incoming: IncomingMessage, code: string): Pro
       subjectId: row.user_id,
       payload: { chatId: incoming.chatId },
     });
-    await db.query('commit');
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
+  });
   await api.sendMessage(
     incoming.chatId,
     `Linked to ${row.org_name}${row.full_name ? ` as ${row.full_name}` : ''}. ${HELP}`,

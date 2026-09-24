@@ -8,7 +8,7 @@ import {
   type PriceBandSource,
   type RateCardSource,
 } from '@arbitron/core';
-import { recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
 import { enqueueMargin } from './margin.js';
@@ -89,18 +89,6 @@ interface BandRow {
   sampled_at: string;
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 async function skip(
   db: Queryable,
   job: JobRow,
@@ -156,8 +144,8 @@ async function classify(
     });
   } catch (error) {
     if (error instanceof LlmOutputError) {
-      await inTransaction(db, async () => {
-        await recordLlmCall(db, {
+      await inTransaction(db, async (tx) => {
+        await recordLlmCall(tx, {
           orgId: job.org_id,
           purpose: 'estimate',
           model: deps.model,
@@ -171,7 +159,7 @@ async function classify(
           outcome: 'invalid_output',
           problems: error.problems,
         });
-        await recordEvent(db, {
+        await recordEvent(tx, {
           orgId: job.org_id,
           type: 'estimate.created',
           subjectTable: 'jobs',
@@ -196,8 +184,8 @@ async function classify(
   }
 
   const { category_slug: slug, confidence, reason } = result.value;
-  await inTransaction(db, async () => {
-    await recordLlmCall(db, {
+  await inTransaction(db, async (tx) => {
+    await recordLlmCall(tx, {
       orgId: job.org_id,
       purpose: 'estimate',
       model: result.model,
@@ -215,7 +203,7 @@ async function classify(
       problems: result.problems,
     });
     if (slug) {
-      await db.query('update jobs set category_slug = $2, category_confidence = $3 where id = $1', [
+      await tx.query('update jobs set category_slug = $2, category_confidence = $3 where id = $1', [
         job.id,
         slug,
         confidence,
@@ -336,8 +324,8 @@ export async function estimateJob(
   }
   const { choice } = decision;
 
-  const estimateId = await inTransaction(db, async () => {
-    const inserted = await db.query<{ id: string }>(
+  const estimateId = await inTransaction(db, async (tx) => {
+    const inserted = await tx.query<{ id: string }>(
       `insert into delivery_estimates
          (org_id, job_id, category_slug, method, currency, low_minor, expected_minor,
           high_minor, turnaround_days, supplier_id)
@@ -358,7 +346,7 @@ export async function estimateJob(
     );
     const id = inserted.rows[0]?.id;
     if (!id) throw new Error(`job ${job.id}: the estimate was not stored`);
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: job.org_id,
       type: 'estimate.created',
       subjectTable: 'delivery_estimates',

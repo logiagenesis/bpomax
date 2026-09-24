@@ -1,5 +1,5 @@
 import { liveGate, operatorIsOffline } from '@arbitron/core';
-import { recordEvent, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, type Queryable } from '@arbitron/db';
 import {
   AccountNotConnectedError,
   FreelancerError,
@@ -167,21 +167,21 @@ export async function autoReply(
 
   // The record first: the unique key on the thread makes a second reply impossible.
   let messageId: string;
-  await db.query('begin');
   try {
-    const inserted = await db.query<{ id: string }>(
-      `insert into messages (org_id, thread_id, direction, body, approved_by, approved_via, origin)
-       values ($1, $2, 'out', $3, $4, 'auto', 'app') returning id`,
-      [inbound.org_id, inbound.thread_id, reply.body, reply.approved_by],
-    );
-    messageId = inserted.rows[0]!.id;
-    await db.query(
-      `insert into auto_reply_sends (org_id, thread_id, auto_reply_id, message_id) values ($1, $2, $3, $4)`,
-      [inbound.org_id, inbound.thread_id, reply.id, messageId],
-    );
-    await db.query('commit');
+    messageId = await inTransaction(db, async (tx) => {
+      const inserted = await tx.query<{ id: string }>(
+        `insert into messages (org_id, thread_id, direction, body, approved_by, approved_via, origin)
+         values ($1, $2, 'out', $3, $4, 'auto', 'app') returning id`,
+        [inbound.org_id, inbound.thread_id, reply.body, reply.approved_by],
+      );
+      const id = inserted.rows[0]!.id;
+      await tx.query(
+        `insert into auto_reply_sends (org_id, thread_id, auto_reply_id, message_id) values ($1, $2, $3, $4)`,
+        [inbound.org_id, inbound.thread_id, reply.id, id],
+      );
+      return id;
+    });
   } catch (error) {
-    await db.query('rollback');
     if (
       error instanceof Error &&
       /auto_reply_sends_thread_id_key|duplicate key/.test(error.message)
