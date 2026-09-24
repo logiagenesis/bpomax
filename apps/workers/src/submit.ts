@@ -6,6 +6,7 @@ import {
   type Platform,
 } from '@arbitron/core';
 import {
+  inTransaction,
   recordEvent,
   releaseBid,
   releaseScannerSlot,
@@ -88,18 +89,6 @@ interface ScannerRow {
   daily_cap: number;
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 /** The bookkeeping of a placed bid: the proposal, its pipeline item, and the events, in one transaction. */
 async function recordPlaced(
   db: Queryable,
@@ -108,12 +97,12 @@ async function recordPlaced(
   requestId: string | null,
   now: Date,
 ): Promise<string> {
-  return inTransaction(db, async () => {
-    await db.query(
+  return inTransaction(db, async (tx) => {
+    await tx.query(
       `update proposals set status = 'submitted', submitted_at = $2, platform_ref = $3 where id = $1`,
       [proposal.id, now.toISOString(), platformRef],
     );
-    const item = await db.query<{ id: string }>(
+    const item = await tx.query<{ id: string }>(
       `insert into pipeline_items (org_id, job_id, proposal_id, stage, value_minor, currency)
        values ($1, $2, $3, 'applied', $4, $5)
        on conflict (job_id) do update
@@ -131,7 +120,7 @@ async function recordPlaced(
     const pipelineItemId = item.rows[0]?.id;
     if (!pipelineItemId)
       throw new Error(`proposal ${proposal.id}: the pipeline item was not stored`);
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: proposal.org_id,
       type: 'proposal.submitted',
       subjectTable: 'proposals',
@@ -145,7 +134,7 @@ async function recordPlaced(
         approvedVia: proposal.approved_via,
       },
     });
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: proposal.org_id,
       type: 'pipeline.stage_changed',
       subjectTable: 'pipeline_items',

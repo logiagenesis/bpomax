@@ -8,7 +8,7 @@ import {
   type ModelDraft,
   type ScorableJob,
 } from '@arbitron/core';
-import { recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
 
@@ -103,18 +103,6 @@ function toScorable(row: JobRow): ScorableJob {
     bidCount: row.bid_count,
     averageBidMinor: num(row.average_bid_minor),
   };
-}
-
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
 }
 
 /**
@@ -245,8 +233,8 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
     });
   } catch (error) {
     if (error instanceof LlmOutputError) {
-      await inTransaction(db, async () => {
-        await recordLlmCall(db, {
+      await inTransaction(db, async (tx) => {
+        await recordLlmCall(tx, {
           orgId: job.org_id,
           purpose: 'draft',
           model: deps.model,
@@ -260,7 +248,7 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
           outcome: 'invalid_output',
           problems: error.problems,
         });
-        await recordEvent(db, {
+        await recordEvent(tx, {
           orgId: job.org_id,
           type: 'proposal.drafted',
           subjectTable: 'jobs',
@@ -291,8 +279,8 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
   const deliveryDays = estimatedDays ?? draft.delivery_days;
   const timelineSource = estimatedDays === null ? 'proposed_by_model' : 'estimate';
 
-  const proposalId = await inTransaction(db, async () => {
-    const inserted = await db.query<{ id: string }>(
+  const proposalId = await inTransaction(db, async (tx) => {
+    const inserted = await tx.query<{ id: string }>(
       `insert into proposals
          (org_id, job_id, margin_evaluation_id, template_variant_id, body, amount_minor,
           currency, delivery_days, milestones, status)
@@ -314,13 +302,13 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
     if (!id) throw new Error(`job ${job.id}: the proposal was not stored`);
 
     for (const item of citations) {
-      await db.query(
+      await tx.query(
         'insert into proposal_citations (org_id, proposal_id, portfolio_item_id) values ($1, $2, $3)',
         [job.org_id, id, item.id],
       );
     }
 
-    await recordLlmCall(db, {
+    await recordLlmCall(tx, {
       orgId: job.org_id,
       purpose: 'draft',
       model: result.model,
@@ -337,7 +325,7 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
       outcome: 'ok',
       problems: result.problems,
     });
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: job.org_id,
       type: 'proposal.drafted',
       subjectTable: 'proposals',

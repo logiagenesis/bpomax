@@ -1,5 +1,5 @@
 import { toMinor, type ScannerFilters } from '@arbitron/core';
-import { recordEvent, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, type Queryable } from '@arbitron/db';
 import {
   AccountNotConnectedError,
   FreelancerError,
@@ -295,18 +295,6 @@ async function upsertJob(
   return rows[0]!;
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 export async function pollScanner(
   deps: IngestDeps,
   data: { readonly scannerId: string; readonly requestId?: string },
@@ -341,8 +329,9 @@ export async function pollScanner(
   const polled = (
     outcome: 'ok' | 'error' | 'skipped',
     payload: Record<string, unknown>,
+    on: Queryable = db,
   ): Promise<string> =>
-    recordEvent(db, {
+    recordEvent(on, {
       orgId: scanner.org_id,
       type: 'scanner.polled',
       actorKind: 'system',
@@ -446,15 +435,15 @@ export async function pollScanner(
   const kept = page.projects.filter(built.keep);
   const created: string[] = [];
   let updated = 0;
-  await inTransaction(db, async () => {
+  await inTransaction(db, async (tx) => {
     for (const project of kept) {
-      const row = await upsertJob(db, scanner, project);
+      const row = await upsertJob(tx, scanner, project);
       if (!row.inserted) {
         updated += 1;
         continue;
       }
       created.push(row.id);
-      await recordEvent(db, {
+      await recordEvent(tx, {
         orgId: scanner.org_id,
         type: 'job.ingested',
         actorKind: 'system',
@@ -473,19 +462,23 @@ export async function pollScanner(
         },
       });
     }
-    await db.query(`update platform_accounts set last_sync_at = $2 where id = $1`, [
+    await tx.query(`update platform_accounts set last_sync_at = $2 where id = $1`, [
       scanner.account_id,
       now.toISOString(),
     ]);
-    await polled('ok', {
-      fetched: page.projects.length,
-      kept: kept.length,
-      created: created.length,
-      updated,
-      total_count: page.totalCount,
-      request_id: page.requestId,
-      filters_not_applied: built.notApplied,
-    });
+    await polled(
+      'ok',
+      {
+        fetched: page.projects.length,
+        kept: kept.length,
+        created: created.length,
+        updated,
+        total_count: page.totalCount,
+        request_id: page.requestId,
+        filters_not_applied: built.notApplied,
+      },
+      tx,
+    );
   });
 
   // After the commit, so the score worker finds the rows it is told about.

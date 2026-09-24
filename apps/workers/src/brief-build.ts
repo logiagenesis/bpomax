@@ -11,6 +11,7 @@ import {
 } from '@arbitron/core';
 import {
   insertBriefVersion,
+  inTransaction,
   loadCurrentBrief,
   loadDiscoverySession,
   recordEvent,
@@ -54,18 +55,6 @@ interface ThreadRow {
   job_title: string | null;
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 export async function buildBrief(
   deps: BriefBuildDeps,
   data: BriefBuildJobData,
@@ -105,8 +94,8 @@ export async function buildBrief(
     });
   } catch (error) {
     if (error instanceof LlmOutputError) {
-      await inTransaction(db, async () => {
-        await recordLlmCall(db, {
+      await inTransaction(db, async (tx) => {
+        await recordLlmCall(tx, {
           orgId: thread.org_id,
           purpose: 'brief',
           model: deps.model,
@@ -120,7 +109,7 @@ export async function buildBrief(
           outcome: 'invalid_output',
           problems: error.problems,
         });
-        await recordEvent(db, {
+        await recordEvent(tx, {
           orgId: thread.org_id,
           type: 'brief.drafted',
           subjectTable: 'threads',
@@ -148,8 +137,8 @@ export async function buildBrief(
   const validated = validateBrief(candidate);
   // The model's structure is held to the same rule as a person's; a bad field falls back to the hand draft.
   const brief = validated.ok ? validated.value : base;
-  return inTransaction(db, async () => {
-    await recordLlmCall(db, {
+  return inTransaction(db, async (tx) => {
+    await recordLlmCall(tx, {
       orgId: thread.org_id,
       purpose: 'brief',
       model: result.model,
@@ -168,9 +157,9 @@ export async function buildBrief(
         ? result.problems
         : [...result.problems, validated.errors.map((e) => `${e.field} ${e.message}`)],
     });
-    const row = await insertBriefVersion(db, { orgId: thread.org_id, threadId: thread.id, brief });
+    const row = await insertBriefVersion(tx, { orgId: thread.org_id, threadId: thread.id, brief });
     const lockBlockers = briefLockBlockers(brief);
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: thread.org_id,
       type: 'brief.drafted',
       subjectTable: 'briefs',

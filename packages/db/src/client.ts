@@ -21,43 +21,59 @@ export interface Queryable {
 }
 
 /**
+ * Run work in one transaction that has its connection to itself (D-063, D-065).
+ *
+ * Two callers interleaving on one connection would share one transaction: one could
+ * commit or roll back the other's statements, or run with the other's claims. A pool
+ * (anything with `connect()`, as node-postgres's `Pool`) lends a connection for the
+ * transaction and gets it back even when the work fails; PGlite runs it as its own
+ * `transaction`, which holds its single connection until the end; anything else (one
+ * plain client) is taken one transaction at a time.
+ *
+ * The work must use the `tx` it is given. The outer connection waits for the transaction
+ * to end (on PGlite, for ever), so a slip shows up as a hang in a test rather than a
+ * statement quietly run outside the transaction.
+ */
+export async function inTransaction<T>(
+  db: Queryable,
+  work: (tx: Queryable) => Promise<T>,
+): Promise<T> {
+  if (db.connect) {
+    const client = await db.connect();
+    try {
+      return await beginCommit(client, work);
+    } finally {
+      client.release();
+    }
+  }
+  if (db.transaction) return db.transaction(work);
+  return oneAtATime(db, () => beginCommit(db, work));
+}
+
+/**
  * Run work as a signed-in user, with row level security deciding what they can reach.
  *
  * The claims and the role are set with `set local`, so they last exactly as long as the
  * transaction and cannot leak to the next request that borrows the same pooled
  * connection. This is the only way the application should read tenant data: the
- * alternative is passing an org_id by hand and hoping every query remembers to.
- *
- * The transaction must have its connection to itself: two requests interleaving on one
- * connection would share one transaction, and one could run with the other's claims. A
- * pool lends a connection for the transaction; PGlite's own transaction holds its single
- * connection; anything else (one plain client) is taken one transaction at a time.
+ * alternative is passing an org_id by hand and hoping every query remembers to. The
+ * transaction is `inTransaction`'s, so concurrent requests each run as their own user.
  */
 export async function withUser<T>(
   db: Queryable,
   authUserId: string,
   work: (tx: Queryable) => Promise<T>,
 ): Promise<T> {
-  const asUser = async (tx: Queryable): Promise<T> => {
+  return inTransaction(db, async (tx) => {
     await tx.query(`select set_config('request.jwt.claims', $1, true)`, [
       JSON.stringify({ sub: authUserId }),
     ]);
     await tx.query('set local role authenticated');
     return work(tx);
-  };
-  if (db.connect) {
-    const client = await db.connect();
-    try {
-      return await inTransaction(client, asUser);
-    } finally {
-      client.release();
-    }
-  }
-  if (db.transaction) return db.transaction(asUser);
-  return oneAtATime(db, () => inTransaction(db, asUser));
+  });
 }
 
-async function inTransaction<T>(tx: Queryable, work: (tx: Queryable) => Promise<T>): Promise<T> {
+async function beginCommit<T>(tx: Queryable, work: (tx: Queryable) => Promise<T>): Promise<T> {
   await tx.query('begin');
   try {
     const result = await work(tx);

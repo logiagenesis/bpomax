@@ -9,6 +9,7 @@ import {
 import {
   captureDiscoveryAnswers,
   draftDiscoveryBatch,
+  inTransaction,
   loadDiscoverySession,
   recordEvent,
   recordLlmCall,
@@ -63,18 +64,6 @@ interface InboundRow {
   client_handle: string | null;
 }
 
-async function inTransaction<T>(db: Queryable, work: () => Promise<T>): Promise<T> {
-  await db.query('begin');
-  try {
-    const result = await work();
-    await db.query('commit');
-    return result;
-  } catch (error) {
-    await db.query('rollback');
-    throw error;
-  }
-}
-
 export async function runDiscovery(
   deps: DiscoveryDeps,
   data: DiscoveryJobData,
@@ -108,8 +97,8 @@ export async function runDiscovery(
     });
   } catch (error) {
     if (error instanceof LlmOutputError) {
-      await inTransaction(db, async () => {
-        await recordLlmCall(db, {
+      await inTransaction(db, async (tx) => {
+        await recordLlmCall(tx, {
           orgId: message.org_id,
           purpose: 'discovery',
           model: deps.model,
@@ -123,7 +112,7 @@ export async function runDiscovery(
           outcome: 'invalid_output',
           problems: error.problems,
         });
-        await recordEvent(db, {
+        await recordEvent(tx, {
           orgId: message.org_id,
           type: 'discovery.updated',
           subjectTable: 'discovery_sessions',
@@ -153,8 +142,8 @@ export async function runDiscovery(
   }
 
   const accepted = acceptedDiscoveryAnswers(result.value, session.answers);
-  const updated = await inTransaction(db, async () => {
-    await recordLlmCall(db, {
+  const updated = await inTransaction(db, async (tx) => {
+    await recordLlmCall(tx, {
       orgId: message.org_id,
       purpose: 'discovery',
       model: result.model,
@@ -171,12 +160,12 @@ export async function runDiscovery(
       outcome: 'ok',
       problems: result.problems,
     });
-    const captured = await captureDiscoveryAnswers(db, session, accepted, 'client', now);
-    const draft = await draftDiscoveryBatch(db, captured.session, {
+    const captured = await captureDiscoveryAnswers(tx, session, accepted, 'client', now);
+    const draft = await draftDiscoveryBatch(tx, captured.session, {
       clientHandle: message.client_handle,
       now,
     });
-    await recordEvent(db, {
+    await recordEvent(tx, {
       orgId: message.org_id,
       type: 'discovery.updated',
       subjectTable: 'discovery_sessions',
@@ -192,7 +181,7 @@ export async function runDiscovery(
       },
     });
     if (draft) {
-      await recordEvent(db, {
+      await recordEvent(tx, {
         orgId: message.org_id,
         type: 'message.drafted',
         subjectTable: 'messages',

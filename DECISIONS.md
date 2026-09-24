@@ -1926,3 +1926,30 @@ Decision:
 Why: ARB-340's acceptance, "Reply rate = replies/sends verified" (the API test checks
 each variant against a hand count and raw SQL over proposals, threads and messages), and
 docs/01 section I's "templates (variants, reply rates)".
+
+## D-065 — Every transaction goes through `inTransaction`, with a connection of its own
+
+Date: 24/09/2026
+Decided by: Claude Code (session …tJv8; the loose end D-063 left)
+
+Decision:
+
+- `packages/db` exports `inTransaction(db, work)`: a pool lends one connection for the
+  transaction and gets it back even when the work fails; PGlite runs it as its own
+  `transaction`; one plain client takes transactions in turn. `withUser` is now
+  `inTransaction` plus the claims and the role, so the two cannot drift apart.
+- The ten copies of a local `begin … commit` helper in the workers (brief-build,
+  discovery, draft-bid, estimate, inbox-sync, ingest, margin, score, submit, and the
+  auto-reply send) and the Telegram link are replaced by it, each passing the `tx` it is
+  given to every statement inside, the events included. Two event helpers that closed
+  over the worker's connection (`polled` in ingest, `synced` in inbox-sync) take the
+  connection to write on.
+- `tests/transactions.test.ts` reads every source file under apps/ and packages/ and
+  fails on a `begin` anywhere but `packages/db/src/client.ts`.
+
+Why: on a node-postgres `Pool`, `db.query('begin')` and the statements after it can each
+land on a different connection; on one shared connection two jobs share one transaction,
+and one job's rollback undoes the other's writes. The new tests (twenty jobs at once,
+every third failing, on PGlite and on one plain connection) fail on the old pattern and
+pass on this. The workers have no production entry point yet (B-12), so nothing deployed
+was exposed.
