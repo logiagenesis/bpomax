@@ -127,5 +127,5 @@ export async function expectEveryLinkGoesSomewhere(page: Page): Promise<void> {
     .locator('a')
     .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''));
   expect(hrefs.length).toBeGreaterThan(0);
-  for (const href of hrefs) expect(href).toMatch(/^\.\/[a-z-]+\.html(\?.*)?$/);
+  for (const href of hrefs) expect(href).toMatch(/^\.\/[a-z-]+\.html(\?[^#]*)?(#[a-z-]+)?$/);
 }

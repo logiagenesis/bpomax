@@ -143,7 +143,7 @@ test('says plainly when the password is wrong, and keeps no session', async ({ p
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled();
 });
 
-test('a valid login with no membership is turned away and the session dropped', async ({
+test('a valid login with no membership keeps the session and opens onboarding (ARB-400)', async ({
   page,
 }) => {
   await serveAuth(page, { sessionStatus: 403 });
@@ -151,9 +151,19 @@ test('a valid login with no membership is turned away and the session dropped', 
   await page.getByLabel('Email').fill('stranger@example.com');
   await page.getByLabel('Password').fill('x');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.locator('#status')).toHaveText(
-    'Signed in, but this account is not a member of an organisation. Ask an owner to add you.',
-  );
+  await page.waitForURL('**/onboarding.html');
+  const stored = await page.evaluate(() => sessionStorage.getItem('arbitron.session'));
+  expect(JSON.parse(stored ?? '{}').access_token).toBe(SESSION.access_token);
+  await expect(page.getByRole('heading', { name: 'Create your organisation' })).toBeVisible();
+});
+
+test('a refusal other than "no organisation" drops the session', async ({ page }) => {
+  await serveAuth(page, { sessionStatus: 500 });
+  await page.goto('/login.html');
+  await page.getByLabel('Email').fill('ayanda@example.com');
+  await page.getByLabel('Password').fill('x');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.locator('#status')).toHaveClass(/alert--error/);
   expect(await page.evaluate(() => sessionStorage.getItem('arbitron.session'))).toBeNull();
   await expect(page).toHaveURL(/login\.html/);
 });

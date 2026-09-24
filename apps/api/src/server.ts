@@ -13,6 +13,7 @@ import { registerEventRoutes } from './routes/events.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerMessageRoutes } from './routes/messages.js';
+import { registerOrgRoutes } from './routes/orgs.js';
 import { registerPaymentRoutes } from './routes/payments.js';
 import { registerPlatformAccountRoutes } from './routes/platform-accounts.js';
 import { registerPriceBandRoutes } from './routes/price-bands.js';
@@ -50,6 +51,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-api' }));
 
   registerMeRoutes(app, options);
+  registerOrgRoutes(app, options);
   registerDashboardRoutes(app, options);
   registerJobRoutes(app, options);
   registerProposalRoutes(app, options);

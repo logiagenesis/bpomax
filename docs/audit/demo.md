@@ -11,6 +11,10 @@ mode adds one control of its own. Tests are in `e2e/demo.spec.ts`
 | Button (in the banner on every page) | Reset the sample data | Put the sample data back as it started | Clears this tab's demo store and reloads the page | — | The page reloads with the original sample | — | Never | Yes | an approval is kept for the tab and appears in the audit log; reset brings the sample back | ✅ |
 
 Page-level, each with its test: every signed-in page opens from its own link with sample
-data and the banner, and makes no request outside the site. The landing, login, privacy
-and style-guide pages show the banner. Any email and password sign in. Settings keeps
-live mode off until every rule is set.
+data and the banner, and makes no request outside the site. The landing, login, sign-up,
+onboarding, privacy, terms and style-guide pages show the banner. Any email and password sign in. Settings keeps
+live mode off until every rule is set. Onboarding reads each step from the tab's sample
+rows (test "onboarding in the demo reads each step from the tab’s sample rows"), and
+sign-up stays closed while the terms are pending (test "sign-up in the demo stays closed
+while the terms are pending"); the demo's sign-up answers as a project that asks for
+email confirmation, so it never pretends an account was made (ARB-400).

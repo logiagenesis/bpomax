@@ -10,7 +10,8 @@ import { runAction } from './lib/ui.js';
  * `supabase.auth.signInWithPassword()` makes:
  * https://supabase.com/docs/reference/javascript/auth-signinwithpassword — and the
  * session it answers is kept for the tab. The API is then told, so the audit log
- * records the sign-in, and the browser goes to the page it was asked for.
+ * records the sign-in, and the browser goes to the page it was asked for — or, for
+ * someone in no organisation yet, to onboarding (ARB-400).
  *
  * Nothing here is a credential of the app: the project URL and anon key are the public
  * browser values (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY).
@@ -99,12 +100,14 @@ form.addEventListener('submit', (event) => {
       try {
         await apiSend('POST', '/v1/sessions');
       } catch (error) {
-        clearSession();
+        // In no organisation yet (ARB-400): the session is kept, and onboarding offers
+        // to create one or explains how to be added to someone else's.
         if (error instanceof ApiError && error.status === 403) {
-          throw new Error(
-            'Signed in, but this account is not a member of an organisation. Ask an owner to add you.',
-          );
+          password.value = '';
+          location.assign('./onboarding.html');
+          return 'Signed in. You are not in an organisation yet: opening the setup page…';
         }
+        clearSession();
         throw error;
       }
       password.value = '';

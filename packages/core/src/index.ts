@@ -24,6 +24,7 @@
  *   ARB-310  delivery orders: milestones reconciled, handover checklist, moves (delivery.ts)
  *   ARB-311  payments, their rand figures and realised margin      (payments.ts)
  *   ARB-320  analytics: rates and margin per category, template, supplier, scanner (analytics.ts)
+ *   ARB-400  sign-up: the new-org rule, onboarding steps, the terms shape (orgs.ts, terms.ts)
  */
 export * from './allowance.js';
 export * from './analytics.js';
@@ -38,6 +39,7 @@ export * from './events.js';
 export * from './margin.js';
 export * from './messaging.js';
 export * from './money.js';
+export * from './orgs.js';
 export * from './payments.js';
 export * from './privacy.js';
 export * from './scanners.js';
@@ -48,4 +50,5 @@ export * from './sourcing-posts.js';
 export * from './submitting.js';
 export * from './suppliers.js';
 export * from './templates.js';
+export * from './terms.js';
 export const PACKAGE_NAME = '@arbitron/core';

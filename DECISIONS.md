@@ -1998,3 +1998,65 @@ Decision:
 
 Why: docs/01 rule 7 (no guessing; every endpoint cited), docs/01 section B's Upwork row,
 ARB-300's acceptance, and the Upwork terms quoted in the documentation.
+
+## D-067 — Sign-up: Supabase makes the identity; one org per person, made by `app.create_org`
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-400, session …tJv8)
+
+Decision:
+
+- The identity is Supabase's: the sign-up page sends `POST {SUPABASE_URL}/auth/v1/signup`,
+  the request `supabase.auth.signUp()` makes (body `{ email, password, data }`, the page to
+  come back to as `redirect_to`; supabase-js `GoTrueClient.signUp` and `lib/fetch.ts`
+  `_request`). A session in the answer means the project signs people in at once; no
+  session means Supabase has emailed a confirmation link. Migration 0009's trigger then
+  gives the identity its application user, with no org.
+- The org is made by one SECURITY DEFINER function, `app.create_org(name, country,
+request_id)` (migration 0032), called under the person's own session. It creates the
+  org, the person's owner membership, the org's empty settings row (every margin rule
+  null, live mode off) and an `org.created` event, in one transaction. It takes no org id
+  and no user id, so it cannot put anyone into an org that already exists; `orgs` and
+  `memberships` stay closed to direct inserts, as 0008 left them.
+- One self-service org per person: anyone already in any org, in any role, is refused
+  (409). The pages act in one org at a time and have no org switcher, so a second org
+  would be unreachable. Joining someone else's org stays an owner's act (D-13).
+- A new org's base currency is ZAR, the column default, and the form does not ask for
+  one: the margin rules and every report are in rand (`settings.min_margin_zar_minor`,
+  docs/01 section G). The country is asked for, as a two-letter ISO 3166-1 code, ZA by
+  default; nothing yet reads it.
+- The user row is locked while the function runs, so two requests from one person at
+  once cannot both find no membership and make two orgs.
+- Someone signed in with no org is kept signed in and sent to onboarding, from the login
+  page and from any signed-in page (a 403 from `/v1/me`), instead of being signed out.
+- Onboarding lists six steps, each read from the org's own rows (`onboardingSteps` in
+  core): the margin rules and fee table, a connected Freelancer.com account, a scanner, an
+  active template with an active variant, and Telegram (optional). None is ticked by hand.
+
+Why: ARB-400's acceptance ("New org isolated from Logi-Ink org"), which
+`packages/db/src/signup.test.ts` proves on every tenant table in both directions under
+the real `authenticated` role; docs/01 rule 6 (nothing invented: no currency, plan or
+default margin is chosen for a new org).
+
+## D-068 — Public sign-up opens only once the owner publishes approved terms of service
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-400, session …tJv8)
+
+Decision:
+
+- A public SaaS sign-up needs terms the person accepts, and legal wording is not something
+  the build may write (docs/01 rule 6). The terms are published like the privacy notice
+  (ARB-015): `apps/web/src/public/terms.json`, in the same shape and held to the same rule
+  (`parseTermsOfService`), shown on `terms.html`. The committed file is `pending`.
+- While the terms are pending, or break the rule, the sign-up form is closed and says why,
+  and nothing is sent. Once they are approved, the form asks the person to accept that
+  version, and sends the version and the time as Supabase user metadata
+  (`data.terms_version`, `data.terms_accepted_at`), so the identity carries the record of
+  what was accepted.
+- An owner can still add people to their own org meanwhile (ARB-012). The demo build shows
+  sign-up closed, because the terms are pending there too; no placeholder terms are
+  published anywhere.
+
+Why: ARB-400 opens the product to the public; accepting terms that do not exist is not
+possible, and inventing them is not allowed. The owner's action is docs/BLOCKERS.md D-16.
