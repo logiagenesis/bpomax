@@ -82,7 +82,9 @@ export function identityRows(tag: string): readonly FixtureRow[] {
   return [
     {
       table: 'orgs',
-      sql: `insert into orgs (id, name) values ('${org}', 'Org ${tag}')`,
+      // A fixture org stands for the house org (0033's billing_exempt, D-069), so the
+      // tests of every earlier ticket run unmetered; ARB-410's own tests unset it.
+      sql: `insert into orgs (id, name, billing_exempt) values ('${org}', 'Org ${tag}', true)`,
     },
     {
       table: 'users',

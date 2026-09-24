@@ -1148,6 +1148,7 @@ export type Database = {
       orgs: {
         Row: {
           base_currency: string;
+          billing_exempt: boolean;
           country_code: string;
           created_at: string;
           id: string;
@@ -1156,6 +1157,7 @@ export type Database = {
         };
         Insert: {
           base_currency?: string;
+          billing_exempt?: boolean;
           country_code?: string;
           created_at?: string;
           id?: string;
@@ -1164,6 +1166,7 @@ export type Database = {
         };
         Update: {
           base_currency?: string;
+          billing_exempt?: boolean;
           country_code?: string;
           created_at?: string;
           id?: string;
@@ -1340,6 +1343,36 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      plans: {
+        Row: {
+          active: boolean;
+          code: string;
+          created_at: string;
+          id: string;
+          limits: Json;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          code: string;
+          created_at?: string;
+          id?: string;
+          limits: Json;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          code?: string;
+          created_at?: string;
+          id?: string;
+          limits?: Json;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       platform_accounts: {
         Row: {

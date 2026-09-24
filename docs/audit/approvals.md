@@ -56,3 +56,8 @@ post's Approve and Close ask first as on the sourcing page, and are logged as
 `sourcing.post_approved` and `sourcing.post_closed`.
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.
+
+ARB-410: an approval, single or bulk, is refused with 402 and the plan's own words when
+the plan has no room to send another bid this month; the bid stays waiting (test "a plan
+with no room to send refuses the approval in its own words (ARB-410)"; the API side in
+`apps/api/src/routes/usage.test.ts`).

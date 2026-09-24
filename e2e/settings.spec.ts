@@ -46,7 +46,19 @@ interface Options {
   freelancer?: { configured: boolean; environment: string | null; reason: string | null };
   upwork?: { configured: boolean; environment: string | null; reason: string | null };
   autoReply?: Record<string, unknown> | null;
+  usage?: Record<string, unknown>;
 }
+
+/** `GET /v1/usage` for the house org (ARB-410): counted, never limited. */
+const HOUSE_USAGE = {
+  plan: { kind: 'exempt' },
+  period: { start: '2026-09-01', resetsOn: '2026-10-01' },
+  metrics: [
+    { metric: 'jobs_scored', label: 'Jobs scored', used: 12, limit: null, percent: null },
+    { metric: 'bids_drafted', label: 'Bids drafted', used: 4, limit: null, percent: null },
+    { metric: 'bids_submitted', label: 'Bids sent', used: 0, limit: null, percent: null },
+  ],
+};
 
 /** Two bands as `GET /v1/price-bands` returns them: one seed figure, one observed. */
 const BANDS = [
@@ -222,6 +234,7 @@ async function open(page: Page, options: Options = {}) {
       'GET /v1/scanners': (_request, route) => route.fulfill({ json: { scanners } }),
       'GET /v1/price-bands': (_request, route) =>
         route.fulfill({ json: { categories: 22, bands: options.bands ?? [] } }),
+      'GET /v1/usage': (_request, route) => route.fulfill({ json: options.usage ?? HOUSE_USAGE }),
       'POST /v1/scanners': (request, route) => {
         const body = request.body as Record<string, unknown>;
         const row = {
@@ -523,6 +536,7 @@ test('the API’s own refusal of a scanner lands on the field', async ({ page })
     'GET /v1/scanners': (_request, route) => route.fulfill({ json: { scanners: [] } }),
     'GET /v1/price-bands': (_request, route) =>
       route.fulfill({ json: { categories: 22, bands: [] } }),
+    'GET /v1/usage': (_request, route) => route.fulfill({ json: HOUSE_USAGE }),
     'POST /v1/scanners': (_request, route) =>
       route.fulfill({
         status: 409,
@@ -775,4 +789,68 @@ test('at 380 px wide the page does not scroll sideways', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
   await open(page, { complete: true, bands: BANDS });
   await expectNoSidewaysScroll(page);
+});
+
+test.describe('plan and usage (ARB-410)', () => {
+  test('the house org is shown as counted, never limited', async ({ page }) => {
+    await open(page);
+    await expect(page.locator('#plan-state')).toHaveText(
+      'This is the house organisation: every metered action is counted, and none is limited.',
+    );
+    await expect(page.locator('#usage-rows tr[data-metric="jobs_scored"] td')).toHaveText([
+      'Jobs scored',
+      '12',
+      'No limit',
+      '—',
+    ]);
+    await expect(page.locator('#usage-period')).toHaveText(
+      'Counted from 01/09/2026, South African time; the counts start again on 01/10/2026.',
+    );
+  });
+
+  test('a customer on a plan sees each count against its limit, flagged near and at it', async ({
+    page,
+  }) => {
+    // A made-up plan for the test; no real plan exists (docs/02 D-12).
+    await open(page, {
+      usage: {
+        plan: { kind: 'plan', code: 'test-plan', name: 'Test plan', status: 'past_due' },
+        period: { start: '2026-09-01', resetsOn: '2026-10-01' },
+        metrics: [
+          { metric: 'jobs_scored', label: 'Jobs scored', used: 80, limit: 100, percent: 80 },
+          { metric: 'bids_drafted', label: 'Bids drafted', used: 10, limit: 10, percent: 100 },
+          { metric: 'bids_submitted', label: 'Bids sent', used: 3, limit: 50, percent: 6 },
+        ],
+      },
+    });
+    await expect(page.locator('#plan-state')).toHaveText('Plan: Test plan, payment overdue.');
+    await expect(page.locator('#usage-rows tr[data-metric="jobs_scored"] td').nth(3)).toHaveText(
+      '80% Near the limit',
+    );
+    await expect(page.locator('#usage-rows tr[data-metric="bids_drafted"] td').nth(3)).toHaveText(
+      '100% Limit reached',
+    );
+    await expect(page.locator('#usage-rows tr[data-metric="bids_submitted"] td').nth(3)).toHaveText(
+      '6%',
+    );
+  });
+
+  test('a customer with no plan is told why nothing metered runs', async ({ page }) => {
+    await open(page, {
+      usage: {
+        plan: {
+          kind: 'none',
+          reason: 'no_plans',
+          message:
+            'No plans are published yet, so metered actions are off for this organisation (docs/02 D-12).',
+        },
+        period: { start: '2026-09-01', resetsOn: '2026-10-01' },
+        metrics: HOUSE_USAGE.metrics,
+      },
+    });
+    await expect(page.locator('#plan-state')).toHaveText(
+      'No plans are published yet, so metered actions are off for this organisation (docs/02 D-12).',
+    );
+    await expect(page.locator('#plan-state')).toHaveClass(/alert--warning/);
+  });
 });

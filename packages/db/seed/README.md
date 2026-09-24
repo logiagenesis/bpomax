@@ -32,3 +32,29 @@ Fill it in from one of:
 
 Until then the estimate worker falls through to the next method rather than reading a
 band that does not exist.
+
+## plans.json
+
+Empty, on purpose (ARB-410).
+
+A plan is what a customer organisation pays for and what it may do each month: one
+monthly limit per metered action (`jobs_scored`, `bids_drafted`, `bids_submitted`), a
+whole number or `null` for no limit. The figures are the owner's (docs/02 D-12: earlier
+working figures are not approved), so none are written here. Until a plan exists, an
+organisation created through public sign-up can take no metered action, and says so; the
+house org (Logi-Ink) is never limited (D-069).
+
+Each entry, checked by `validatePlan` in `@arbitron/core` before anything is written:
+
+```json
+{
+  "code": "a-code",
+  "name": "Shown to customers",
+  "active": true,
+  "limits": { "jobs_scored": 0, "bids_drafted": 0, "bids_submitted": 0 }
+}
+```
+
+Every metric must be stated; one left out fails the seed rather than reading as
+unlimited. A plan removed from the file is not deleted: set `active` to false instead.
+Prices are ARB-420's.

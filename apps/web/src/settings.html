@@ -58,6 +58,28 @@
         </div>
       </section>
 
+      <section class="card stack" aria-labelledby="plan-heading">
+        <h2 id="plan-heading">Plan and usage</h2>
+        <p id="plan-state"></p>
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Metered actions this month
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Action</th>
+                <th scope="col" class="num">Used this month</th>
+                <th scope="col" class="num">Monthly limit</th>
+                <th scope="col" class="num">Share used</th>
+              </tr>
+            </thead>
+            <tbody id="usage-rows"></tbody>
+          </table>
+        </div>
+        <p id="usage-period" class="section-note"></p>
+      </section>
+
       <section class="card stack" aria-labelledby="rules-heading">
         <h2 id="rules-heading">Margin rules</h2>
         <p class="section-note">

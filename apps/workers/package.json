@@ -13,6 +13,7 @@
   "dependencies": {
     "@arbitron/core": "workspace:*",
     "@arbitron/db": "workspace:*",
+    "@arbitron/email": "workspace:*",
     "@arbitron/freelancer": "workspace:*",
     "@arbitron/llm": "workspace:*",
     "@arbitron/upwork": "workspace:*",

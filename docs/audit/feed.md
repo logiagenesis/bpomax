@@ -26,3 +26,7 @@ Approvals, and the sender still holds the live gate and the allowance (D-032), s
 confirmation is asked here (docs/05 section 1.3 names the actions that need one).
 
 Page-level: no session → login with `next`; 401 → login; no horizontal scroll at 380 px.
+
+ARB-410: when the org's plan has no room for the score or the draft Queue bid asks for,
+the API answers 402 with the plan's own words, and the page shows them as they are (test
+"a plan limit is shown in the plan’s own words (ARB-410)").

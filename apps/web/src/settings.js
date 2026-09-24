@@ -16,7 +16,7 @@ import {
   parseRandToMinor,
   showFieldErrors,
 } from './lib/forms.js';
-import { formatDate, formatDateTime, formatMoney } from './lib/format.js';
+import { formatDate, formatDateTime, formatMoney, formatPercent } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
 import { confirmAction, runAction } from './lib/ui.js';
 
@@ -914,6 +914,77 @@ async function loadBands() {
   }
 }
 
+// ------------------------------------------------------------ plan and usage
+const planState = byId('plan-state');
+const usageRows = byId('usage-rows');
+const usagePeriodNote = byId('usage-period');
+
+/** @type {Record<string, string>} */
+const SUBSCRIPTION_STATUS = { trialing: 'on trial', active: 'active', past_due: 'payment overdue' };
+
+/**
+ * @typedef {{ metric: string, label: string, used: number, limit: number | null, percent: number | null }} UsageRow
+ * @typedef {{ plan: { kind: 'exempt' } | { kind: 'plan', name: string, status: string } | { kind: 'none', message: string },
+ *             period: { start: string, resetsOn: string }, metrics: UsageRow[] }} Usage
+ */
+
+/**
+ * ARB-410: the org's plan and each metered action against its monthly limit. Read only:
+ * the plan is chosen at checkout (ARB-420), and the counts are the workers'.
+ * @param {Usage} usage
+ */
+function renderUsage(usage) {
+  const { plan } = usage;
+  planState.className = plan.kind === 'none' ? 'alert alert--warning' : '';
+  planState.textContent =
+    plan.kind === 'exempt'
+      ? 'This is the house organisation: every metered action is counted, and none is limited.'
+      : plan.kind === 'plan'
+        ? `Plan: ${plan.name}, ${SUBSCRIPTION_STATUS[plan.status] ?? plan.status}.`
+        : plan.message;
+  usageRows.replaceChildren(
+    ...usage.metrics.map((row) => {
+      const tr = document.createElement('tr');
+      tr.dataset.metric = row.metric;
+      /** @param {string | Node} content @param {string} [className] */
+      const cell = (content, className) => {
+        const td = document.createElement('td');
+        if (className) td.className = className;
+        td.append(content);
+        return td;
+      };
+      const share = document.createElement('span');
+      if (row.percent === null) {
+        share.textContent = '—';
+      } else {
+        share.textContent = formatPercent(row.percent / 100, 0);
+        if (row.percent >= 80) {
+          const badge = document.createElement('span');
+          badge.className = `badge ${row.percent >= 100 ? 'badge--skip' : 'badge--caution'}`;
+          badge.textContent = row.percent >= 100 ? 'Limit reached' : 'Near the limit';
+          share.append(' ', badge);
+        }
+      }
+      tr.append(
+        cell(row.label),
+        cell(String(row.used), 'num'),
+        cell(row.limit === null ? 'No limit' : String(row.limit), 'num'),
+        cell(share, 'num'),
+      );
+      return tr;
+    }),
+  );
+  usagePeriodNote.textContent = `Counted from ${formatDate(`${usage.period.start}T12:00:00Z`)}, South African time; the counts start again on ${formatDate(`${usage.period.resetsOn}T12:00:00Z`)}.`;
+}
+
+async function loadUsage() {
+  try {
+    renderUsage(/** @type {Usage} */ (await apiGet('/v1/usage')));
+  } catch (e) {
+    bail(e);
+  }
+}
+
 // ----------------------------------------------------------------- telegram
 const linkCode = /** @type {HTMLButtonElement} */ (byId('link-code'));
 const linkCodeOut = byId('link-code-out');
@@ -1031,6 +1102,7 @@ async function load() {
         if (!canWrite(role)) linkCode.title = 'Your role cannot link Telegram.';
         const autoReply = /** @type {{ autoReply: any }} */ (await apiGet('/v1/auto-reply'));
         renderAutoReply(autoReply.autoReply);
+        await loadUsage();
         await loadScanners();
         await loadBands();
       } catch (e) {

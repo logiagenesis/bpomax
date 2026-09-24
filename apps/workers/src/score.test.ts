@@ -248,6 +248,7 @@ describe('idempotency', () => {
     const transport = new ScriptedTransport([JSON.stringify(naiveGo)]);
     const first = await scoreJob({ db, transport, model: MODEL }, { jobId });
     const second = await scoreJob({ db, transport, model: MODEL }, { jobId });
+    if (first.status === 'blocked') throw new Error(first.message);
     expect(second).toEqual({ status: 'already_scored', scoreId: first.scoreId });
     expect(transport.requests).toHaveLength(1);
   });

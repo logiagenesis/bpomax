@@ -122,6 +122,9 @@ importers:
       '@arbitron/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@arbitron/email':
+        specifier: workspace:*
+        version: link:../../packages/email
       '@arbitron/freelancer':
         specifier: workspace:*
         version: link:../../packages/freelancer
@@ -153,6 +156,12 @@ importers:
       '@arbitron/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
+
+  packages/email:
     devDependencies:
       '@types/node':
         specifier: ^26.6.2

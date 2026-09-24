@@ -599,3 +599,78 @@ describe('on the queue', () => {
     }
   }, 30_000);
 });
+
+describe('plan limits (ARB-410)', () => {
+  // A made-up plan for the test: one bid sent a month. No real plan exists (docs/02 D-12).
+  beforeAll(async () => {
+    await db.exec(`insert into plans (code, name, limits) values
+      ('test-one-bid', 'Test plan', '{"jobs_scored": null, "bids_drafted": null, "bids_submitted": 1}')`);
+    await db.query(
+      `update subscriptions set plan = 'test-one-bid', status = 'active' where org_id = $1`,
+      [ORG],
+    );
+    await db.query('update orgs set billing_exempt = false where id = $1', [ORG]);
+    await db.query(`delete from usage_counters where org_id = $1 and metric like 'plan:%'`, [ORG]);
+  });
+
+  afterAll(async () => {
+    await db.query('update orgs set billing_exempt = true where id = $1', [ORG]);
+  });
+
+  it('sends while the plan has room, then refuses with the message, sends nothing and gives the bid back', async () => {
+    await setLive(true);
+    await setAllowance(50);
+    const placer = new ScriptedPlacer();
+    const first = await insertProposal(await insertJob('plan-1'));
+    expect(
+      await submitProposal({ db, liveMode: true, placer, now: () => NOW }, { proposalId: first }),
+    ).toMatchObject({ status: 'submitted' });
+
+    const second = await insertProposal(await insertJob('plan-2'));
+    const result = await submitProposal(
+      { db, liveMode: true, placer, now: () => NOW },
+      { proposalId: second },
+    );
+    expect(result).toEqual({
+      status: 'blocked',
+      reason: 'plan_limit',
+      message:
+        "The Test plan plan's monthly limit for sending bids is reached: 1 of 1 used. It resets on 01/10/2026. Choose a bigger plan in Settings to go on now.",
+    });
+    expect(placer.placed).toHaveLength(1);
+    expect(await bidsUsed()).toBe(1);
+    expect((await proposalState(second)).status).toBe('approved');
+    expect((await eventsFor(second)).at(-1)).toMatchObject({
+      outcome: 'blocked',
+      payload: { reason: 'plan_limit', plan: 'limit_reached' },
+    });
+  });
+
+  it('counts nothing while live mode is off: only a real send is metered', async () => {
+    await db.query(`delete from usage_counters where org_id = $1 and metric like 'plan:%'`, [ORG]);
+    const proposalId = await insertProposal(await insertJob('plan-dry'));
+    const result = await submitProposal({ db, liveMode: false, now: () => NOW }, { proposalId });
+    expect(result).toMatchObject({ status: 'blocked', reason: 'live_mode_off' });
+    const { rows } = await db.query(
+      `select 1 from usage_counters where org_id = $1 and metric = 'plan:bids_submitted'`,
+      [ORG],
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it('gives the plan bid back when the platform refuses', async () => {
+    await setAllowance(50);
+    const proposalId = await insertProposal(await insertJob('plan-refused'));
+    await expect(
+      submitProposal(
+        { db, liveMode: true, placer: new ScriptedPlacer('refuse'), now: () => NOW },
+        { proposalId },
+      ),
+    ).rejects.toThrow(/platform said no/);
+    const { rows } = await db.query<{ used: number }>(
+      `select used from usage_counters where org_id = $1 and metric = 'plan:bids_submitted'`,
+      [ORG],
+    );
+    expect(rows[0]?.used ?? 0).toBe(0);
+  });
+});
