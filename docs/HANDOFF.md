@@ -1,4 +1,4 @@
-# HANDOFF — 24/09/2026, 08:10 UTC (10:10 SAST)
+# HANDOFF — 24/09/2026, 08:40 UTC (10:40 SAST)
 
 Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
 of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
@@ -7,19 +7,17 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 
 **TL;DR**
 
-- **Board:** 37 of 55 tickets are DONE; 13 are BUILT-PENDING-CREDENTIALS (010, 013,
-  015, 020, 022, 070, 120, 203, 300, 400, 410, 420, 430); 5 are TODO (099, 299, 399, 440,
-  499). Nothing is BLOCKED outright: every ticket is built against a stand-in and waits
-  only on the owner's credentials or answers (docs/BLOCKERS.md).
-- **CI:** green on `main` at `f813036` (PR #32, ARB-420). The ARB-430 PR is open from
-  `claude/beautiful-tesla-b6goej` and merges when green. On the owner's instruction of
-  24/09/2026 every PR comes from that one branch; claims are pushed to `main` as a
-  one-file commit built with git plumbing, never another branch.
+- **Board:** 55 tickets. 38 are DONE; 13 are BUILT-PENDING-CREDENTIALS (010, 013, 015,
+  020, 022, 070, 120, 203, 300, 400, 410, 420, 430); 4 are BLOCKED, the phase audits (099,
+  299, 399, 499), each waiting on its phase's credential tickets. None is TODO: nothing
+  buildable remains until the owner supplies what section 5 lists.
+- **CI:** green on `main`. Every PR in this run came from the one branch
+  `claude/beautiful-tesla-b6goej` and was merged when its six checks were green (#28 to
+  #34); claims were one-file commits pushed to `main` by git plumbing.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next:** ARB-440 (the marketing site: factual copy only, D-01 and the brand assets,
-  Lighthouse ≥ 90). Then the phase audits (099, 299, 399, 499), which each need every
-  ticket of their phase DONE. See section 6.
+- **Next:** nothing to build. Section 5 is the owner's list, each item with the ticket it
+  unblocks; section 6 says what to do when one arrives.
 
 ## 1. State of `main`
 
@@ -27,21 +25,22 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `f813036` = PR #32, ARB-420 billing (D-070)                                             |
-| Open PR                | ARB-430 affiliates, from `claude/beautiful-tesla-b6goej`                               |
-| Local checks at ARB-430 | lint, format, typecheck, the browser check green; 1341 unit tests (111 files); 282 + 38 Playwright tests |
+| Last merge             | `07c4462` = PR #33, ARB-430 affiliates (D-071); PR #34 (ARB-440 and this handoff) merges next |
+| Open PR                | #34: ARB-440, the phase audits marked BLOCKED, and this handoff; none after it           |
+| Local checks at ARB-440 | lint, format, typecheck, the browser check green; 1410 unit tests (112 files); 288 + 38 Playwright tests; Lighthouse 99–100 |
 | Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 37    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330, 340 |
+| DONE                      | 38    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330, 340, 440 |
 | BUILT-PENDING-CREDENTIALS | 13    | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12), 300 (C-04), 400 (D-16, B-06), 410 (D-12, B-13), 420 (C-05), 430 (C-05) |
-| TODO                      | 5     | 099, 299, 399, 440, 499                                     |
+| BLOCKED                   | 4     | 099, 299, 399, 499: each needs every ticket of its phase DONE, and the deployed API (B-12) for its links |
 
-ARB-099 (the Phase 1 audit and tag) needs every Phase 1 ticket DONE, so it waits on the
-credentials; under D-036 the build continues into Phase 2 meanwhile.
+A phase audit tags the phase and prints four links; tagging a phase whose tickets still
+wait on credentials would say it is complete when it is not, so the four are BLOCKED with
+what each waits on (board rows).
 
 ## 3. This session's tickets (all on `main`)
 
@@ -77,6 +76,7 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
 | ARB-410 | Plans and limits: three metered actions per South African month, `plans` (0033, seed empty for D-12), the house org exempt, counters the system's alone, refusals in the worker and at the button (402), 80%/100% alerts to owners by Telegram and `@arbitron/email` (a stand-in until B-13) (BUILT-PENDING-CREDENTIALS) | D-069 |
 | ARB-420 | Billing: `packages/billing` (Paystack and Stripe, every call cited, stand-ins), hosted checkout, signed webhooks re-read against the provider and applied once (0034), the grace period an owner setting, the daily sweep, the Billing page (BUILT-PENDING-CREDENTIALS, C-05) | D-070 |
 | ARB-430 | Affiliates: codes for the house org's owner, a click with no personal data (0035), attribution at org creation, conversion at the first paid plan, the Affiliates page and its funnel (BUILT-PENDING-CREDENTIALS) | D-071 |
+| ARB-440 | The landing page: factual copy only, every sentence traced to its proof; `tests/copy-audit.test.ts` on every page; Lighthouse in CI (`e2e/lighthouse.mjs`), 99–100 in every category (DONE) | D-072 |
 | ARB-330 | MCP server (`apps/mcp`, SDK 1.30.1, stdio): the eleven tools over the API with the operator's token, approvals recorded as `mcp` (0029), `GET /v1/jobs/:id`, `POST /v1/jobs/:id/score`, `POST /v1/proposals/:id/submit`, `enqueueSubmit` re-runs a finished job, README setup for Claude Code and Claude Desktop; 24 tests | D-062 |
 
 ## 4. How to work here (what cost time this session)
@@ -87,15 +87,15 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
   --cacheinfo`, `git commit-tree`, `git push origin <sha>:main`), build and commit on the
   branch, push it, open the PR, merge when green, then `git merge --ff-only origin/main`.
 
-- **Branch and PR:** `git fetch origin main && git checkout -B claude/<name> origin/main`,
-  build, commit with the docs/05 checklist in the body, `git push -u origin <branch>`,
-  open the PR (draft), mark it ready and merge with the GitHub tools once CI is green.
+- **PR:** commit with the docs/05 checklist in the body, `git push -u origin
+  claude/beautiful-tesla-b6goej`, open the PR (draft), mark it ready and merge with the
+  GitHub tools once CI is green, passing the full 40-character head SHA.
   Never `git reset --hard` or force-push (denied in `.claude/settings.json`). Deleting a
   remote branch from the session is refused (HTTP 403 by the git proxy); the owner
   deletes them. When the owner deleted every branch but `main` on 23/09, GitHub closed
   PR #7 unmerged; re-pushing the branch and reopening the PR recovered it.
-- **Claims:** a one-line board change committed on a throwaway branch from `origin/main`
-  and pushed with `git push origin HEAD:main`.
+- **Claims:** a one-line board change built on `origin/main` with git plumbing (no branch,
+  section 4's first bullet) and pushed with `git push origin <sha>:main`.
 - **Local services:** `redis-server --daemonize yes`; Postgres 16 at
   `postgresql://postgres:postgres@localhost:54322/postgres`, started with
   `su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/tmp/pg-local/data -o '-p 54322 -k /tmp' -l /var/tmp/pg-local/log start"`.
@@ -105,48 +105,63 @@ credentials; under D-036 the build continues into Phase 2 meanwhile.
   `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium-1194/chrome-linux/chrome pnpm exec playwright test --config e2e/playwright.config.ts`,
   and the same with `build:web:demo` and `e2e/playwright.demo.config.ts`. Always read
   the exit code: `pnpm -s … | tail` hid a typecheck failure once.
-- **Official docs:** developers.freelancer.com and vercel.app are not reachable from the
-  container; read them through the Firecrawl connector (`firecrawl_scrape`, markdown).
-  The page metadata says 404 but the content is the real page.
+- **Official docs:** developers.freelancer.com, upwork.com, docs.stripe.com, paystack.com
+  and vercel.app are not reachable from the container; read them through the Firecrawl
+  connector (`firecrawl_scrape`). Stripe serves each page as Markdown at `<page>.md`;
+  Paystack's docs-v2.paystack.com renders the code samples its main site hides in tabs.
+- **Lighthouse:** `pnpm build:web:e2e`, then
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium-1194/chrome-linux/chrome pnpm lighthouse`.
 - **Vercel:** the connector's `list_deployments` refuses the team id (403 "scope
   logi-ink"); call it without `teamId`.
 
-## 5. Open blockers, by credential
+## 5. Open blockers: what the owner supplies, and the ticket each unblocks
 
-Full rows in docs/BLOCKERS.md and docs/02-BLOCKERS.md. What the owner supplies, and the
-ticket it unblocks:
+Full rows in docs/BLOCKERS.md (C-, V-, D-14 to D-16) and docs/02-BLOCKERS.md. Keys go in
+`.env` only, never in the repository or a message.
 
-| Owner supplies                                                                              | Unblocks                                                                 |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| B-03 Freelancer.com developer app (client id, secret, redirect URI, scopes 1, 2, 5, 6, and `fln:project_create`) | the sandbox clauses of ARB-020, ARB-022, ARB-044, ARB-050, ARB-120 and ARB-203; the real sends of ARB-121 and ARB-122 |
-| B-04 one sandbox freelancer and one sandbox employer account                                | the same                                                                 |
-| B-06 Supabase project (SUPABASE_URL, anon key, service role key, DATABASE_URL); D-05 region | ARB-010 hosted half, ARB-012 and ARB-061 real sign-in, ARB-070 out of demo mode |
-| B-07 hosted Redis URL                                                                       | ARB-030 and ARB-022 in production                                        |
-| B-08 Anthropic API key                                                                      | ARB-031, ARB-032 with a real model (V-04)                                |
-| B-09 Telegram bot token | ARB-050, and the ARB-120 and ARB-204 alerts |
-| B-10 FX rate provider                                                                       | ARB-041, ARB-311                                                         |
-| B-12 a host for the API, workers and bot                                                    | ARB-070 (the API half), ARB-099                                          |
-| T-01 API terms; T-02 fee table (the freelancer and the employer side); T-03 allowance; T-06 privacy period and wording | ARB-044 go-live; ARB-041 and ARB-204; ARB-042; ARB-015 |
-| D-02, D-03 margin rules; D-04, D-14 categories and bands; D-06 searches; D-07, D-10 content | ARB-041 and ARB-204; ARB-040; ARB-021 seed; ARB-043                                  |
-| D-08 auto-reply wording; D-09 the supplier list (through the template on the Suppliers page) | ARB-121 in use; ARB-200 and ARB-201 with real suppliers                  |
-| D-16 terms of service (legal wording, published in `apps/web/src/public/terms.json`)        | ARB-400: public sign-up opens                                            |
-| D-12 SaaS plans and their limits (`packages/db/seed/plans.json`)                            | ARB-410 in use; ARB-420 prices                                           |
-| B-13 an email provider and a verified sending domain                                        | ARB-410's email alerts; ARB-420's billing emails                         |
-| B-15 Paystack and Stripe accounts, their keys, a plan per product plan in each dashboard, the webhook URLs (C-05) | ARB-420, ARB-430's paid step                                      |
-| D-01 product name and domain                                                                | ARB-400 branding, ARB-440                                                |
+| Owner supplies | Unblocks |
+| --- | --- |
+| B-03 Freelancer.com developer app (client id, secret, redirect URI `https://bpomax.vercel.app/freelancer-callback.html`, scopes 1, 2, 5, 6 and `fln:project_create`) and B-04 one sandbox freelancer and one sandbox employer account | ARB-020, ARB-022, ARB-120, ARB-203 (C-02); the sandbox clauses of ARB-044 and ARB-050; ARB-099, ARB-299 |
+| B-05 which live Freelancer.com account, ID-verified | going live (ARB-044) |
+| B-06 Supabase project (URL, anon key, service role key, DATABASE_URL), with D-05 the data region | ARB-010 (C-01); real sign-in for ARB-012 and ARB-061 (V-03); ARB-400; ARB-070 out of demo mode |
+| B-07 a hosted Redis URL | the queues in production (ARB-030, ARB-070) |
+| B-08 Anthropic API key | real model calls for ARB-031 and ARB-032 (V-04) |
+| B-09 Telegram bot token | ARB-050, and the Telegram alerts of ARB-120, ARB-204 and ARB-410 |
+| B-10 an FX rate provider | ARB-041 and ARB-311 for any deal not in rand |
+| B-12 a host for the API, workers and bot | ARB-070 (C-03); the links of every phase audit (ARB-099, 299, 399, 499) |
+| B-13 an email provider and a verified sending domain | ARB-410's email alerts; ARB-420's billing emails |
+| B-14 Upwork API key, with T-04 Upwork's API terms read | ARB-300 (C-04); ARB-399 |
+| B-15 Paystack and Stripe accounts, keys, a plan per product plan in each dashboard, the two webhook URLs | ARB-420, ARB-430 (C-05); ARB-499 |
+| T-01 Freelancer.com API terms | going live (ARB-044) |
+| T-02 Freelancer.com fee schedule, freelancer and employer sides | ARB-041, ARB-204 |
+| T-03 Freelancer.com membership plan and bid allowance | ARB-042 |
+| T-05 legal structure for paying overseas suppliers | the first live supplier payment (ARB-310, ARB-311) |
+| T-06 POPIA retention period and privacy notice wording | ARB-015; live mode |
+| D-01 product name and domain | ARB-400 branding, ARB-440's name |
+| D-02 minimum margin (% and rand) and D-03 FX buffer | ARB-041 |
+| D-04 categories delivered in-house | ARB-040 |
+| D-06 three starting saved searches | ARB-021's seed |
+| D-07 bid templates and D-10 portfolio items | ARB-043 |
+| D-08 auto-reply wording | ARB-121 in use |
+| D-09 the supplier list (the template on the Suppliers page) | ARB-200, ARB-201 with real suppliers |
+| D-11 brand colours and the logo, with the docs/03 assets (logo, icons, share image) | ARB-060's tokens; ARB-440's icons |
+| D-12 SaaS plans: limits, prices with each provider's reference, the grace period (`packages/db/seed/plans.json`) | ARB-410, ARB-420; ARB-499 |
+| D-13 who else gets operator access | ARB-012 (SOFT) |
+| D-14 market price band figures | ARB-013, ARB-040's band method |
+| D-16 terms of service wording (`apps/web/src/public/terms.json`) | ARB-400: public sign-up opens |
 
 ## 6. The exact next ticket
 
-**ARB-440 — Marketing site (static, Vite), factual copy only, no fake scarcity.** Claim it
-on the board first (a one-file commit on `origin/main`, pushed to `main`, as in section
-4). Acceptance: "Copy audit passes; Lighthouse ≥ 90 on all categories". Blockers D-01
-(product name and domain) and the docs/03 assets. Build the landing page as part of the
-web app (index.html already records referral clicks, ARB-430): only statements the build
-can stand behind (what the product does, as built), no prices until D-12, no testimonials,
-no counts, no urgency; the working name "Arbitron" until D-01; a copy audit as a test that
-fails on banned patterns; Lighthouse with the pre-installed Chromium. Then the phase
-audits (ARB-099, 299, 399, 499): each needs every ticket of its phase DONE, so each is
-marked BLOCKED with the tickets and credentials it waits on.
+None is buildable. When the owner supplies an item from section 5:
+
+1. Put any key in `.env` (and the Vercel or host environment), never in a file in git.
+2. Pick the ticket it unblocks from the board, claim it (section 4), and run its own
+   clause for real: the BLOCKERS row for it (C-01 to C-05, V-03, V-04, D-14 to D-16) says
+   exactly what to run and what to record.
+3. Move the row to DONE with the evidence, and clear the BLOCKERS row.
+4. When every ticket of a phase is DONE and the API is deployed (B-12), run that phase's
+   audit: the docs/05 checklist across the phase, tag `phase-N`, and the report with the
+   repository, latest commit, tag and live preview links.
 
 ## 7. Loose ends
 

@@ -2188,3 +2188,31 @@ Decision:
 Why: ARB-430's acceptance ("Referral code tracked from click to paid subscription"),
 docs/01 rule 6 (no commission or terms invented), and POPIA-minded data minimisation
 (docs/02 T-06): a click needs no personal data to be counted.
+
+## D-072 — The landing page says only what the build proves; the copy audit and Lighthouse are tests
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-440, session …tJv8)
+
+Decision:
+
+- The marketing site is the web app's own `index.html`: static, built by Vite with the
+  other pages, served from the same place (it already records referral clicks, ARB-430).
+- Every sentence is something the build does, and `docs/audit/index.md` lists each one
+  with the ticket or test that proves it. Where a feature waits on the owner, the copy
+  says so ("once Upwork approves the API key"). The opt-in exceptions to approval
+  (auto-send, the away reply) are named, not hidden.
+- The page has no prices (D-12), no numbers, no ratings, testimonials or customer counts,
+  and no deadlines. It keeps the working name "Arbitron" until D-01. No logo, icon or share
+  image is generated (docs/03 says the owner produces them); the page asks for no icon
+  file (`href="data:,"`) rather than a missing one.
+- `tests/copy-audit.test.ts` holds every page's visible text, and every sentence a script
+  can show, to docs/05 section 2: scarcity, countdowns, earnings claims, guarantees,
+  invented social proof, placeholders and US spellings. It proves it would catch each kind
+  with samples.
+- `e2e/lighthouse.mjs` runs Lighthouse 13 on the built public pages in CI, in the
+  end-to-end tests' Chromium, and fails below 90 in any category. It lives in e2e/, the one
+  place a browser is driven (D-066), and visits only this app's pages.
+
+Why: ARB-440's acceptance ("Copy audit passes; Lighthouse ≥ 90 on all categories"),
+docs/01 section H ("no fake reviews, no fake scarcity"), and docs/05 section 2.

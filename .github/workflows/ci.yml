@@ -86,6 +86,11 @@ jobs:
       - name: Run Playwright tests
         run: pnpm exec playwright test --config e2e/playwright.config.ts
 
+      # ARB-440's acceptance: Lighthouse at 90 or more in every category on the public
+      # pages of the build above, in the Chromium installed for the end-to-end tests.
+      - name: Lighthouse on the public pages (ARB-440)
+        run: pnpm -s lighthouse
+
       # D-043: demo mode must never reach a real build. The e2e build above is a real
       # build with stand-in hosts, so the demo stand-in must be absent from it.
       - name: Check that a non-demo build carries no demo code
