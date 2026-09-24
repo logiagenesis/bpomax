@@ -10,7 +10,9 @@ import {
   type FreelancerConfig,
   type FreelancerProject,
 } from '@arbitron/freelancer';
+import type { UpworkConfig } from '@arbitron/upwork';
 import type { Job, Queue } from 'bullmq';
+import { pollUpworkScanner, purgeUpworkJobs } from './ingest-upwork.js';
 import { enqueueScore } from './score.js';
 
 /**
@@ -68,6 +70,8 @@ export interface IngestDeps {
   readonly now?: () => Date;
   /** Where a new listing goes next (01 section E). Optional so a poll can run alone. */
   readonly scoreQueue?: Queue;
+  /** `upworkConfig(process.env)` when ok (ARB-300); absent or null leaves Upwork scanners unscheduled. */
+  readonly upwork?: UpworkConfig | null;
 }
 
 export interface IngestSync {
@@ -76,6 +80,8 @@ export interface IngestSync {
   readonly changed: number;
   readonly removed: number;
   readonly reason?: string;
+  /** Upwork jobs deleted by the 24-hour rule on this run (D-066). */
+  readonly purged: number;
 }
 
 interface ScheduleRow {
@@ -95,14 +101,16 @@ export async function syncIngestSchedules(deps: IngestDeps): Promise<IngestSync>
   }
 
   const wanted = new Map<string, number>();
-  if (deps.config) {
+  const platforms = [...(deps.config ? ['freelancer'] : []), ...(deps.upwork ? ['upwork'] : [])];
+  if (platforms.length > 0) {
     const { rows } = await deps.db.query<ScheduleRow>(
       `select s.id, s.poll_interval_seconds
          from scanners s
-        where s.active and s.platform = 'freelancer'
+        where s.active and s.platform::text = any($1::text[])
           and exists (select 1 from platform_accounts a
-                       where a.org_id = s.org_id and a.platform = 'freelancer'
+                       where a.org_id = s.org_id and a.platform = s.platform
                          and a.status = 'connected')`,
+      [platforms],
     );
     for (const row of rows)
       wanted.set(scannerSchedulerId(row.id), row.poll_interval_seconds * 1000);
@@ -128,11 +136,15 @@ export async function syncIngestSchedules(deps: IngestDeps): Promise<IngestSync>
     await deps.queue.removeJobScheduler(key);
     removed += 1;
   }
+  // Upwork's 24-hour rule is kept on every sync, configured or not: a job stored while
+  // Upwork was configured must still go (D-066).
+  const purged = await purgeUpworkJobs(deps.db, deps.now ? deps.now() : new Date());
   return {
     wanted: wanted.size,
     added,
     changed,
     removed,
+    purged,
     ...(deps.config ? {} : { reason: 'Freelancer.com is not configured (docs/02 B-03)' }),
   };
 }
@@ -157,7 +169,7 @@ export type IngestRun =
       readonly reason: string;
     };
 
-interface ScannerRow {
+export interface ScannerRow {
   id: string;
   org_id: string;
   name: string;
@@ -246,6 +258,7 @@ async function upsertJob(
   db: Queryable,
   scanner: ScannerRow,
   project: FreelancerProject,
+  fetchedAt: Date,
 ): Promise<UpsertedJob> {
   const currency =
     project.currencyCode && CURRENCY.test(project.currencyCode) ? project.currencyCode : null;
@@ -262,8 +275,9 @@ async function upsertJob(
   const { rows } = await db.query<UpsertedJob>(
     `insert into jobs
        (org_id, scanner_id, platform, external_id, raw, title, description,
-        budget_min_minor, budget_max_minor, currency, hourly, skills, bid_count, posted_at)
-     values ($1, $2, 'freelancer', $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        budget_min_minor, budget_max_minor, currency, hourly, skills, bid_count, posted_at,
+        fetched_at)
+     values ($1, $2, 'freelancer', $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      on conflict (org_id, platform, external_id) do update
        set raw = excluded.raw,
            title = excluded.title,
@@ -274,7 +288,8 @@ async function upsertJob(
            hourly = excluded.hourly,
            skills = excluded.skills,
            bid_count = excluded.bid_count,
-           posted_at = coalesce(excluded.posted_at, jobs.posted_at)
+           posted_at = coalesce(excluded.posted_at, jobs.posted_at),
+           fetched_at = excluded.fetched_at
      returning id, (xmax = 0) as inserted`,
     [
       scanner.org_id,
@@ -290,6 +305,7 @@ async function upsertJob(
       project.skills,
       bidCount,
       project.submittedAt?.toISOString() ?? null,
+      fetchedAt.toISOString(),
     ],
   );
   return rows[0]!;
@@ -307,11 +323,25 @@ export async function pollScanner(
     `select s.id, s.org_id, s.name, s.filters, s.active, s.platform::text as platform,
             a.id as account_id, a.status::text as account_status
        from scanners s
-       left join platform_accounts a on a.org_id = s.org_id and a.platform = 'freelancer'
+       left join platform_accounts a on a.org_id = s.org_id and a.platform = s.platform
       where s.id = $1`,
     [data.scannerId],
   );
   const scanner = rows[0];
+  if (scanner?.active && scanner.platform === 'upwork') {
+    return pollUpworkScanner(
+      {
+        db,
+        queue: deps.queue,
+        upwork: deps.upwork ?? null,
+        ...(deps.fetch ? { fetch: deps.fetch } : {}),
+        now: () => now,
+        ...(deps.scoreQueue ? { scoreQueue: deps.scoreQueue } : {}),
+      },
+      scanner,
+      requestId,
+    );
+  }
   if (!scanner || !scanner.active || scanner.platform !== 'freelancer') {
     // Its schedule is stale; the sync would remove it within a minute, this does it now.
     await deps.queue.removeJobScheduler(scannerSchedulerId(data.scannerId));
@@ -322,7 +352,7 @@ export async function pollScanner(
         ? 'the scanner no longer exists'
         : !scanner.active
           ? 'the scanner is inactive'
-          : `the scanner is for ${scanner.platform}, which has no ingest yet`,
+          : `the scanner is for ${scanner.platform}, which has no verified API to read jobs from (docs/01 section B)`,
     };
   }
 
@@ -437,7 +467,7 @@ export async function pollScanner(
   let updated = 0;
   await inTransaction(db, async (tx) => {
     for (const project of kept) {
-      const row = await upsertJob(tx, scanner, project);
+      const row = await upsertJob(tx, scanner, project, now);
       if (!row.inserted) {
         updated += 1;
         continue;

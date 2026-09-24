@@ -715,6 +715,7 @@ export type Database = {
           currency: string | null;
           description: string | null;
           external_id: string;
+          fetched_at: string;
           first_seen_at: string;
           hourly: boolean;
           id: string;
@@ -742,6 +743,7 @@ export type Database = {
           currency?: string | null;
           description?: string | null;
           external_id: string;
+          fetched_at?: string;
           first_seen_at?: string;
           hourly?: boolean;
           id?: string;
@@ -769,6 +771,7 @@ export type Database = {
           currency?: string | null;
           description?: string | null;
           external_id?: string;
+          fetched_at?: string;
           first_seen_at?: string;
           hourly?: boolean;
           id?: string;

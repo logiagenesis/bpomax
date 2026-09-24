@@ -2,6 +2,7 @@ import {
   bidPayload,
   checkApproval,
   liveGate,
+  readOnlyPlatformReason,
   type BidPayload,
   type Platform,
 } from '@arbitron/core';
@@ -56,7 +57,8 @@ export type SubmitBlockReason =
   | 'daily_cap_reached'
   | 'below_min_score'
   | 'auto_send_off'
-  | 'no_scanner';
+  | 'no_scanner'
+  | 'read_only_platform';
 
 export type SubmitResult =
   | { readonly status: 'submitted'; readonly platformRef: string; readonly pipelineItemId: string }
@@ -193,6 +195,13 @@ export async function submitProposal(
     }
     await note('skipped', { reason: approval.reason, status: proposal.status });
     return { status: 'skipped', reason: approval.reason };
+  }
+
+  // Upwork and Fiverr are read only here (docs/01 section B, D-066): nothing is sent there.
+  const readOnly = readOnlyPlatformReason(proposal.platform);
+  if (readOnly) {
+    await note('blocked', { reason: 'read_only_platform', message: readOnly });
+    return { status: 'blocked', reason: 'read_only_platform', message: readOnly };
   }
 
   const payload = bidPayload({

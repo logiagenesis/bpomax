@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { ServerOptions } from './context.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerTemplateRoutes } from './routes/templates.js';
+import { registerUpworkAccountRoutes } from './routes/upwork-accounts.js';
 import { registerAutoReplyRoutes } from './routes/auto-reply.js';
 import { registerBriefRoutes } from './routes/briefs.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
@@ -67,6 +68,7 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerAnalyticsRoutes(app, options);
   registerTemplateRoutes(app, options);
   registerPlatformAccountRoutes(app, options);
+  registerUpworkAccountRoutes(app, options);
   registerEventRoutes(app, options);
   registerScannerRoutes(app, options);
   registerTelegramRoutes(app, options);

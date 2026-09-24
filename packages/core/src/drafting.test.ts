@@ -1,6 +1,7 @@
 import { Ajv } from 'ajv';
 import { describe, expect, it } from 'vitest';
 import {
+  readOnlyPlatformReason,
   MAX_CITATIONS,
   buildDraftPrompt,
   buildDraftSchema,
@@ -174,5 +175,15 @@ describe('the prompt and the body', () => {
       'Hello there.\n\nExamples of our work:\n- Practice site: https://example.test/practice\n- Shop demo (demo)',
     );
     expect(proposalBody('Hello there.', [])).toBe('Hello there.');
+  });
+});
+
+describe('readOnlyPlatformReason', () => {
+  it('lets a bid be drafted for Freelancer.com only', () => {
+    expect(readOnlyPlatformReason('freelancer')).toBeNull();
+    expect(readOnlyPlatformReason('upwork')).toBe(
+      'Upwork jobs are read only here: bid on Upwork itself (docs/01 section B).',
+    );
+    expect(readOnlyPlatformReason('fiverr')).toMatch(/^Fiverr jobs are read only here/);
   });
 });

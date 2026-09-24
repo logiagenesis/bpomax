@@ -1,5 +1,5 @@
 // @ts-check
-import { canWrite } from '@arbitron/core';
+import { canWrite, readOnlyPlatformReason } from '@arbitron/core';
 import { apiGet, apiSend } from './lib/api.js';
 import { formatDateTime, formatMoney } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
@@ -103,6 +103,8 @@ function verdictBadge(verdict) {
 
 /** @param {FeedRow} job */
 function queueBidState(job) {
+  const readOnly = readOnlyPlatformReason(job.platform);
+  if (readOnly) return readOnly;
   if (!mayQueue) return 'Your role can view the feed but not queue bids.';
   if (job.proposal_status && ['queued', 'approved', 'submitted'].includes(job.proposal_status)) {
     return `A bid is already ${BID_WORDS[job.proposal_status]?.toLowerCase() ?? job.proposal_status}.`;

@@ -9,6 +9,7 @@ import type { FastifyInstance } from 'fastify';
 import { currentMembership, invalid, UUID, type ServerOptions } from '../context.js';
 import { messageOf, refuse, statusOf } from '../errors.js';
 import { freelancerStatus } from './platform-accounts.js';
+import { upworkStatus } from './upwork-accounts.js';
 
 /**
  * Settings (ARB-061, docs/01 section I): platform accounts, margin rules, the fee table,
@@ -141,6 +142,7 @@ export function registerSettingsRoutes(app: FastifyInstance, options: ServerOpti
       telegramLinked: result.me.telegramLinked,
       role: result.me.role,
       freelancer: freelancerStatus(options),
+      upwork: upworkStatus(options),
     });
   });
 

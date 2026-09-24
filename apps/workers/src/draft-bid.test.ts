@@ -377,6 +377,26 @@ describe('templates', () => {
   });
 });
 
+describe('a read-only marketplace', () => {
+  it('drafts nothing for an Upwork job, even with a passed margin, and says why', async () => {
+    const { jobId, evaluationId } = await readyJob('upwork');
+    await db.query(`update jobs set platform = 'upwork' where id = $1`, [jobId]);
+    const transport = new ScriptedTransport([reply()]);
+    const result = await draftBid({ db, transport, model: MODEL }, { jobId });
+    expect(result).toEqual({ status: 'skipped', reason: 'read_only_platform' });
+    expect(await proposalFor(evaluationId)).toEqual([]);
+    expect(transport.requests).toHaveLength(0);
+    const { rows } = await db.query<{ outcome: string; payload: Record<string, unknown> }>(
+      `select outcome, payload from events where type = 'proposal.drafted' and subject_id = $1`,
+      [jobId],
+    );
+    expect(rows[0]).toMatchObject({
+      outcome: 'skipped',
+      payload: { reason: 'read_only_platform', platform: 'upwork' },
+    });
+  });
+});
+
 describe('what it does without', () => {
   it('drafts with no citations when nothing may be shown', async () => {
     await deactivateTemplates();

@@ -61,6 +61,7 @@ export default defineConfig(({ mode }) => {
           'audit-log': 'src/audit-log.html',
           privacy: 'src/privacy.html',
           'freelancer-callback': 'src/freelancer-callback.html',
+          'upwork-callback': 'src/upwork-callback.html',
         },
       },
     },

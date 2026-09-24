@@ -363,3 +363,15 @@ test('connecting Freelancer.com in the demo returns at once with a sample accoun
     'Connected the Freelancer.com account sample-account (demo).',
   );
 });
+
+test('connecting Upwork in the demo returns at once with a sample account, to read jobs only', async ({
+  page,
+}) => {
+  await page.goto('/settings.html');
+  await expect(page.locator('#connect-upwork-hint')).toContainText('Nothing reaches Upwork.');
+  await page.getByRole('button', { name: 'Connect Upwork' }).click();
+  await expect(page).toHaveURL(/\/upwork-callback\.html$/);
+  await expect(page.locator('#status')).toHaveText(
+    'Connected the Upwork account Sample Upwork account (demo). It is used to read jobs only.',
+  );
+});

@@ -4,7 +4,7 @@ import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@ar
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { LlmRequest, LlmResponse, LlmTransport } from '@arbitron/llm';
 import type { PGlite } from '@electric-sql/pglite';
-import { QueueEvents, UnrecoverableError } from 'bullmq';
+import { QueueEvents, UnrecoverableError, type Queue } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { estimateJob } from './estimate.js';
 import {
@@ -308,6 +308,26 @@ describe('an evaluation stores every line', () => {
       feeRule: { percent: 10, sourceUrl: 'https://example.test/fees', readOn: '2026-09-22' },
       fx: null,
     });
+  });
+
+  it('judges an Upwork job like any other, but hands nothing to the drafter', async () => {
+    await setRules({
+      ...RULES,
+      feeTable: [...FEE_TABLE, { ...FEE_TABLE[0], platform: 'upwork' }],
+    });
+    const jobId = await insertJob('upwork-zar');
+    await db.query(`update jobs set platform = 'upwork' where id = $1`, [jobId]);
+    const estimateId = await insertEstimate(jobId, 250_000);
+    const added: unknown[] = [];
+    const draftQueue = {
+      add: (name: string, data: unknown) => {
+        added.push({ name, data });
+        return Promise.resolve({ id: name });
+      },
+    } as unknown as Queue;
+    const result = await evaluateJobMargin({ db, fx: usdZar(), draftQueue }, { jobId, estimateId });
+    expect(result).toMatchObject({ status: 'evaluated', passed: true });
+    expect(added).toEqual([]);
   });
 
   it('for a fixed-price USD deal, with the rate and its time', async () => {
