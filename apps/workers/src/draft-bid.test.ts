@@ -553,3 +553,68 @@ describe('on the queue', () => {
     }
   }, 30_000);
 });
+
+describe('plan limits (ARB-410)', () => {
+  // A made-up plan for the test: one draft a month. No real plan exists (docs/02 D-12).
+  beforeAll(async () => {
+    await db.exec(`insert into plans (code, name, limits) values
+      ('test-one-draft', 'Test plan', '{"jobs_scored": null, "bids_drafted": 1, "bids_submitted": null}')`);
+    await db.query(
+      `update subscriptions set plan = 'test-one-draft', status = 'active' where org_id = $1`,
+      [ORG],
+    );
+    await db.query('update orgs set billing_exempt = false where id = $1', [ORG]);
+    // The drafts above were counted while the org was the house org; start this month at 0.
+    await db.query(`delete from usage_counters where org_id = $1 and metric like 'plan:%'`, [ORG]);
+  });
+
+  afterAll(async () => {
+    await db.query('update orgs set billing_exempt = true where id = $1', [ORG]);
+  });
+
+  it('drafts while the plan has room, then refuses with the message and asks the model nothing', async () => {
+    await insertTemplate('Plan limit', 'web-design', [{ label: 'A', body: 'Words.' }]);
+    const first = await readyJob('plan-1');
+    const transport = new ScriptedTransport([reply(), reply()]);
+    const drafted = await draftBid({ db, transport, model: MODEL }, { jobId: first.jobId });
+    expect(drafted, JSON.stringify(drafted)).toMatchObject({ status: 'drafted' });
+
+    const second = await readyJob('plan-2');
+    const result = await draftBid({ db, transport, model: MODEL }, { jobId: second.jobId });
+    expect(result).toMatchObject({ status: 'blocked', reason: 'plan_limit' });
+    if (result.status === 'blocked') {
+      expect(result.detail).toMatch(
+        /^The Test plan plan's monthly limit for drafting bids is reached: 1 of 1 used\. It resets on \d{2}\/\d{2}\/\d{4}\. Choose a bigger plan in Settings to go on now\.$/,
+      );
+    }
+    expect(transport.requests).toHaveLength(1);
+    expect(await proposalFor(second.evaluationId)).toEqual([]);
+    const events = await db.query<{ outcome: string; reason: string }>(
+      `select outcome, payload ->> 'reason' as reason from events
+        where type = 'proposal.drafted' and payload ->> 'jobId' = $1::text`,
+      [second.jobId],
+    );
+    expect(events.rows).toEqual([{ outcome: 'blocked', reason: 'plan_limit' }]);
+  });
+
+  it('gives the draft back when the model cannot be reached', async () => {
+    await db.query(
+      `update usage_counters set used = 0 where org_id = $1 and metric = 'plan:bids_drafted'`,
+      [ORG],
+    );
+    const job = await readyJob('plan-down');
+    const down: LlmTransport = {
+      send: async () => {
+        throw new Error('connection refused');
+      },
+    };
+    await expect(
+      draftBid({ db, transport: down, model: MODEL }, { jobId: job.jobId }),
+    ).rejects.toThrow(/connection refused/);
+    const { rows } = await db.query<{ used: number }>(
+      `select used from usage_counters where org_id = $1 and metric = 'plan:bids_drafted'`,
+      [ORG],
+    );
+    expect(rows[0]?.used).toBe(0);
+  });
+});

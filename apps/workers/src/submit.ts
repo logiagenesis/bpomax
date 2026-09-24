@@ -10,12 +10,14 @@ import {
   inTransaction,
   recordEvent,
   releaseBid,
+  releasePlanUsage,
   releaseScannerSlot,
   reserveBid,
   reserveScannerSlot,
   type Queryable,
 } from '@arbitron/db';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { meter, type UsageAlert } from './usage-alert.js';
 
 /**
  * The submit worker (ARB-044, docs/01 sections E and H): "Places bid via API; creates
@@ -47,6 +49,8 @@ export interface SubmitDeps {
   readonly placer?: BidPlacer | null;
   /** Defaults to the current time; tests fix it. */
   readonly now?: () => Date;
+  /** ARB-410: the 80 % and 100 % alerts (`createUsageAlert`). */
+  readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
 }
 
 export type SubmitBlockReason =
@@ -58,7 +62,9 @@ export type SubmitBlockReason =
   | 'below_min_score'
   | 'auto_send_off'
   | 'no_scanner'
-  | 'read_only_platform';
+  | 'read_only_platform'
+  /** ARB-410: the org's plan has no room for another bid this month. */
+  | 'plan_limit';
 
 export type SubmitResult =
   | { readonly status: 'submitted'; readonly platformRef: string; readonly pipelineItemId: string }
@@ -341,6 +347,19 @@ export async function submitProposal(
     );
   }
 
+  // A bid sent is metered (ARB-410): only a real send counts, so this comes after the
+  // live gate and just before the platform is called.
+  const metered = await meter(deps, {
+    orgId: proposal.org_id,
+    metric: 'bids_submitted',
+    now,
+    requestId,
+  });
+  if (!metered.ok) {
+    await giveBackBid();
+    return blocked('plan_limit', metered.message, { plan: metered.reason });
+  }
+
   let platformRef: string;
   try {
     ({ platformRef } = await deps.placer.placeBid(payload));
@@ -348,6 +367,7 @@ export async function submitProposal(
     const message = (error as Error).message;
     await giveBackBid();
     await giveBackSlot();
+    await releasePlanUsage(db, { orgId: proposal.org_id, metric: 'bids_submitted', now });
     await recordEvent(db, {
       orgId: proposal.org_id,
       type: 'external.call',

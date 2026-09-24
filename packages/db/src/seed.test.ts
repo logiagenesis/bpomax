@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildSeedSql, loadMarketPriceBands, loadServiceCategories } from './seed.js';
+import { buildSeedSql, loadMarketPriceBands, loadPlans, loadServiceCategories } from './seed.js';
 import { createTestDatabase } from './testing.js';
 
 /**
@@ -99,5 +99,53 @@ describe('the seed', () => {
     // ARB-040 prices real bids off the p50. A band that came from nowhere would become a
     // number on a real proposal, so the shipped seed carries none (docs/BLOCKERS.md D-14).
     expect(loadMarketPriceBands()).toEqual([]);
+  });
+
+  it('ships no invented plan either (docs/02 D-12)', () => {
+    expect(loadPlans()).toEqual([]);
+  });
+});
+
+describe('plans (ARB-410)', () => {
+  // A made-up plan for the test only: its name and limits are not a proposal.
+  const TEST_PLAN = {
+    code: 'test-plan',
+    name: 'Test plan',
+    active: true,
+    limits: { jobs_scored: 5, bids_drafted: 3, bids_submitted: null },
+  };
+
+  it('writes a published plan, and a second run changes nothing', async () => {
+    const plans = loadPlans({ plans: [TEST_PLAN] });
+    await db.exec(buildSeedSql({ plans }));
+    await db.exec(buildSeedSql({ plans }));
+    const { rows } = await db.query<{
+      code: string;
+      name: string;
+      active: boolean;
+      limits: unknown;
+    }>('select code, name, active, limits from plans');
+    expect(rows).toEqual([
+      {
+        code: 'test-plan',
+        name: 'Test plan',
+        active: true,
+        limits: { jobs_scored: 5, bids_drafted: 3, bids_submitted: null },
+      },
+    ]);
+  });
+
+  it('keeps a plan the file no longer lists, since a subscription may name it', async () => {
+    await db.exec(buildSeedSql({ plans: [] }));
+    const { rows } = await db.query('select 1 from plans where code = $1', ['test-plan']);
+    expect(rows).toHaveLength(1);
+  });
+
+  it('refuses a plan with a limit left out, or a code used twice, before writing anything', () => {
+    expect(() =>
+      loadPlans({ plans: [{ ...TEST_PLAN, limits: { jobs_scored: 5, bids_drafted: 3 } }] }),
+    ).toThrow(/plan 1: limits.bids_submitted must be stated/);
+    expect(() => loadPlans({ plans: [TEST_PLAN, TEST_PLAN] })).toThrow(/used twice/);
+    expect(() => loadPlans({})).toThrow(/"plans" list/);
   });
 });

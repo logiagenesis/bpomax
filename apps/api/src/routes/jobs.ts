@@ -3,6 +3,7 @@ import { recordEvent, withUser } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import { channelOf, currentMembership, UUID, type ServerOptions } from '../context.js';
 import { messageOf, refuse, statusOf } from '../errors.js';
+import { refuseOverLimit } from '../plan-limits.js';
 
 /**
  * The feed (ARB-061, docs/01 section I): "jobs with score, estimate, margin, Queue bid
@@ -163,6 +164,9 @@ export function registerJobRoutes(app: FastifyInstance, options: ServerOptions):
           );
         }
 
+        // ARB-410: each path is a model call on the org's plan; one with no room says so now.
+        await refuseOverLimit(tx, me.orgId, action === 'drafting' ? 'bids_drafted' : 'jobs_scored');
+
         await recordEvent(tx, {
           orgId: me.orgId,
           type: 'proposal.draft_requested',
@@ -255,6 +259,7 @@ export function registerJobRoutes(app: FastifyInstance, options: ServerOptions):
         if (!rows[0]) throw refuse(404, 'no such job');
         if (!options.enqueue?.score)
           throw refuse(503, 'The scoring queue is not available. Try again later.');
+        await refuseOverLimit(tx, me.orgId, 'jobs_scored');
         await recordEvent(tx, {
           orgId: me.orgId,
           type: 'job.score_requested',

@@ -102,6 +102,8 @@ async function open(
     rows?: ReturnType<typeof proposal>[];
     replies?: ReturnType<typeof reply>[];
     posts?: ReturnType<typeof sourcingPost>[];
+    /** ARB-410: the API refuses approvals, as it does when the plan has no room. */
+    approveRefusal?: { status: number; error: string };
   } = {},
 ) {
   const replies = options.replies ?? [];
@@ -201,6 +203,12 @@ async function open(
         return route.fulfill({ json: { results } });
       },
       'POST /v1/proposals/:id/approve': (request, route) => {
+        if (options.approveRefusal) {
+          return route.fulfill({
+            status: options.approveRefusal.status,
+            json: { error: options.approveRefusal.error },
+          });
+        }
         const row = rows.find((r) => request.path.includes(r.id))!;
         row.status = 'approved';
         row.approved_by_name = 'Ayanda Nkosi';
@@ -316,6 +324,18 @@ test('approve, confirmed, posts the approval and refreshes the list', async ({ p
     `/v1/proposals/${rows[0]!.id}/approve`,
   );
   await expect(page.locator('#list article')).toHaveCount(1);
+});
+
+test('a plan with no room to send refuses the approval in its own words (ARB-410)', async ({
+  page,
+}) => {
+  const error =
+    "The Test plan plan's monthly limit for sending bids is reached: 50 of 50 used. It resets on 01/10/2026. Choose a bigger plan in Settings to go on now.";
+  await open(page, { approveRefusal: { status: 402, error } });
+  await page.getByRole('button', { name: 'Approve Shopify store rebuild' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expectStatus(page, error);
+  await expect(page.locator('#status')).toHaveClass(/alert--error/);
 });
 
 test('when bidding is paused the page says so, and so does an approval', async ({ page }) => {

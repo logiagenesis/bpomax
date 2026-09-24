@@ -1012,6 +1012,34 @@ function api(method, url, body) {
       }),
     });
   }
+  // ARB-410 in the demo: the sample org is the house org, counted and never limited.
+  if (key === 'GET /v1/usage') {
+    const now = new Date();
+    const local = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const start = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1));
+    const next = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 1));
+    const sent = store.proposals.filter((p) => p.status === 'submitted').length;
+    const drafted = store.proposals.length;
+    const scored = store.jobs.filter((j) => j.verdict).length;
+    return respond(200, {
+      plan: { kind: 'exempt' },
+      period: {
+        start: start.toISOString().slice(0, 10),
+        resetsOn: next.toISOString().slice(0, 10),
+      },
+      metrics: [
+        { metric: 'jobs_scored', label: 'Jobs scored', used: scored, limit: null, percent: null },
+        {
+          metric: 'bids_drafted',
+          label: 'Bids drafted',
+          used: drafted,
+          limit: null,
+          percent: null,
+        },
+        { metric: 'bids_submitted', label: 'Bids sent', used: sent, limit: null, percent: null },
+      ],
+    });
+  }
   if (key === 'POST /v1/orgs') {
     return respond(409, {
       error: 'You are already a member of an organisation. Sign in to use it.',

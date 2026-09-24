@@ -10,6 +10,7 @@ import {
   type ServerOptions,
 } from '../context.js';
 import { messageOf, refuse, statusOf } from '../errors.js';
+import { refuseOverLimit } from '../plan-limits.js';
 
 /**
  * Approvals (ARB-061, docs/01 section I): "all pending outbound items, approve / edit /
@@ -106,6 +107,8 @@ async function approveOne(
   const before = await loadProposal(tx, id);
   if (!before) throw refuse(404, 'no such bid');
   if (before.status !== 'queued') notQueued(before.status);
+  // ARB-410: an approval hands the bid to the sender, so a plan with no room says so now.
+  await refuseOverLimit(tx, me.orgId, 'bids_submitted');
   const { rows } = await tx.query<{ id: string }>(
     `update proposals set status = 'approved', approved_by = $2, approved_via = $3::approval_channel
      where id = $1 and status = 'queued' returning id`,
@@ -219,6 +222,7 @@ export function registerProposalRoutes(app: FastifyInstance, options: ServerOpti
         if (before.status === 'submitted') throw refuse(409, 'This bid has already been sent.');
         if (before.status !== 'approved')
           throw refuse(409, `This bid is ${before.status}, so it is not sent.`);
+        await refuseOverLimit(tx, me.orgId, 'bids_submitted');
         if (!options.enqueue?.submit)
           throw refuse(
             503,

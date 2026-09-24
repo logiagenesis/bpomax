@@ -25,6 +25,7 @@
  *   ARB-311  payments, their rand figures and realised margin      (payments.ts)
  *   ARB-320  analytics: rates and margin per category, template, supplier, scanner (analytics.ts)
  *   ARB-400  sign-up: the new-org rule, onboarding steps, the terms shape (orgs.ts, terms.ts)
+ *   ARB-410  plans, metered actions, usage checks and the 80 %/100 % alerts (plans.ts)
  */
 export * from './allowance.js';
 export * from './analytics.js';
@@ -41,6 +42,7 @@ export * from './messaging.js';
 export * from './money.js';
 export * from './orgs.js';
 export * from './payments.js';
+export * from './plans.js';
 export * from './privacy.js';
 export * from './scanners.js';
 export * from './scoring.js';

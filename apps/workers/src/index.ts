@@ -19,6 +19,7 @@ export * from './draft-bid.js';
 export * from './submit.js';
 export * from './sourcing.js';
 export * from './reprice.js';
+export * from './usage-alert.js';
 
 export const APP_NAME = 'arbitron-workers';
 export * from './retention.js';

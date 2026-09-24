@@ -2060,3 +2060,48 @@ Decision:
 
 Why: ARB-400 opens the product to the public; accepting terms that do not exist is not
 possible, and inventing them is not allowed. The owner's action is docs/BLOCKERS.md D-16.
+
+## D-069 — Plans and limits: three metered actions, the house org exempt, counters the system's alone
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-410, session …tJv8)
+
+Decision:
+
+- Three actions are metered, per org per calendar month in South African time (as the bid
+  allowance, D-030): `jobs_scored` and `bids_drafted` (each is a paid model call) and
+  `bids_submitted` (a bid actually placed; nothing is counted while live mode is off).
+  Counters are `usage_counters` rows keyed `plan:<metric>`, beside ARB-042's
+  `bids:<platform>`.
+- A plan is platform data in a new `plans` table (0033): a code, a name, `active`, and one
+  monthly limit per metric, a whole number or null for no limit. It is published in
+  `packages/db/seed/plans.json` and checked by `validatePlan`, which refuses a metric left
+  out rather than reading it as unlimited. The file ships empty: the figures are D-12's.
+  Prices are ARB-420's. An org's plan is `subscriptions.plan`; a retired plan still holds
+  for the orgs already on it.
+- The house org: `orgs.billing_exempt`, set for every org that existed when 0033 ran (only
+  Logi-Ink predates public sign-up), false for every org `app.create_org` makes. It is
+  counted and never limited. An owner may still rename their org, but the column grant no
+  longer lets them change `billing_exempt`.
+- An org with no plan (none published, none chosen, cancelled, or a plan no longer
+  offered) can take no metered action, and is told which. A limit of 0 means the plan does
+  not include the action.
+- `subscriptions` and `usage_counters` lose 0008's owner write policies: an owner could
+  otherwise choose their own plan or wind back a counter. Members still read them; the
+  workers (service_role) and ARB-420's webhooks write them.
+- The count moves by one conditional upsert, so the limit holds under concurrency (25 at
+  once against a limit of 10 take exactly 10). A model call that never reached the model,
+  or a bid the platform refused, is given back.
+- The API reads the plan before it hands work on (score, queue-bid, approve, bulk approve,
+  hand to the sender again) and refuses with 402 and the plan's own words, so the person
+  is told at the button; the worker still enforces it.
+- Alerts: the action that crosses 80% or 100% of a limit records `usage.threshold_reached`
+  and tells the org's owners, on Telegram in every linked chat and by email, through
+  `@arbitron/email`'s interface. No email provider is chosen (B-13), so `emailConfig`
+  always says so and the alert records that email was not sent and why. `usage.alert_sent`
+  records counts only, never an address or a chat id. An alert that fails never undoes
+  the action.
+
+Why: ARB-410's acceptance ("Limit reached blocks action with message; alerts sent"), docs/01
+rule 6 (no plan, limit or price invented: D-12), and D-067 (a self-service org must not
+run paid model calls unmetered).

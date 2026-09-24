@@ -8,10 +8,17 @@ import {
   type ModelScore,
   type ScorableJob,
 } from '@arbitron/core';
-import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
+import {
+  inTransaction,
+  recordEvent,
+  recordLlmCall,
+  releasePlanUsage,
+  type Queryable,
+} from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
 import { enqueueEstimate } from './estimate.js';
+import { meter, type UsageAlert } from './usage-alert.js';
 
 /**
  * The score worker (ARB-032, docs/01 section E): "LLM scoring against strict JSON
@@ -37,11 +44,15 @@ export interface ScoreDeps {
    * Optional so the scorer can be run on its own, as its tests do.
    */
   readonly estimateQueue?: Queue;
+  /** ARB-410: the 80 % and 100 % alerts (`createUsageAlert`). */
+  readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
 }
 
 export type ScoreResult =
   | { readonly status: 'scored'; readonly scoreId: string; readonly score: FinalScore }
-  | { readonly status: 'already_scored'; readonly scoreId: string };
+  | { readonly status: 'already_scored'; readonly scoreId: string }
+  /** ARB-410: the org's plan has no room for another score this month. */
+  | { readonly status: 'blocked'; readonly reason: 'plan_limit'; readonly message: string };
 
 interface JobRow {
   id: string;
@@ -108,6 +119,22 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
   );
   if (existing.rows[0]) return { status: 'already_scored', scoreId: existing.rows[0].id };
 
+  // A score is a model call, so it is metered (ARB-410): refused when the plan has no
+  // room, before anything is paid for.
+  const metered = await meter(deps, { orgId: row.org_id, metric: 'jobs_scored', requestId });
+  if (!metered.ok) {
+    await recordEvent(db, {
+      orgId: row.org_id,
+      type: 'job.scored',
+      subjectTable: 'jobs',
+      subjectId: row.id,
+      requestId,
+      outcome: 'blocked',
+      payload: { reason: 'plan_limit', plan: metered.reason, message: metered.message },
+    });
+    return { status: 'blocked', reason: 'plan_limit', message: metered.message };
+  }
+
   const job = toScorable(row);
   const findings = detectRedFlags(job);
 
@@ -151,6 +178,9 @@ export async function scoreJob(deps: ScoreDeps, data: ScoreJobData): Promise<Sco
       });
       throw new UnrecoverableError(`job ${row.id}: ${error.message}`);
     }
+    // The model was never reached, so the score is given back; the queue's retry takes
+    // it again.
+    await releasePlanUsage(db, { orgId: row.org_id, metric: 'jobs_scored' });
     await recordEvent(db, {
       orgId: row.org_id,
       type: 'job.scored',

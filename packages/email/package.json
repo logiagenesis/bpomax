@@ -1,0 +1,17 @@
+{
+  "name": "@arbitron/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The email sender interface for alerts and billing notices, its configuration check, and a stand-in for tests; no provider until docs/02 B-13 is answered",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fake": "./src/fake.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2"
+  }
+}

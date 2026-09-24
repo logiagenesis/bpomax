@@ -9,9 +9,16 @@ import {
   type ScorableJob,
   readOnlyPlatformReason,
 } from '@arbitron/core';
-import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
+import {
+  inTransaction,
+  recordEvent,
+  recordLlmCall,
+  releasePlanUsage,
+  type Queryable,
+} from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
+import { meter, type UsageAlert } from './usage-alert.js';
 
 /**
  * The draft-bid worker (ARB-043, docs/01 section E): "Builds bid from template + job +
@@ -36,12 +43,19 @@ export interface DraftDeps {
   readonly db: Queryable;
   readonly transport: LlmTransport;
   readonly model: string;
+  /** ARB-410: the 80 % and 100 % alerts (`createUsageAlert`). */
+  readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
 }
 
 export type DraftResult =
   | { readonly status: 'drafted'; readonly proposalId: string }
   | { readonly status: 'already_drafted'; readonly proposalId: string }
-  | { readonly status: 'blocked'; readonly reason: 'no_template'; readonly detail: string }
+  | {
+      readonly status: 'blocked';
+      /** `plan_limit`: the org's plan has no room for another draft this month (ARB-410). */
+      readonly reason: 'no_template' | 'plan_limit';
+      readonly detail: string;
+    }
   | {
       readonly status: 'skipped';
       readonly reason: 'no_margin' | 'margin_failed' | 'read_only_platform';
@@ -217,6 +231,19 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
     return { status: 'blocked', reason: 'no_template', detail };
   }
 
+  // A draft is a model call, so it is metered (ARB-410), once the job is known to need
+  // one and a template exists to write it from.
+  const metered = await meter(deps, { orgId: job.org_id, metric: 'bids_drafted', requestId });
+  if (!metered.ok) {
+    await note('blocked', {
+      reason: 'plan_limit',
+      plan: metered.reason,
+      detail: metered.message,
+      marginEvaluationId: evaluation.id,
+    });
+    return { status: 'blocked', reason: 'plan_limit', detail: metered.message };
+  }
+
   const estimate = evaluation.delivery_estimate_id
     ? await db.query<{ turnaround_days: number | null }>(
         'select turnaround_days from delivery_estimates where id = $1',
@@ -276,6 +303,8 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
       });
       throw new UnrecoverableError(`job ${job.id}: ${error.message}`);
     }
+    // The model was never reached, so the draft is given back for the queue's retry.
+    await releasePlanUsage(db, { orgId: job.org_id, metric: 'bids_drafted' });
     await recordEvent(db, {
       orgId: job.org_id,
       type: 'proposal.drafted',

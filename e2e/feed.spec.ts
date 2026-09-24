@@ -260,6 +260,15 @@ test('the API’s refusal is shown as it is', async ({ page }) => {
   await expect(page.locator('#status')).toHaveClass(/alert--error/);
 });
 
+test('a plan limit is shown in the plan’s own words (ARB-410)', async ({ page }) => {
+  const error =
+    "The Test plan plan's monthly limit for drafting bids is reached: 20 of 20 used. It resets on 01/10/2026. Choose a bigger plan in Settings to go on now.";
+  await open(page, { queueBid: { status: 402, json: { error } } });
+  await page.getByRole('button', { name: 'Queue bid for Pay us first' }).click();
+  await expectStatus(page, error);
+  await expect(page.locator('#status')).toHaveClass(/alert--error/);
+});
+
 test('Queue bid is off while a bid is already in play, with the reason in its title', async ({
   page,
 }) => {

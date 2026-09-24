@@ -80,6 +80,9 @@ export const EVENT_TYPES = [
   'external.call',
   'external.blocked_by_live_mode',
   'retention.purged',
+  // plans and usage (ARB-410)
+  'usage.threshold_reached',
+  'usage.alert_sent',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
