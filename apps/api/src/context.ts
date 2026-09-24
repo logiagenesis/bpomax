@@ -1,6 +1,7 @@
 import type { FxQuote, Role } from '@arbitron/core';
 import { isRole } from '@arbitron/core';
 import type { Queryable } from '@arbitron/db';
+import type { BillingConfig, Fetch as BillingFetch } from '@arbitron/billing';
 import type { Fetch, FreelancerConfigResult } from '@arbitron/freelancer';
 import type { Fetch as UpworkFetch, UpworkConfigResult } from '@arbitron/upwork';
 import type { FastifyRequest } from 'fastify';
@@ -67,6 +68,16 @@ export interface ServerOptions {
    * (ARB-311). Absent until B-10 is answered: the rate must then be typed with the payment.
    */
   readonly fx?: { quote(from: string, to: string): Promise<FxQuote> } | null;
+  /**
+   * Billing (ARB-420): `billingConfig(process.env)` and fetches the tests point at the
+   * Paystack and Stripe stand-ins. A provider that is not configured refuses checkout and
+   * its webhooks with the reason, naming docs/02 B-15.
+   */
+  readonly billing?: {
+    readonly config: BillingConfig;
+    readonly paystackFetch?: BillingFetch;
+    readonly stripeFetch?: BillingFetch;
+  };
 }
 
 /**

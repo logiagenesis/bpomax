@@ -57,4 +57,18 @@ Each entry, checked by `validatePlan` in `@arbitron/core` before anything is wri
 
 Every metric must be stated; one left out fails the seed rather than reading as
 unlimited. A plan removed from the file is not deleted: set `active` to false instead.
-Prices are ARB-420's.
+
+Prices (ARB-420) are optional per plan, one per currency, with the provider's own
+reference for the plan you created in its dashboard (docs/02 B-15):
+
+```json
+"prices": {
+  "ZAR": { "amountMinor": 0, "paystackPlanCode": "PLN_..." },
+  "USD": { "amountMinor": 0, "stripePriceId": "price_..." }
+}
+```
+
+A currency left out is not on sale; `amountMinor` is in cents. `graceDays` at the top of
+the file is how long a plan keeps working after a failed payment (D-070); `null`, as
+shipped, starts no clock, and the plan then holds until the provider ends the
+subscription.

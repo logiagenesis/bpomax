@@ -83,6 +83,14 @@ export const EVENT_TYPES = [
   // plans and usage (ARB-410)
   'usage.threshold_reached',
   'usage.alert_sent',
+  // billing (ARB-420)
+  'billing.checkout_started',
+  'billing.webhook_received',
+  'billing.plan_activated',
+  'billing.payment_failed',
+  'billing.payment_recovered',
+  'billing.cancelled',
+  'billing.downgraded',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

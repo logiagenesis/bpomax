@@ -20,6 +20,7 @@ export * from './submit.js';
 export * from './sourcing.js';
 export * from './reprice.js';
 export * from './usage-alert.js';
+export * from './billing-sweep.js';
 
 export const APP_NAME = 'arbitron-workers';
 export * from './retention.js';

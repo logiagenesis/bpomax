@@ -5,6 +5,7 @@
  * Generated types land in packages/db/src/types.generated.ts (ARB-010).
  */
 export * from './allowance.js';
+export * from './billing.js';
 export * from './briefs.js';
 export * from './client.js';
 export * from './discovery.js';

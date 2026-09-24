@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildSeedSql, loadMarketPriceBands, loadPlans, loadServiceCategories } from './seed.js';
+import {
+  buildSeedSql,
+  loadGraceDays,
+  loadMarketPriceBands,
+  loadPlans,
+  loadServiceCategories,
+} from './seed.js';
 import { createTestDatabase } from './testing.js';
 
 /**
@@ -147,5 +153,34 @@ describe('plans (ARB-410)', () => {
     ).toThrow(/plan 1: limits.bids_submitted must be stated/);
     expect(() => loadPlans({ plans: [TEST_PLAN, TEST_PLAN] })).toThrow(/used twice/);
     expect(() => loadPlans({})).toThrow(/"plans" list/);
+  });
+
+  it('writes a plan s prices and the grace period, and ships neither (ARB-420)', async () => {
+    expect(loadGraceDays()).toBeNull();
+    const priced = loadPlans({
+      plans: [
+        {
+          ...TEST_PLAN,
+          prices: { ZAR: { amountMinor: 10_000, paystackPlanCode: 'PLN_test' } },
+        },
+      ],
+    });
+    await db.exec(buildSeedSql({ plans: priced, graceDays: 7 }));
+    const plan = await db.query<{ prices: unknown }>(
+      `select prices from plans where code = 'test-plan'`,
+    );
+    expect(plan.rows[0]?.prices).toEqual({
+      ZAR: { amountMinor: 10_000, paystackPlanCode: 'PLN_test' },
+    });
+    const settings = await db.query<{ grace_days: number | null }>(
+      'select grace_days from billing_settings',
+    );
+    expect(settings.rows).toEqual([{ grace_days: 7 }]);
+    await db.exec(buildSeedSql({ plans: [], graceDays: null }));
+    expect((await db.query('select grace_days from billing_settings')).rows).toEqual([
+      { grace_days: null },
+    ]);
+    expect(() => loadGraceDays({ graceDays: -1 })).toThrow(/graceDays/);
+    expect(() => loadGraceDays({ graceDays: 1.5 })).toThrow(/graceDays/);
   });
 });

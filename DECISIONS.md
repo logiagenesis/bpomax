@@ -2105,3 +2105,50 @@ Decision:
 Why: ARB-410's acceptance ("Limit reached blocks action with message; alerts sent"), docs/01
 rule 6 (no plan, limit or price invented: D-12), and D-067 (a self-service org must not
 run paid model calls unmetered).
+
+## D-070 — Billing: hosted checkout, webhooks as the only word, one plan per org, the grace period the owner's
+
+Date: 24/09/2026
+Decided by: Claude Code (ARB-420, session …tJv8)
+
+Decision:
+
+- Rand through Paystack, US dollars through Stripe, as the ticket names them. The customer
+  pays on the provider's own page (Paystack's `authorization_url` from
+  `POST /transaction/initialize` with the plan code; Stripe Checkout in `subscription`
+  mode with the plan's Price). No card detail passes through this app.
+- Every call is cited in `packages/billing/src/docs.ts`, read on 24/09/2026. Paystack's
+  pages were read on docs-v2.paystack.com, which renders the code samples the main site
+  loads in tabs.
+- The browser coming back proves nothing. Only a signed webhook moves a subscription:
+  Paystack's `x-paystack-signature` (HMAC-SHA512 of the raw body with the secret key) and
+  Stripe's `Stripe-Signature` (HMAC-SHA256 of `t.body` with the endpoint secret, compared
+  in constant time, 5-minute tolerance, the manual steps in its docs). The raw body is kept
+  for the check: the webhook routes have their own content parser.
+- A Paystack event is not trusted for its facts: `charge.success` is confirmed with
+  `GET /transaction/verify/:reference`, and invoice and subscription events with
+  `GET /subscription/:code`. The body only says which to read.
+- Each delivery is recorded once in `billing_webhook_receipts`, keyed by Stripe's event
+  id, or, for Paystack, whose events carry no id, by a digest of the signed body. The
+  receipt and the change share one transaction, so a redelivery changes nothing.
+- A checkout is ours when the webhook brings back our reference: Paystack's `reference`
+  or Stripe's `client_reference_id`, both set from `billing_checkouts.reference`. Later
+  events match the subscription by the provider's own reference (Stripe) or customer code
+  (Paystack).
+- Statuses: Stripe `active`/`trialing` paid; `past_due`/`paused` a failed payment;
+  `canceled`/`unpaid`/`incomplete_expired` ended ("revoke access"). Paystack `active` and
+  `non-renewing` paid; `attention` a failed payment; `completed`/`cancelled` ended.
+- The grace period is one owner setting, `graceDays` in plans.json (`billing_settings`).
+  A failed payment starts it once. At its end the plan stops working at once
+  (`loadOrgPlan`), and the daily billing sweep (02:30 SAST) cancels the subscription and
+  records `billing.downgraded`. A later payment brings the plan back. With no grace period
+  set (null, as shipped), no clock starts, and the plan holds until the provider ends the
+  subscription: the build does not choose how long a customer may go unpaid.
+- One plan per org. While a subscription is active, past due or on trial, a new checkout
+  is refused. A second subscription would bill twice, and changing plan needs each
+  provider's own change flow, which is not built.
+- Only an owner may start a checkout; the house org (D-069) is never billed.
+
+Why: ARB-420's acceptance ("Test-mode checkout activates plan; failed payment downgrades
+after grace period"), docs/01 rule 7 (every endpoint cited), and docs/01 rule 6 (no price,
+plan or grace period invented).

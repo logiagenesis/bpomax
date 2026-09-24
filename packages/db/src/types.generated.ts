@@ -205,6 +205,131 @@ export type Database = {
           },
         ];
       };
+      billing_checkouts: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          currency: string;
+          external_session_id: string | null;
+          id: string;
+          org_id: string;
+          plan_code: string;
+          provider: string;
+          reference: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          currency: string;
+          external_session_id?: string | null;
+          id?: string;
+          org_id: string;
+          plan_code: string;
+          provider: string;
+          reference: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          external_session_id?: string | null;
+          id?: string;
+          org_id?: string;
+          plan_code?: string;
+          provider?: string;
+          reference?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'billing_checkouts_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'billing_checkouts_org_id_fkey';
+            columns: ['org_id'];
+            isOneToOne: false;
+            referencedRelation: 'orgs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      billing_settings: {
+        Row: {
+          created_at: string;
+          grace_days: number | null;
+          id: string;
+          singleton: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          grace_days?: number | null;
+          id?: string;
+          singleton?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          grace_days?: number | null;
+          id?: string;
+          singleton?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      billing_webhook_receipts: {
+        Row: {
+          created_at: string;
+          detail: string | null;
+          event_key: string;
+          event_type: string;
+          id: string;
+          org_id: string | null;
+          outcome: string;
+          provider: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          detail?: string | null;
+          event_key: string;
+          event_type: string;
+          id?: string;
+          org_id?: string | null;
+          outcome: string;
+          provider: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          detail?: string | null;
+          event_key?: string;
+          event_type?: string;
+          id?: string;
+          org_id?: string | null;
+          outcome?: string;
+          provider?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'billing_webhook_receipts_org_id_fkey';
+            columns: ['org_id'];
+            isOneToOne: false;
+            referencedRelation: 'orgs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       briefs: {
         Row: {
           acceptance_criteria: string[];
@@ -1352,6 +1477,7 @@ export type Database = {
           id: string;
           limits: Json;
           name: string;
+          prices: Json;
           updated_at: string;
         };
         Insert: {
@@ -1361,6 +1487,7 @@ export type Database = {
           id?: string;
           limits: Json;
           name: string;
+          prices?: Json;
           updated_at?: string;
         };
         Update: {
@@ -1370,6 +1497,7 @@ export type Database = {
           id?: string;
           limits?: Json;
           name?: string;
+          prices?: Json;
           updated_at?: string;
         };
         Relationships: [];
@@ -1964,8 +2092,11 @@ export type Database = {
       subscriptions: {
         Row: {
           created_at: string;
+          currency: string | null;
           current_period_end: string | null;
+          external_customer: string | null;
           external_ref: string | null;
+          grace_until: string | null;
           id: string;
           org_id: string;
           plan: string;
@@ -1975,8 +2106,11 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          currency?: string | null;
           current_period_end?: string | null;
+          external_customer?: string | null;
           external_ref?: string | null;
+          grace_until?: string | null;
           id?: string;
           org_id: string;
           plan: string;
@@ -1986,8 +2120,11 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          currency?: string | null;
           current_period_end?: string | null;
+          external_customer?: string | null;
           external_ref?: string | null;
+          grace_until?: string | null;
           id?: string;
           org_id?: string;
           plan?: string;

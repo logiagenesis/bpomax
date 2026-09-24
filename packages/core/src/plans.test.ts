@@ -21,6 +21,7 @@ const TEST_PLAN: Plan = {
   name: 'Test small',
   active: true,
   limits: { jobs_scored: 5, bids_drafted: 0, bids_submitted: null },
+  prices: {},
 };
 const ON_PLAN: OrgPlan = { kind: 'plan', plan: TEST_PLAN, status: 'active' };
 
@@ -64,6 +65,39 @@ describe('validatePlan', () => {
     [{ ...TEST_PLAN, limits: { ...TEST_PLAN.limits, seats: 3 } }, 'limits.seats'],
   ])('refuses %j on %s', (input, field) => {
     const result = validatePlan(input);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.map((e) => e.field)).toContain(field);
+  });
+});
+
+describe('validatePlan: prices (ARB-420)', () => {
+  // Made-up figures and references for the test; real ones are D-12's and B-15's.
+  const PRICED = {
+    ...TEST_PLAN,
+    prices: {
+      ZAR: { amountMinor: 10_000, paystackPlanCode: 'PLN_test' },
+      USD: { amountMinor: 1_000, stripePriceId: 'price_test' },
+    },
+  };
+
+  it('accepts a price per currency with the provider s own reference', () => {
+    expect(validatePlan(PRICED)).toEqual({ ok: true, value: PRICED });
+  });
+
+  it('treats a plan with no prices as not on sale, not as free', () => {
+    const result = validatePlan({ ...TEST_PLAN, prices: undefined });
+    expect(result).toMatchObject({ ok: true, value: { prices: {} } });
+  });
+
+  it.each([
+    [{ EUR: { amountMinor: 1 } }, 'prices.EUR'],
+    [{ ZAR: { amountMinor: 0, paystackPlanCode: 'PLN_x' } }, 'prices.ZAR.amountMinor'],
+    [{ ZAR: { amountMinor: 99.5, paystackPlanCode: 'PLN_x' } }, 'prices.ZAR.amountMinor'],
+    [{ ZAR: { amountMinor: 100 } }, 'prices.ZAR.paystackPlanCode'],
+    [{ USD: { amountMinor: 100, stripePriceId: ' ' } }, 'prices.USD.stripePriceId'],
+    [[], 'prices'],
+  ])('refuses prices %j on %s', (prices, field) => {
+    const result = validatePlan({ ...TEST_PLAN, prices });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.map((e) => e.field)).toContain(field);
   });
