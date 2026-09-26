@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { listEvents, putPlatformTokens } from '@arbitron/db';
+import { REDACTED_TEXT, listEvents, purgeOrg, putPlatformTokens } from '@arbitron/db';
 import { ENTITY, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import { exchangeCode, freelancerConfig, type FreelancerConfig } from '@arbitron/freelancer';
@@ -281,8 +281,9 @@ describe('a poll', () => {
     expect(received[0]?.payload).toMatchObject({
       external_thread_id: '5001',
       external_message_id: '9001',
-      from_user: String(CLIENT),
     });
+    // Not the client's platform id: nothing of theirs the retention job cannot reach (P-02).
+    expect(received[0]?.payload).not.toHaveProperty('from_user');
     expect(alerts).toHaveLength(1);
     expect(alerts[0]).toMatchObject({ orgId: ORG_A, threadId: threads.rows[0]!.id });
     // The inbound message is handed to the auto-reply worker (ARB-121), the outbound one is not.
@@ -347,6 +348,122 @@ describe('a poll', () => {
     expect(latest.rows[0]?.body).toBe('(1 attachment, not downloaded)');
     expect(alerts).toHaveLength(2);
     expect(messageBody({ message: '  ', attachmentCount: 0 } as never)).toBe('');
+  });
+
+  it('a redacted thread listed again keeps its handle removed, and a new message opens it again (the owner audit, P-05)', async () => {
+    // The retention job closes and redacts the thread (365 days, a year after its last message).
+    await db.query(
+      `insert into settings (org_id, retention_days) values ($1, 365)
+       on conflict (org_id) do update set retention_days = 365`,
+      [ORG_A],
+    );
+    const purge = await purgeOrg(db, ORG_A, new Date('2027-10-01T00:00:00Z'));
+    expect(purge.threads).toBe(1);
+    await db.query('update settings set retention_days = null where org_id = $1', [ORG_A]);
+
+    // Listed again with nothing new: before, the sync put the client's handle back.
+    fake.setThreads([
+      {
+        id: 5001,
+        context: { type: 'project', id: 15791512 },
+        members: [ME, CLIENT],
+        owner: CLIENT,
+        time_created: T0,
+        time_updated: T0 + 3_600,
+      },
+    ]);
+    expect(await pollInbox(deps, { accountId: ACCOUNT_A })).toMatchObject({ newInbound: 0 });
+    const quiet = await db.query<{ status: string; handle: string | null; redacted: boolean }>(
+      `select status::text as status, client_handle as handle, redacted_at is not null as redacted
+         from threads where org_id = $1 and external_thread_id = '5001'`,
+      [ORG_A],
+    );
+    expect(quiet.rows[0]).toEqual({ status: 'closed', handle: null, redacted: true });
+
+    // A new message is new activity: the thread opens again with the handle it came with;
+    // what was redacted stays redacted.
+    fake.addMessage({
+      id: 9005,
+      thread_id: 5001,
+      from_user: CLIENT,
+      message: 'Are you still available?',
+      time_created: T0 + 3_600,
+    });
+    expect(await pollInbox(deps, { accountId: ACCOUNT_A })).toMatchObject({ newInbound: 1 });
+    const reopened = await db.query<{ status: string; handle: string | null; redacted: boolean }>(
+      `select status::text as status, client_handle as handle, redacted_at is not null as redacted
+         from threads where org_id = $1 and external_thread_id = '5001'`,
+      [ORG_A],
+    );
+    expect(reopened.rows[0]).toEqual({
+      status: 'awaiting_operator',
+      handle: 'acme-shop',
+      redacted: false,
+    });
+    const bodies = await db.query<{ external_message_id: string; body: string }>(
+      `select m.external_message_id, m.body from messages m join threads t on t.id = m.thread_id
+        where t.org_id = $1 and t.external_thread_id = '5001' order by m.external_message_id`,
+      [ORG_A],
+    );
+    expect(bodies.rows).toEqual([
+      { external_message_id: '9001', body: REDACTED_TEXT },
+      { external_message_id: '9002', body: REDACTED_TEXT },
+      { external_message_id: '9004', body: REDACTED_TEXT },
+      { external_message_id: '9005', body: 'Are you still available?' },
+    ]);
+  });
+
+  it("another org in the same Freelancer.com thread gets its own thread, and org A's is untouched (the owner audit, P-06)", async () => {
+    const before = await db.query<{ id: string; count: number }>(
+      `select t.id, (select count(*)::int from messages m where m.thread_id = t.id) as count
+         from threads t where t.org_id = $1 and t.external_thread_id = '5001'`,
+      [ORG_A],
+    );
+    // Org B is the client's side of the same thread.
+    await db.query(
+      `update platform_accounts set external_user_id = $2, status = 'connected' where id = $1`,
+      [ACCOUNT_B, String(CLIENT)],
+    );
+    const tokens = await exchangeCode(
+      config,
+      fake.issueCode(REDIRECT, { id: CLIENT, username: 'acme-shop' }),
+    );
+    await putPlatformTokens(db, ACCOUNT_B, {
+      ...tokens,
+      expiresAt: new Date('2026-10-23T10:00:00Z'),
+    });
+    try {
+      const run = await pollInbox(deps, { accountId: ACCOUNT_B });
+      expect(run).toMatchObject({ status: 'polled' });
+      const threads = await db.query<{ org_id: string }>(
+        `select org_id from threads where external_thread_id = '5001' order by org_id`,
+      );
+      expect(threads.rows.map((r) => r.org_id).sort()).toEqual([ORG_A, ORG_B].sort());
+      const theirs = await db.query<{ direction: string; external_message_id: string }>(
+        `select m.direction::text as direction, m.external_message_id from messages m
+           join threads t on t.id = m.thread_id
+          where t.org_id = $1 and t.external_thread_id = '5001'
+          order by m.external_message_id`,
+        [ORG_B],
+      );
+      // The client's own messages are outbound for org B.
+      expect(theirs.rows.find((r) => r.external_message_id === '9001')?.direction).toBe('out');
+      expect(theirs.rows.find((r) => r.external_message_id === '9002')?.direction).toBe('in');
+      const after = await db.query<{ count: number }>(
+        `select count(*)::int as count from messages where thread_id = $1`,
+        [before.rows[0]!.id],
+      );
+      expect(after.rows[0]?.count).toBe(before.rows[0]?.count);
+      const strays = await db.query<{ count: number }>(
+        `select count(*)::int as count from messages m join threads t on t.id = m.thread_id
+          where m.org_id <> t.org_id`,
+      );
+      expect(strays.rows[0]?.count).toBe(0);
+    } finally {
+      await db.query(`update platform_accounts set status = 'disconnected' where id = $1`, [
+        ACCOUNT_B,
+      ]);
+    }
   });
 
   it('an account that is not connected is skipped, saying so, and its schedule removed', async () => {

@@ -14,6 +14,7 @@ import {
   releaseScannerSlot,
   reserveBid,
   reserveScannerSlot,
+  textFingerprint,
   type Queryable,
 } from '@arbitron/db';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
@@ -319,7 +320,7 @@ export async function submitProposal(
       subjectId: proposal.id,
       requestId,
       outcome: 'blocked',
-      payload: { closedBy: gate.closedBy, wouldSend: payload },
+      payload: { closedBy: gate.closedBy, wouldSend: bidForLog(payload) },
     });
     await note('blocked', {
       reason: 'live_mode_off',
@@ -399,10 +400,28 @@ export async function submitProposal(
     subjectId: proposal.id,
     requestId,
     outcome: 'ok',
-    payload: { action: 'place_bid', platform: proposal.platform, platformRef, sent: payload },
+    payload: {
+      action: 'place_bid',
+      platform: proposal.platform,
+      platformRef,
+      sent: bidForLog(payload),
+    },
   });
   const pipelineItemId = await recordPlaced(db, proposal, platformRef, requestId, now);
   return { status: 'submitted', platformRef, pipelineItemId };
+}
+
+/**
+ * The bid as the audit log keeps it: every field, with the text addressed to the client
+ * (the body and the milestone titles) as fingerprints (ARB-520, P-02). The words are in
+ * the proposal, which is locked once sent.
+ */
+export function bidForLog(payload: BidPayload) {
+  return {
+    ...payload,
+    body: textFingerprint(payload.body),
+    milestones: payload.milestones.map((m) => ({ ...m, title: textFingerprint(m.title) })),
+  };
 }
 
 export function createSubmitProcessor(deps: SubmitDeps) {

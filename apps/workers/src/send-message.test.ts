@@ -1,4 +1,4 @@
-import { listEvents, putPlatformTokens } from '@arbitron/db';
+import { listEvents, putPlatformTokens, textFingerprint } from '@arbitron/db';
 import { ENTITY, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import {
@@ -144,7 +144,8 @@ describe('sending an approved message', () => {
     expect(blocked[0]).toMatchObject({ subject_id: id });
     expect(blocked[0]?.payload).toMatchObject({
       closedBy: 'both',
-      wouldSend: { external_thread_id: '5001', message: 'Yes, Monday works.' },
+      // The words are on the message; the log keeps their fingerprint (ARB-520, P-02).
+      wouldSend: { external_thread_id: '5001', message: textFingerprint('Yes, Monday works.') },
     });
     expect(posts()).toHaveLength(0);
     await db.query('delete from messages where id = $1', [id]);

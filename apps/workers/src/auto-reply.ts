@@ -1,5 +1,5 @@
 import { liveGate, operatorIsOffline } from '@arbitron/core';
-import { inTransaction, recordEvent, type Queryable } from '@arbitron/db';
+import { inTransaction, recordEvent, textFingerprint, type Queryable } from '@arbitron/db';
 import {
   AccountNotConnectedError,
   FreelancerError,
@@ -214,7 +214,10 @@ export async function autoReply(
       outcome: 'blocked',
       payload: {
         closedBy: gate.closedBy,
-        wouldSend: { external_thread_id: inbound.external_thread_id, message: reply.body },
+        wouldSend: {
+          external_thread_id: inbound.external_thread_id,
+          message: textFingerprint(reply.body),
+        },
       },
     });
     await outcome(

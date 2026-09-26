@@ -191,8 +191,8 @@ export async function repriceCandidate(
       subjectId: candidate.id,
       requestId,
       outcome,
+      // The candidate is the subject; their name stays on the candidate row (P-02).
       payload: {
-        candidate: candidate.display_name,
         sourcing_request_id: candidate.sourcing_request_id,
         ...payload,
       },

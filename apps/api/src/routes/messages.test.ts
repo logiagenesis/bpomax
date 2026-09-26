@@ -1,4 +1,4 @@
-import { listEvents } from '@arbitron/db';
+import { listEvents, textFingerprint } from '@arbitron/db';
 import { ENTITY, fixtureId, identityRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
@@ -252,8 +252,9 @@ describe('approving, editing and rejecting', () => {
       failureReason: 'Too vague',
       rejectedAt: '2026-09-23T10:00:00.000Z',
     });
+    // The reason is on the message; the log keeps its fingerprint (ARB-520, P-02).
     expect((await listEvents(db, { type: 'message.rejected' }))[0]?.payload).toMatchObject({
-      reason: 'Too vague',
+      reason: textFingerprint('Too vague'),
       state_before: 'queued',
     });
     expect(

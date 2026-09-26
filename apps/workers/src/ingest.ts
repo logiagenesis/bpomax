@@ -485,10 +485,10 @@ export async function pollScanner(
           scanner_id: scanner.id,
           platform: 'freelancer',
           external_id: project.id,
-          title: project.title,
+          // The title and its slug are the client's words: they are on the job row, not
+          // in the audit log (ARB-520, the owner's audit P-02).
           hourly: project.type === 'hourly',
           currency: project.currencyCode,
-          seo_url: project.seoUrl,
         },
       });
     }

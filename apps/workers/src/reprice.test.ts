@@ -154,7 +154,9 @@ describe('repricing with a candidate quote', () => {
     expect(await evaluations(run.estimateId!)).toEqual([]);
     const [event] = await repricedEvents(id);
     expect(event).toMatchObject({ outcome: 'blocked' });
-    expect(event?.payload).toMatchObject({ reason: 'rules_missing', candidate: 'thandi-web' });
+    expect(event?.payload).toMatchObject({ reason: 'rules_missing' });
+    // The candidate is the subject; their name is on the candidate row (ARB-520, P-02).
+    expect(JSON.stringify(event?.payload)).not.toContain('thandi-web');
     expect(alerts).toEqual([]);
   });
 

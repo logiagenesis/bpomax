@@ -5,7 +5,24 @@ import {
   type EventOutcome,
   type EventType,
 } from '@arbitron/core';
+import { createHash } from 'node:crypto';
 import type { Queryable } from './client.js';
+
+/**
+ * What the audit log keeps of a text a client wrote, or one written to a client: its
+ * length and its SHA-256, never the words (ARB-520, the owner's audit P-02). Events are
+ * append-only and outlive retention, so the words stay in their own row (a message, a
+ * bid, a sourcing post), where the retention job reaches them; the fingerprint still
+ * proves what was, or would have been, sent.
+ */
+export interface TextFingerprint {
+  readonly chars: number;
+  readonly sha256: string;
+}
+
+export function textFingerprint(text: string): TextFingerprint {
+  return { chars: text.length, sha256: createHash('sha256').update(text, 'utf8').digest('hex') };
+}
 
 /**
  * The audit log writer and reader (ARB-014, docs/01 section D).

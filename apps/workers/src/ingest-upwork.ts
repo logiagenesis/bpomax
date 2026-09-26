@@ -232,7 +232,8 @@ export async function pollUpworkScanner(
           scanner_id: scanner.id,
           platform: 'upwork',
           external_id: job.id,
-          title: job.title,
+          // No title: the job row is purged after 24 hours (Upwork's terms, D-066), and a
+          // copy here would outlive it (ARB-520, the owner's audit P-02).
           hourly: job.hourly,
           currency: job.fixed?.currency ?? job.hourlyMin?.currency ?? null,
         },

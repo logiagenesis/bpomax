@@ -1,4 +1,4 @@
-import { listEvents, putPlatformTokens } from '@arbitron/db';
+import { listEvents, putPlatformTokens, textFingerprint } from '@arbitron/db';
 import { ENTITY, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import {
@@ -176,7 +176,11 @@ describe('the auto-reply', () => {
     const blocked = await listEvents(db, { type: 'external.blocked_by_live_mode' });
     expect(blocked[0]?.payload).toMatchObject({
       closedBy: 'both',
-      wouldSend: { external_thread_id: '5001', message: 'Thanks, I will reply within a day.' },
+      // The words are on the message; the log keeps their fingerprint (ARB-520, P-02).
+      wouldSend: {
+        external_thread_id: '5001',
+        message: textFingerprint('Thanks, I will reply within a day.'),
+      },
     });
     expect(
       fake.calls.filter((c) => c.method === 'POST' && c.path.includes('/messages/')),

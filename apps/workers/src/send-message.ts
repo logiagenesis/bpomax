@@ -1,5 +1,5 @@
 import { liveGate } from '@arbitron/core';
-import { recordEvent, type Queryable } from '@arbitron/db';
+import { recordEvent, textFingerprint, type Queryable } from '@arbitron/db';
 import {
   AccountNotConnectedError,
   FreelancerError,
@@ -139,7 +139,10 @@ export async function sendMessage(
       outcome: 'blocked',
       payload: {
         closedBy: gate.closedBy,
-        wouldSend: { external_thread_id: message.external_thread_id, message: message.body },
+        wouldSend: {
+          external_thread_id: message.external_thread_id,
+          message: textFingerprint(message.body),
+        },
       },
     });
     await note('blocked', { reason: 'live_mode_off', message: text, closedBy: gate.closedBy });

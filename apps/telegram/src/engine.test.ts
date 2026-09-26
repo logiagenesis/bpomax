@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { textFingerprint } from '@arbitron/db';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
@@ -210,7 +211,7 @@ describe('linking a chat with a one-time code', () => {
     expect(code.rows[0]?.used_at).not.toBeNull();
     expect(await lastEventOf('telegram.linked')).toMatchObject({
       actor_user_id: OWNER,
-      payload: { chatId: OWNER_CHAT },
+      payload: { via: 'telegram' },
     });
 
     await message(OWNER_CHAT, '/start GOODCODE');
@@ -374,7 +375,7 @@ describe('Edit and Reject', () => {
     expect(await lastEventOf('proposal.rejected')).toMatchObject({
       actor_user_id: OWNER,
       subject_id: proposalId,
-      payload: { via: 'telegram', reason: 'Budget too low for the scope.' },
+      payload: { via: 'telegram', reason: textFingerprint('Budget too low for the scope.') },
     });
     expect(api.sent[1]?.text).toBe('Rejected: Budget too low for the scope.');
   });

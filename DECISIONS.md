@@ -2331,3 +2331,50 @@ Decision:
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925, section 1 (E-01 to E-03), and its
 launch gate ("API, workers and bot start and fail closed").
+
+## D-076 — ARB-520: a conversation closes when idle for the whole period; the audit log keeps fingerprints of client text; a thread is its org's own
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-520, session …tJv8), on the owner's audit P-01, P-02, P-05, P-06
+
+Decision:
+
+- **P-01, when a conversation closes.** Nothing ever set a thread to `closed`, so the
+  retention job (which redacts only closed threads, D-040) would never have redacted one.
+  Now the retention job first closes every thread with no activity for the org's whole
+  retention period, unless a contract rides on it (its job's pipeline item is `won`,
+  `in_delivery` or `delivered`), then redacts closed threads past the cutoff as before. No
+  new period is invented: the idle time is the retention period itself (T-06). A new
+  message opens a closed thread again. Closing by hand is not built; the rule above needs
+  no button. Which work counts as still needing the conversation is for the T-06 adviser
+  to confirm.
+- **P-05, redacted data stays redacted.** A redacted thread listed again by the inbox sync
+  keeps its handle removed. A new message on it opens it again as new activity: the new
+  message and its handle are stored and the retention clock starts again for them, while
+  the redacted messages stay redacted.
+- **P-06, a thread per org.** Migration 0037 makes `(org_id, platform, external_thread_id)`
+  the key, moves any message filed in another org's thread to its own org's thread, and an
+  after trigger refuses a message whose thread is another org's. Before, two orgs in one
+  Freelancer.com thread shared the first org's row.
+- **P-02, no client text in the audit log.** `events` is append-only and outlives retention,
+  so client text in a payload could never be redacted. A survey of all 150 `recordEvent`
+  calls found client or third-party text in 19. Each now keeps ids, amounts and, where
+  proof of the words matters, a `textFingerprint` (length and SHA-256). The words stay in
+  their own row, where retention or deletion reaches them:
+  - would-send and sent bids (body, milestone titles), messages, auto-replies and sourcing
+    posts;
+  - rejection reasons (web and Telegram);
+  - the model's notes on a drafted bid, which were kept nowhere else and now have a column,
+    `proposals.operator_notes`;
+  - the estimate's no-category reason.
+
+  Dropped, because the row holds them: job titles and slugs at ingest, including
+  Upwork's, whose rows are purged after 24 hours under Upwork's terms; the platform's echo
+  of a sourcing post; the client's platform user id on a received message; bidder and
+  supplier names; and the Telegram chat id on linking. Kept, as the org's own business
+  data rather than a client's: the auto-reply template's text, milestone titles typed on
+  the pipeline page, org, scanner and template names. Platform and model error text is
+  kept, as it is short and generic.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925, section 3; POPIA's minimality and
+retention conditions as the T-06 adviser will apply them; Upwork's 24-hour rule (D-066).
