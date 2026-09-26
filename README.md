@@ -61,19 +61,36 @@ pnpm db:types               # regenerate packages/db/src/types.generated.ts from
 pnpm --filter @arbitron/web dev    # front end on http://localhost:5173
 ```
 
-The API is built and tested but has no listen entry point yet: hosting is ARB-070. It
-is importable today — `buildServer({ db, authenticate, enqueue, liveMode })` in
-`apps/api/src/server.ts` serves `/health`, the audit log, scanners, the Telegram link
-code and, from ARB-061, `/v1/me`, `/v1/dashboard`, `/v1/jobs` (with `queue-bid`),
-`/v1/proposals` (approve, edit, reject, bulk) and `/v1/settings` (rules, fee table, live
-mode, platform-account plan). `supabaseAuthenticator({ url, anonKey })` in
-`apps/api/src/auth.ts` is the production `authenticate`: it verifies a browser's bearer
-token with the Supabase project (B-06). The workers have their queue wiring — one BullMQ
-queue per worker in docs/01 section E, exponential-backoff retries, a dead-letter queue
-and a `/health` server (`apps/workers/src/`) — and the score, estimate, margin,
-draft-bid and submit processors; no real model has been called (B-08) and no
-marketplace client exists (C-02). The Telegram bot (ARB-050) handles link codes, the
-four commands and approval cards.
+### Running the services
+
+Three processes, each started the way a host starts it (ARB-510, D-075):
+
+```bash
+pnpm --filter @arbitron/api start        # the API on PORT (default 3000)
+pnpm --filter @arbitron/workers start    # every queue's worker, /health and /ready on PORT (3001)
+pnpm --filter @arbitron/telegram start   # the bot's webhook and its notices on PORT (3002)
+```
+
+Each reads its environment, and if something it needs is missing or malformed it stops
+at once and names every such variable, never repeating a value. Each answers `/health`
+(the process is up) and `/ready` (the database and Redis answer), and on SIGTERM stops
+taking work, finishes what is running and closes its connections.
+
+| Process | Needs                                                                        | Optional                                                                                                                                                                                                 |
+| ------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API     | `DATABASE_URL`, `REDIS_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_URL`  | `PORT`, `LIVE_MODE`, `MCP_CHANNEL_KEY`, `QUEUE_PREFIX`, and the Freelancer.com, Upwork, Paystack and Stripe settings (each refused with its reason when not set)                                         |
+| Workers | `DATABASE_URL`, `REDIS_URL`                                                  | `PORT`, `LIVE_MODE`, `QUEUE_PREFIX`; `ANTHROPIC_API_KEY` with `LLM_MODEL_SCORE` and `LLM_MODEL_DRAFT` (without them scoring, estimating, drafting, discovery and briefs are off); Freelancer.com; Upwork |
+| Bot     | `DATABASE_URL`, `REDIS_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | `PORT`, `QUEUE_PREFIX`, `TELEGRAM_WEBHOOK_URL` (https, ending `/telegram/webhook`; registered with Telegram on start)                                                                                    |
+
+`DATABASE_URL` is the Postgres connection for a service role: the API narrows each
+request to the signed-in person with row-level security (`withUser`), and the workers
+and the bot act across organisations (D-017). For a hosted Postgres, put the provider's
+`sslmode` in the URL. `PORT`, `QUEUE_PREFIX`, `MCP_CHANNEL_KEY` and `TELEGRAM_WEBHOOK_URL`
+are not in `.env.example`, which holds exactly docs/01 section J's list. The workers never
+hold the bot token: they queue Telegram notices, and the bot sends them.
+
+None of the three is hosted yet (docs/02 B-12, ARB-070). Locally they run against the
+compose Postgres and Redis once `pnpm db:reset` has applied the migrations.
 
 The web pages (ARB-061) are `login.html`, `dashboard.html`, `feed.html`,
 `approvals.html`, `settings.html` and `audit-log.html`, with the design system at

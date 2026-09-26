@@ -14,9 +14,11 @@
     "db:types:supabase": "supabase gen types typescript --linked --schema public > src/types.generated.ts"
   },
   "devDependencies": {
-    "@types/node": "^26.6.2"
+    "@types/node": "^26.6.2",
+    "@types/pg": "^8.23.1"
   },
   "dependencies": {
-    "@arbitron/core": "workspace:*"
+    "@arbitron/core": "workspace:*",
+    "pg": "^8.23.0"
   }
 }

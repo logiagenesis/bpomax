@@ -70,23 +70,43 @@ async function countQueues(queues: QueueSet): Promise<WorkerHealth> {
   };
 }
 
+/** What `/ready` reports: 200 when `ready` is true, 503 otherwise. */
+export interface Readiness {
+  readonly ready: boolean;
+}
+
 /**
  * `GET /health` for the worker process. 200 while Redis answers, 503 when it does not,
  * so a host's health check restarts a worker that has lost its queue rather than one
  * that merely has dead letters waiting to be read.
+ *
+ * `GET /ready`, when a check is given (ARB-510): whether the process can do its work
+ * now, the database and Redis both answering, for a host to hold traffic or a deploy.
  */
-export function createHealthServer(queues: QueueSet, timeoutMs?: number): Server {
+export function createHealthServer(
+  queues: QueueSet,
+  timeoutMs?: number,
+  ready?: () => Promise<Readiness>,
+): Server {
   return createServer((request, response) => {
-    if (request.method !== 'GET' || request.url !== '/health') {
-      response.writeHead(404, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ error: 'not found' }));
+    const send = (status: number, body: unknown) => {
+      response.writeHead(status, { 'content-type': 'application/json' });
+      response.end(JSON.stringify(body));
+    };
+    if (request.method === 'GET' && request.url === '/health') {
+      void queueHealth(queues, timeoutMs).then((health) =>
+        send(health.status === 'ok' ? 200 : 503, health),
+      );
       return;
     }
-    queueHealth(queues, timeoutMs).then((health) => {
-      response.writeHead(health.status === 'ok' ? 200 : 503, {
-        'content-type': 'application/json',
-      });
-      response.end(JSON.stringify(health));
-    });
+    if (request.method === 'GET' && request.url === '/ready' && ready) {
+      ready().then(
+        (report) => send(report.ready ? 200 : 503, report),
+        (error: unknown) =>
+          send(503, { ready: false, error: error instanceof Error ? error.message : 'failed' }),
+      );
+      return;
+    }
+    send(404, { error: 'not found' });
   });
 }

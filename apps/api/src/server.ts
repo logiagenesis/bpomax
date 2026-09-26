@@ -39,7 +39,21 @@ import { registerThreadRoutes } from './routes/threads.js';
  * somewhere to drift.
  */
 export function buildServer(options: ServerOptions): FastifyInstance {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger
+      ? {
+          // A request is logged by method, path and id only: a query string or a header
+          // can carry a token or an OAuth code, and those are never logged.
+          serializers: {
+            req: (request: { method: string; url: string; id: string }) => ({
+              method: request.method,
+              path: request.url.split('?')[0],
+              id: request.id,
+            }),
+          },
+        }
+      : false,
+  });
 
   // The browser side of tenancy: only the web app's own origin may call this API, and it
   // signs each request with a bearer token rather than a cookie, so credentials stay off.
@@ -62,6 +76,15 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   });
 
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-api' }));
+  const ready = options.ready;
+  if (ready)
+    app.get('/ready', async (_request, reply) => {
+      const report = await ready().catch((error: unknown) => ({
+        ready: false,
+        error: error instanceof Error ? error.message : 'failed',
+      }));
+      return reply.code(report.ready ? 200 : 503).send({ service: 'arbitron-api', ...report });
+    });
 
   registerMeRoutes(app, options);
   registerOrgRoutes(app, options);

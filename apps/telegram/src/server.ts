@@ -15,6 +15,8 @@ import { handleUpdate, type BotDeps } from './engine.js';
 export interface TelegramServerOptions extends BotDeps {
   readonly webhookSecret: string;
   readonly logger?: boolean;
+  /** `GET /ready` (ARB-510): the database and Redis both answering. Absent, not served. */
+  readonly ready?: () => Promise<{ readonly ready: boolean }>;
 }
 
 export const WEBHOOK_PATH = '/telegram/webhook';
@@ -33,9 +35,31 @@ export const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 
 export function buildTelegramServer(options: TelegramServerOptions): FastifyInstance {
   if (!options.webhookSecret) throw new Error('TELEGRAM_WEBHOOK_SECRET is not set (docs/02 B-09)');
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger
+      ? {
+          // Method, path and id only: nothing a request carries is logged.
+          serializers: {
+            req: (request: { method: string; url: string; id: string }) => ({
+              method: request.method,
+              path: request.url.split('?')[0],
+              id: request.id,
+            }),
+          },
+        }
+      : false,
+  });
 
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-telegram' }));
+  const ready = options.ready;
+  if (ready)
+    app.get('/ready', async (_request, reply) => {
+      const report = await ready().catch((error: unknown) => ({
+        ready: false,
+        error: error instanceof Error ? error.message : 'failed',
+      }));
+      return reply.code(report.ready ? 200 : 503).send({ service: 'arbitron-telegram', ...report });
+    });
 
   app.post(WEBHOOK_PATH, async (request, reply) => {
     if (!secretMatches(request.headers[SECRET_HEADER], options.webhookSecret)) {

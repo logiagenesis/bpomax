@@ -179,8 +179,8 @@ When the owner supplies an item from section 5:
   token or a device sign-in) is not built and needs the owner's say (D-062).
 - A recorded payment cannot be corrected from the page (D-059): no refund or reversal
   kind exists in any ticket yet.
-- The API, workers and bot have no production entry point yet: no start script binds them
-  (the owner's audit, E-01 and E-02). ARB-510 builds them.
+- The API, workers and bot start with `pnpm --filter <app> start` (ARB-510, D-075; README
+  "Running the services"). They are not hosted: B-12.
 
 - The stand-in of Freelancer.com covers OAuth, `users/0.1/self` and the project search.
   Each later ticket adds the endpoints it calls, in the documented shapes.
