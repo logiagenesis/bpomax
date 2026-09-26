@@ -107,15 +107,20 @@ describe.each(TENANT_TABLES)('%s', (table) => {
     expect(row, `no fixture row for ${table}`).toBeDefined();
 
     await signIn(db, AUTH_B);
-    await expect(db.exec(row!.sql)).rejects.toThrow(/row-level security/i);
+    // Refused by row-level security, or before it by a column grant (0038, ARB-502).
+    await expect(db.exec(row!.sql)).rejects.toThrow(/row-level security|permission denied/i);
   });
 
   it('changes nothing in the other org', async () => {
     await signIn(db, AUTH_B);
 
-    const updated = await db.query(`update ${table} set org_id = org_id where org_id = $1`, [
-      ORG_A,
-    ]);
+    // A column the person may not write at all is refused outright (0038): no change either.
+    const updated = await db
+      .query(`update ${table} set org_id = org_id where org_id = $1`, [ORG_A])
+      .catch((error: Error) => {
+        if (/permission denied/i.test(error.message)) return { affectedRows: 0 };
+        throw error;
+      });
     expect(updated.affectedRows).toBe(0);
 
     const deleted = await db.query(`delete from ${table} where org_id = $1`, [ORG_A]);

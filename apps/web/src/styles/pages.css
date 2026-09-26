@@ -107,3 +107,14 @@
   padding-block: var(--space-4);
   color: var(--color-text-muted);
 }
+
+/* The style guide's colour swatches (ARB-501: no inline style attributes). */
+.swatch {
+  height: 3rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.swatch__label {
+  margin-top: var(--space-2);
+}

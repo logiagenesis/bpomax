@@ -2453,3 +2453,56 @@ Decision:
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-06; docs/01 section H (approval
 records).
+
+## D-079 — ARB-501 and ARB-502: headers, a page policy, rate limits, column grants; no OAuth `state`
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-501, ARB-502, session …tJv8), on the owner's audit S-03, S-04, S-05, S-09
+
+Decision:
+
+- **S-03, headers and page policy.** Vercel sends seven security headers with every
+  path: frame-ancestors none, no sniffing, same-origin referrer, no camera, microphone,
+  location or payment, HSTS for a year, and same-origin opener (`vercel.json`, in the
+  documented `headers` shape). The build writes a content security policy into every
+  page's `<head>` (`apps/web/csp.js`), since the two hosts a page may call, the Supabase
+  project and the API, are known only at build time. Only the app's own scripts, styles,
+  fonts and images are allowed, calls only to those two hosts (none in a demo build), and
+  no plug-ins. The two inline `style` attributes and the style guide's inline swatches
+  became classes and style properties. `e2e/csp.spec.ts` opens every built page and fails
+  on any violation; an inline style put back fails it. Lighthouse stays at 100.
+- **S-04, rate limits.** `@fastify/rate-limit` 11.2 limits every caller to 300 requests a
+  minute and the sign-in-free referral click to 30. The health checks and the payment
+  providers' webhooks are not limited: a provider retries, and a refused webhook is a
+  lost payment. These are engineering limits for one API process, not business figures.
+  The routes are registered after the limiter loads, because routes registered before it
+  were found not to be limited at all. `TRUST_PROXY` (true, false, or the number of
+  proxies in front) makes the limit count callers rather than the host's proxy.
+- **S-05, column grants.** Migration 0038 grants the signed-in person's writes by column
+  on the four tables whose other columns matter:
+  - users: none;
+  - platform accounts: who the account is, and its plan; never its Vault secret ids,
+    status or sync points;
+  - proposals: approve, edit or reject; no insert, so a bid always comes from the
+    drafter and the margin rule;
+  - messages: draft, approve, edit or reject; never the sending.
+
+  Restrictive policies forbid a person marking a bid submitted, and extend 0009's
+  "approval in your own name" rule to auto-replies, payments and checkouts. An audit
+  event is now written in the person's own name or the system's. Every API test passes
+  unchanged, and the isolation tests now accept a column grant's refusal alongside
+  row-level security's. A rejected bid's approval is cleared, as a rejected reply's was,
+  so rejecting a bid someone else approved is not refused by 0009's rule. Whether the
+  Supabase Data API should be reachable from browsers at all is the owner's decision
+  (docs/BLOCKERS.md D-19); these grants hold either way.
+
+- **S-09, OAuth `state`: not built.** Freelancer.com's documented authorisation request
+  lists response_type, client_id, redirect_uri, scope, advanced_scopes and prompt, and no
+  `state` (developers.freelancer.com, "Generating Access Tokens"). Upwork's lists
+  response_type, client_id and redirect_uri. Sending an undocumented parameter would be a
+  guess. The code is already bound to the person who started the connect by a
+  single-use, ten-minute attempt row (0017, D-041). Whether either platform echoes
+  `state` is to be checked in the sandbox (C-02).
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 2; docs/01 rule 3 (no
+undocumented call).

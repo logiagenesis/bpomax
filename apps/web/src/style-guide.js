@@ -31,9 +31,20 @@ for (const name of SWATCHES) {
   const value = styles.getPropertyValue(`--color-${name}`).trim();
   const card = document.createElement('div');
   card.className = 'card';
-  card.innerHTML = `<div style="height:3rem;border-radius:var(--radius);border:1px solid var(--color-border);background:var(--color-${name})"></div>
-    <p class="stat__label" style="margin-top:var(--space-2)">--color-${name}</p>
-    <p class="stat__note"><code>${value}</code></p>`;
+  // Built element by element, with the colour set through the style object: the page's
+  // content security policy allows no inline style attribute (ARB-501).
+  const swatch = document.createElement('div');
+  swatch.className = 'swatch';
+  swatch.style.background = `var(--color-${name})`;
+  const label = document.createElement('p');
+  label.className = 'stat__label swatch__label';
+  label.textContent = `--color-${name}`;
+  const note = document.createElement('p');
+  note.className = 'stat__note';
+  const code = document.createElement('code');
+  code.textContent = value;
+  note.append(code);
+  card.append(swatch, label, note);
   swatches.append(card);
 }
 

@@ -109,6 +109,55 @@ describe('the approval channel (ARB-500, the owner audit S-06)', () => {
   });
 });
 
+describe('rate limits (ARB-501, the owner audit S-04)', () => {
+  it('refuses a caller past the limit with 429, and never limits the health checks', async () => {
+    const limited = buildServer({
+      db,
+      authenticate: () => null,
+      rateLimit: { perMinute: 3, clicksPerMinute: 2 },
+    });
+    await limited.ready();
+    const codes: number[] = [];
+    for (let i = 0; i < 4; i += 1)
+      codes.push((await limited.inject({ method: 'GET', url: '/v1/me' })).statusCode);
+    expect(codes).toEqual([401, 401, 401, 429]);
+    for (let i = 0; i < 5; i += 1)
+      expect((await limited.inject({ method: 'GET', url: '/health' })).statusCode).toBe(200);
+    await limited.close();
+  });
+
+  it('holds the sign-in-free referral click to its own, lower limit', async () => {
+    const limited = buildServer({
+      db,
+      authenticate: () => null,
+      rateLimit: { perMinute: 100, clicksPerMinute: 2 },
+    });
+    await limited.ready();
+    const click = () =>
+      limited.inject({ method: 'POST', url: '/v1/referrals/clicks', payload: { code: 'NOPE' } });
+    expect((await click()).statusCode).toBe(404);
+    expect((await click()).statusCode).toBe(404);
+    expect((await click()).statusCode).toBe(429);
+    await limited.close();
+  });
+
+  it('counts callers, not the proxy in front, when told how many proxies to trust', async () => {
+    const limited = buildServer({
+      db,
+      authenticate: () => null,
+      trustProxy: 1,
+      rateLimit: { perMinute: 1 },
+    });
+    await limited.ready();
+    const from = (ip: string) =>
+      limited.inject({ method: 'GET', url: '/v1/me', headers: { 'x-forwarded-for': ip } });
+    expect((await from('198.51.100.1')).statusCode).toBe(401);
+    expect((await from('198.51.100.2')).statusCode).toBe(401);
+    expect((await from('198.51.100.1')).statusCode).toBe(429);
+    await limited.close();
+  });
+});
+
 describe('GET /v1/events', () => {
   it('turns away a request with no session', async () => {
     const response = await app.inject({ method: 'GET', url: '/v1/events' });

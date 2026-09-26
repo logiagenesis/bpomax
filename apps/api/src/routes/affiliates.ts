@@ -11,6 +11,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   currentMembership,
   invalid,
+  REFERRAL_CLICKS_PER_MINUTE,
   UUID,
   type Membership,
   type ServerOptions,
@@ -51,15 +52,26 @@ export function registerAffiliateRoutes(app: FastifyInstance, options: ServerOpt
   const now = () => options.now?.() ?? new Date();
 
   /** A visit by a referral link. No sign-in: whoever followed the link is not known yet. */
-  app.post('/v1/referrals/clicks', async (request, reply) => {
-    const body = (request.body ?? {}) as { code?: unknown; landingPage?: unknown };
-    const clickId = await recordReferralClick(options.db, {
-      code: typeof body.code === 'string' ? body.code : '',
-      landingPage: typeof body.landingPage === 'string' ? body.landingPage : null,
-    });
-    if (!clickId) return reply.code(404).send({ error: 'That referral code is not in use.' });
-    return reply.code(201).send({ clickId });
-  });
+  app.post(
+    '/v1/referrals/clicks',
+    {
+      config: {
+        rateLimit: {
+          max: options.rateLimit?.clicksPerMinute ?? REFERRAL_CLICKS_PER_MINUTE,
+          timeWindow: 60_000,
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = (request.body ?? {}) as { code?: unknown; landingPage?: unknown };
+      const clickId = await recordReferralClick(options.db, {
+        code: typeof body.code === 'string' ? body.code : '',
+        landingPage: typeof body.landingPage === 'string' ? body.landingPage : null,
+      });
+      if (!clickId) return reply.code(404).send({ error: 'That referral code is not in use.' });
+      return reply.code(201).send({ clickId });
+    },
+  );
 
   app.get('/v1/affiliates', async (request, reply) => {
     const authUserId = await options.authenticate(request);

@@ -1,6 +1,12 @@
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { decideChannel, rememberChannel, type ServerOptions } from './context.js';
+import {
+  RATE_LIMIT_PER_MINUTE,
+  decideChannel,
+  rememberChannel,
+  type ServerOptions,
+} from './context.js';
 import { registerAffiliateRoutes } from './routes/affiliates.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerTemplateRoutes } from './routes/templates.js';
@@ -40,6 +46,17 @@ import { registerThreadRoutes } from './routes/threads.js';
  */
 export function buildServer(options: ServerOptions): FastifyInstance {
   const app = Fastify({
+    // Behind the host's proxy the caller is in X-Forwarded-For; TRUST_PROXY says how far
+    // to believe it, so the rate limit counts callers, not the proxy (ARB-501).
+    ...(options.trustProxy === undefined
+      ? {}
+      : {
+          trustProxy:
+            typeof options.trustProxy === 'number'
+              ? // n proxies in front: trust the n hops nearest this server.
+                (_address: string, hop: number) => hop < (options.trustProxy as number)
+              : options.trustProxy,
+        }),
     logger: options.logger
       ? {
           // A request is logged by method, path and id only: a query string or a header
@@ -75,6 +92,32 @@ export function buildServer(options: ServerOptions): FastifyInstance {
     rememberChannel(request, channel);
   });
 
+  // ARB-501, the owner's audit S-04: every caller is limited per minute, the sign-in-free
+  // referral click more tightly; the health checks and the payment providers' webhooks
+  // are not limited (a provider retries, and a refused webhook is a lost payment).
+  void app.register(rateLimit, {
+    global: true,
+    max: options.rateLimit?.perMinute ?? RATE_LIMIT_PER_MINUTE,
+    timeWindow: 60_000,
+    allowList: (request) => RATE_LIMIT_EXEMPT.has(request.url.split('?')[0] ?? ''),
+  });
+
+  // Routes are registered once the limiter has loaded, so every one of them is limited.
+  void app.register(async (scope) => {
+    registerRoutes(scope as unknown as FastifyInstance, options);
+  });
+
+  return app;
+}
+
+const RATE_LIMIT_EXEMPT = new Set([
+  '/health',
+  '/ready',
+  '/v1/webhooks/paystack',
+  '/v1/webhooks/stripe',
+]);
+
+function registerRoutes(app: FastifyInstance, options: ServerOptions): void {
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-api' }));
   const ready = options.ready;
   if (ready)
@@ -113,8 +156,6 @@ export function buildServer(options: ServerOptions): FastifyInstance {
   registerEventRoutes(app, options);
   registerScannerRoutes(app, options);
   registerTelegramRoutes(app, options);
-
-  return app;
 }
 
 function toList(value: string | readonly string[]): readonly string[] {

@@ -21,6 +21,8 @@ export interface ApiConfig {
   readonly queuePrefix: string | null;
   readonly liveMode: boolean;
   readonly mcpChannelKey: string | null;
+  /** TRUST_PROXY: how many proxies in front of the API may name the caller (ARB-501). */
+  readonly trustProxy: boolean | number | undefined;
   readonly freelancer: FreelancerConfigResult;
   readonly upwork: UpworkConfigResult;
   readonly billing: BillingConfig;
@@ -66,6 +68,12 @@ export function apiConfig(env: Env): ApiConfigResult {
   const port = check.port(env, API_DEFAULT_PORT);
   const liveMode = check.liveMode(env);
   const queuePrefix = check.queuePrefix(env);
+  const rawTrust = env.TRUST_PROXY?.trim() ?? '';
+  let trustProxy: boolean | number | undefined;
+  if (rawTrust === '') trustProxy = undefined;
+  else if (rawTrust === 'true' || rawTrust === 'false') trustProxy = rawTrust === 'true';
+  else if (/^\d{1,2}$/.test(rawTrust)) trustProxy = Number(rawTrust);
+  else check.problems.push('TRUST_PROXY must be true, false or the number of proxies in front');
   if (check.problems.length > 0) return { ok: false, problems: check.problems };
 
   return {
@@ -80,6 +88,7 @@ export function apiConfig(env: Env): ApiConfigResult {
       queuePrefix,
       liveMode,
       mcpChannelKey: env.MCP_CHANNEL_KEY?.trim() || null,
+      trustProxy,
       freelancer: freelancerConfig(env),
       upwork: upworkConfig(env),
       billing: billingConfig(env),
