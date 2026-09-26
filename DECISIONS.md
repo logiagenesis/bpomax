@@ -2216,3 +2216,69 @@ Decision:
 
 Why: ARB-440's acceptance ("Copy audit passes; Lighthouse ≥ 90 on all categories"),
 docs/01 section H ("no fake reviews, no fake scarcity"), and docs/05 section 2.
+
+## D-073 — The owner's audit of 25/09/2026 is Phase 5; claims travel in the ticket's PR
+
+Date: 26/09/2026
+Decided by: Claude Code (session …tJv8), on the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925
+
+Decision:
+
+- The handoff of 24/09/2026 said nothing buildable remained. The owner's audit showed
+  otherwise, and its main claims were checked on `79d3080` before acting: the API,
+  workers and bot have only a `typecheck` script and nothing calls `listen`; nothing
+  constructs `AnthropicTransport`; `BidPlacer` has no implementation; `vercel.json` sets
+  no headers; migration 0016 lets any operator write a Telegram link code for another
+  member; and deleting an org fails on Postgres 16, because `events` has a
+  `do instead nothing` delete rule while its `org_id` cascades (reproduced: "referential
+  integrity query … gave unexpected result").
+- The audit's engineering items become Phase 5 on the board, ARB-500 to ARB-540, each
+  row naming the audit items it closes. Four rows whose remaining gap is engineering, not
+  a credential, are reopened as TODO with the ticket that closes them: ARB-015, ARB-044,
+  ARB-050 and ARB-070. D-036's BUILT-PENDING-CREDENTIALS applies only when every open
+  clause needs something only the owner can supply.
+- The audit's findings that are the owner's to settle are rows in docs/BLOCKERS.md:
+  D-17 (what deleting an org or person does to the audit log) and D-18 (Freelancer.com's
+  API terms for other organisations' accounts). S-01 and P-01 are recorded there as
+  DEFECT rows until their tickets merge.
+- The audit's Drive housekeeping (its section 9) and brand assets (section 8) are the
+  owner's and are not touched from the build.
+- No other session writes to `main` (the "hourly routine session" in the old handoff was
+  not found). The board claim is now the first commit of the ticket's own pull request,
+  not a separate push to `main`.
+
+Why: docs/01 rule 6 (no claim the build cannot prove), the owner's instruction to build
+every buildable ticket, and the audit's evidence.
+
+## D-074 — ARB-500: a link code is its person's alone; the MCP label needs a key; shorter token cache
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-500, session …tJv8), on the owner's audit S-01, S-02, S-06, S-07, S-08
+
+Decision:
+
+- **S-01.** Migration 0036 replaces 0016's tenant-shaped policies on `telegram_link_codes`:
+  a signed-in person may create a code only naming themselves (and only if their role may
+  write, as before), unused; may read and delete only their own; and nobody may change a
+  code from the application. The bot marks a code used in one conditional update inside
+  the transaction that links the chat, so a code links one chat once even when two send
+  it together. `telegram_pending`, the bot's own state, loses every application write
+  policy; the bot writes it under service_role.
+- **S-02.** `suppliers.external_profile_url` and `supplier_candidates.external_profile_url`
+  must start with `http://` or `https://` (0036 check constraints), however the row is
+  written; the suppliers page makes a link only of such an address as well.
+- **S-06.** `x-arbitron-channel: mcp` counts only with `x-arbitron-channel-key` equal to the
+  API's `MCP_CHANNEL_KEY`, compared in constant time; a claim without it is refused (403)
+  before any route runs, rather than relabelled, so a misconfigured MCP process is seen at
+  once. The MCP server now needs `ARBITRON_MCP_CHANNEL_KEY`. `MCP_CHANNEL_KEY` is documented
+  in the README's MCP section, not `.env.example`, which `tests/env-example.test.ts` holds to
+  exactly docs/01 section J's list. The key is the owner's to
+  generate and hand to each MCP install; it proves the request came through an install the
+  owner configured, not which person sent it (the token still says that). A credential of
+  its own for MCP is E-10, the owner's call (D-062).
+- **S-07.** A verified token is remembered for 10 seconds (was 60), keyed by its SHA-256,
+  and the full cache forgets the least recently used token first.
+- **S-08.** The Telegram webhook secret is compared in constant time over SHA-256 digests.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 2; docs/01 section I (the
+link code is the person's); docs/05 section 4.

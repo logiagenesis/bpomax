@@ -122,7 +122,9 @@ function render(suppliers) {
       .filter(Boolean)
       .join(' · ');
     who.append(strong, meta);
-    if (s.externalProfileUrl) {
+    // Only a web address becomes a link (ARB-500, the owner's audit S-02); the database
+    // refuses anything else, and this holds even if an old row slipped through.
+    if (s.externalProfileUrl && /^https?:\/\//i.test(s.externalProfileUrl)) {
       const link = document.createElement('a');
       link.href = s.externalProfileUrl;
       link.textContent = 'Profile';

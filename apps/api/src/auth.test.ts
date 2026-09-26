@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { bearerToken, supabaseAuthenticator } from './auth.js';
+import { CACHE_SIZE, DEFAULT_TTL_MS, bearerToken, supabaseAuthenticator } from './auth.js';
 
 const USER = '11111111-2222-4333-8444-555555555555';
 
@@ -59,6 +59,46 @@ describe('supabaseAuthenticator', () => {
     clock += 60_001;
     await authenticate(request);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('forgets a token after ten seconds by default (the owner audit, S-07)', async () => {
+    expect(DEFAULT_TTL_MS).toBe(10_000);
+    let clock = 1_000;
+    const fetch = fakeFetch(() => ({ status: 200, body: { id: USER } }));
+    const authenticate = supabaseAuthenticator({
+      url: 'https://x.supabase.co',
+      anonKey: 'anon',
+      fetch,
+      now: () => clock,
+    });
+    const request = { headers: { authorization: 'Bearer good' } };
+    await authenticate(request);
+    clock += 9_999;
+    await authenticate(request);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    clock += 2;
+    await authenticate(request);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('when full, forgets the least recently used token, not the first one added', async () => {
+    const fetch = fakeFetch(() => ({ status: 200, body: { id: USER } }));
+    const authenticate = supabaseAuthenticator({
+      url: 'https://x.supabase.co',
+      anonKey: 'anon',
+      fetch,
+    });
+    const as = (token: string) => authenticate({ headers: { authorization: `Bearer ${token}` } });
+    for (let i = 0; i < CACHE_SIZE; i += 1) await as(`t${String(i)}`);
+    expect(fetch).toHaveBeenCalledTimes(CACHE_SIZE);
+    // t0 is used again, so t1 is now the least recently used.
+    await as('t0');
+    expect(fetch).toHaveBeenCalledTimes(CACHE_SIZE);
+    await as('newcomer');
+    await as('t0');
+    expect(fetch).toHaveBeenCalledTimes(CACHE_SIZE + 1);
+    await as('t1');
+    expect(fetch).toHaveBeenCalledTimes(CACHE_SIZE + 2);
   });
 
   it('does not remember a refusal, and treats an outage as an error rather than a stranger', async () => {

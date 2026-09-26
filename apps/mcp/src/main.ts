@@ -14,6 +14,6 @@ if (!config.ok) {
   process.exit(1);
 }
 const server = createArbitronMcpServer(
-  httpApiClient({ baseUrl: config.baseUrl, token: config.token }),
+  httpApiClient({ baseUrl: config.baseUrl, token: config.token, channelKey: config.channelKey }),
 );
 await server.connect(new StdioServerTransport());

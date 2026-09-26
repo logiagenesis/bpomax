@@ -190,6 +190,17 @@ test('lists suppliers with their rate cards in the one money format, and every l
   for (const href of hrefs) expect(href).toMatch(/^\.\/[a-z-]+\.html(\?.*)?$/);
 });
 
+test('a profile address that is not a web address is never made a link (the owner audit, S-02)', async ({
+  page,
+}) => {
+  await open(page, {
+    suppliers: [{ ...THANDI, externalProfileUrl: 'javascript:alert(document.domain)' }],
+  });
+  await expectStatus(page, 'Loaded 1 supplier.');
+  await expect(page.locator('#rows tr')).toHaveCount(1);
+  await expect(page.locator('#rows a')).toHaveCount(0);
+});
+
 test('an empty database says what to do next', async ({ page }) => {
   await open(page, { suppliers: [] });
   await expectStatus(page, 'No suppliers yet.');

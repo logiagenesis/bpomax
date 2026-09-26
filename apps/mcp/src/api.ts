@@ -1,8 +1,9 @@
 /**
  * The MCP server's way to the Arbitron API (ARB-330). Every tool is one call to an API
  * route with the operator's own token, so row-level security, roles, the approval rules
- * and the live gate hold exactly as they do on the web. The channel header marks an
- * approval as made through MCP; the person approving is still the token's.
+ * and the live gate hold exactly as they do on the web. The channel header, with the
+ * API's channel key, marks an approval as made through MCP; the person approving is still
+ * the token's.
  */
 export interface ApiRequest {
   readonly method: 'GET' | 'POST' | 'PATCH';
@@ -21,6 +22,7 @@ export interface ApiClient {
 }
 
 export const CHANNEL_HEADER = 'x-arbitron-channel';
+export const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';
 
 /** The query string of a request, leaving out what is not set. */
 export function queryString(query: ApiRequest['query']): string {
@@ -37,6 +39,8 @@ export interface HttpApiOptions {
   readonly baseUrl: string;
   /** The operator's Supabase access token (docs/02 B-06). */
   readonly token: string;
+  /** The API's MCP_CHANNEL_KEY, which makes the API label this client's approvals `mcp`. */
+  readonly channelKey: string;
   readonly fetch?: typeof fetch;
 }
 
@@ -51,6 +55,7 @@ export function httpApiClient(options: HttpApiOptions): ApiClient {
         headers: {
           authorization: `Bearer ${options.token}`,
           [CHANNEL_HEADER]: 'mcp',
+          [CHANNEL_KEY_HEADER]: options.channelKey,
           ...(request.body === undefined ? {} : { 'content-type': 'application/json' }),
         },
         ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),

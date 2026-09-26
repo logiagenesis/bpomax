@@ -4,7 +4,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { TelegramApi } from './api.js';
-import { SECRET_HEADER, WEBHOOK_PATH, buildTelegramServer } from './server.js';
+import { SECRET_HEADER, WEBHOOK_PATH, buildTelegramServer, secretMatches } from './server.js';
 
 /** ARB-050: the webhook accepts Telegram's updates and nobody else's. */
 let db: PGlite;
@@ -93,6 +93,20 @@ describe(`POST ${WEBHOOK_PATH}`, () => {
     });
     expect(failed.statusCode).toBe(200);
     expect(failed.json()).toEqual({ ok: false });
+  });
+
+  it('compares the secret in constant time, whatever length is sent (the owner audit, S-08)', async () => {
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('./server.ts', import.meta.url), 'utf8'),
+    );
+    expect(source).toMatch(/timingSafeEqual/);
+    expect(source).not.toMatch(/\[SECRET_HEADER\] !==/);
+    expect(secretMatches('shh_1', 'shh_1')).toBe(true);
+    expect(secretMatches('shh_2', 'shh_1')).toBe(false);
+    expect(secretMatches('shh', 'shh_1')).toBe(false);
+    expect(secretMatches('a much longer guess than the secret', 'shh_1')).toBe(false);
+    expect(secretMatches(undefined, 'shh_1')).toBe(false);
+    expect(secretMatches(['shh_1'], 'shh_1')).toBe(false);
   });
 
   it('refuses to start without a secret', () => {

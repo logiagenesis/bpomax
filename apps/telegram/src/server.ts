@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { parseUpdate } from './api.js';
 import { handleUpdate, type BotDeps } from './engine.js';
@@ -17,6 +18,17 @@ export interface TelegramServerOptions extends BotDeps {
 }
 
 export const WEBHOOK_PATH = '/telegram/webhook';
+
+/**
+ * Compares the header with the secret in constant time, so the time taken says nothing
+ * about how much of a guess was right (ARB-500, the owner's audit S-08). Both sides are
+ * hashed first, which makes them the same length whatever was sent.
+ */
+export function secretMatches(sent: unknown, secret: string): boolean {
+  if (typeof sent !== 'string') return false;
+  const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest();
+  return timingSafeEqual(digest(sent), digest(secret));
+}
 export const SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 
 export function buildTelegramServer(options: TelegramServerOptions): FastifyInstance {
@@ -26,7 +38,7 @@ export function buildTelegramServer(options: TelegramServerOptions): FastifyInst
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-telegram' }));
 
   app.post(WEBHOOK_PATH, async (request, reply) => {
-    if (request.headers[SECRET_HEADER] !== options.webhookSecret) {
+    if (!secretMatches(request.headers[SECRET_HEADER], options.webhookSecret)) {
       return reply.code(401).send({ error: 'not from Telegram' });
     }
     const incoming = parseUpdate(request.body);

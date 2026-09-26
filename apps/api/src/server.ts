@@ -1,6 +1,6 @@
 import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { ServerOptions } from './context.js';
+import { decideChannel, rememberChannel, type ServerOptions } from './context.js';
 import { registerAffiliateRoutes } from './routes/affiliates.js';
 import { registerAnalyticsRoutes } from './routes/analytics.js';
 import { registerTemplateRoutes } from './routes/templates.js';
@@ -49,6 +49,16 @@ export function buildServer(options: ServerOptions): FastifyInstance {
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: false,
     exposedHeaders: ['content-disposition', 'x-export-rows', 'x-export-truncated'],
+  });
+
+  app.addHook('onRequest', async (request, reply) => {
+    const channel = decideChannel(request, options.mcpChannelKey);
+    if (channel === 'refused')
+      return reply.code(403).send({
+        error:
+          "this request claims the MCP channel without its key; set ARBITRON_MCP_CHANNEL_KEY on the MCP server to the API's MCP_CHANNEL_KEY",
+      });
+    rememberChannel(request, channel);
   });
 
   app.get('/health', async () => ({ status: 'ok', service: 'arbitron-api' }));

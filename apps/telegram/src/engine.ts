@@ -72,29 +72,31 @@ export async function linkedUser(db: Queryable, chatId: string): Promise<LinkedU
 
 async function link(deps: BotDeps, incoming: IncomingMessage, code: string): Promise<void> {
   const { db, api } = deps;
-  const found = await db.query<{
-    id: string;
-    org_id: string;
-    user_id: string;
-    full_name: string | null;
-    org_name: string;
-  }>(
-    `select c.id, c.org_id, c.user_id, u.full_name, o.name as org_name
-     from telegram_link_codes c
-     join users u on u.id = c.user_id
-     join orgs o on o.id = c.org_id
-     where c.code = $1 and c.used_at is null and c.expires_at > $2`,
-    [code, (deps.now ? deps.now() : new Date()).toISOString()],
-  );
-  const row = found.rows[0];
-  if (!row) {
-    await api.sendMessage(
-      incoming.chatId,
-      'That code is not valid or has expired. Create a new one in Settings and try again.',
+  const now = (deps.now ? deps.now() : new Date()).toISOString();
+  // The code is claimed and used in one conditional update, inside the transaction that
+  // links the chat, so two chats sending the same code at once cannot both be linked:
+  // the second finds it already used (ARB-500, the owner's audit S-01).
+  const linked = await inTransaction(db, async (tx) => {
+    const claimed = await tx.query<{
+      id: string;
+      org_id: string;
+      user_id: string;
+      full_name: string | null;
+      org_name: string;
+    }>(
+      `with used as (
+         update telegram_link_codes set used_at = now()
+         where code = $1 and used_at is null and expires_at > $2
+         returning id, org_id, user_id
+       )
+       select used.id, used.org_id, used.user_id, u.full_name, o.name as org_name
+       from used
+       join users u on u.id = used.user_id
+       join orgs o on o.id = used.org_id`,
+      [code, now],
     );
-    return;
-  }
-  await inTransaction(db, async (tx) => {
+    const row = claimed.rows[0];
+    if (!row) return null;
     // A chat belongs to one Telegram account; a new code moves it to the person who made the code.
     await tx.query(
       'update users set telegram_chat_id = null where telegram_chat_id = $1 and id <> $2',
@@ -104,7 +106,6 @@ async function link(deps: BotDeps, incoming: IncomingMessage, code: string): Pro
       row.user_id,
       incoming.chatId,
     ]);
-    await tx.query('update telegram_link_codes set used_at = now() where id = $1', [row.id]);
     await recordEvent(tx, {
       orgId: row.org_id,
       type: 'telegram.linked',
@@ -113,10 +114,18 @@ async function link(deps: BotDeps, incoming: IncomingMessage, code: string): Pro
       subjectId: row.user_id,
       payload: { chatId: incoming.chatId },
     });
+    return row;
   });
+  if (!linked) {
+    await api.sendMessage(
+      incoming.chatId,
+      'That code is not valid or has expired. Create a new one in Settings and try again.',
+    );
+    return;
+  }
   await api.sendMessage(
     incoming.chatId,
-    `Linked to ${row.org_name}${row.full_name ? ` as ${row.full_name}` : ''}. ${HELP}`,
+    `Linked to ${linked.org_name}${linked.full_name ? ` as ${linked.full_name}` : ''}. ${HELP}`,
   );
 }
 

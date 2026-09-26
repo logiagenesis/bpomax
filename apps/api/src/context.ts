@@ -4,6 +4,7 @@ import type { Queryable } from '@arbitron/db';
 import type { BillingConfig, Fetch as BillingFetch } from '@arbitron/billing';
 import type { Fetch, FreelancerConfigResult } from '@arbitron/freelancer';
 import type { Fetch as UpworkFetch, UpworkConfigResult } from '@arbitron/upwork';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
 
 /**
@@ -78,15 +79,51 @@ export interface ServerOptions {
     readonly paystackFetch?: BillingFetch;
     readonly stripeFetch?: BillingFetch;
   };
+  /**
+   * The key the MCP process sends in `x-arbitron-channel-key` (MCP_CHANNEL_KEY in .env,
+   * ARBITRON_MCP_CHANNEL_KEY on the MCP side). A request is labelled `mcp` only when it
+   * carries this key; unset, no request can claim the MCP channel (ARB-500, S-06).
+   */
+  readonly mcpChannelKey?: string;
+}
+
+export const CHANNEL_HEADER = 'x-arbitron-channel';
+export const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';
+
+/** Constant-time comparison of a sent value with a secret, hashed to one length first. */
+export function secretMatches(sent: unknown, secret: string): boolean {
+  if (typeof sent !== 'string' || secret === '') return false;
+  const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest();
+  return timingSafeEqual(digest(sent), digest(secret));
 }
 
 /**
- * The channel a request came through: `mcp` when the MCP server sends
- * `x-arbitron-channel: mcp` (ARB-330), `web` otherwise. It labels an approval; the person
- * approving is always the signed-in one, whatever the channel.
+ * The channel a request came through (ARB-330): `mcp` for the MCP server, `web` otherwise.
+ * It labels an approval; the person approving is always the signed-in one. The header
+ * alone is a claim any caller can make, so it counts only with the MCP channel key the
+ * API was given (ARB-500, the owner's audit S-06); a claim without it is refused rather
+ * than quietly relabelled, so a misconfigured MCP process shows up at once.
  */
+export function decideChannel(
+  request: Pick<FastifyRequest, 'headers'>,
+  mcpChannelKey: string | undefined,
+): 'web' | 'mcp' | 'refused' {
+  if (request.headers[CHANNEL_HEADER] === undefined) return 'web';
+  if (request.headers[CHANNEL_HEADER] !== 'mcp') return 'refused';
+  return mcpChannelKey && secretMatches(request.headers[CHANNEL_KEY_HEADER], mcpChannelKey)
+    ? 'mcp'
+    : 'refused';
+}
+
+const channels = new WeakMap<object, 'web' | 'mcp'>();
+
+/** Records the channel `buildServer` decided for this request. */
+export function rememberChannel(request: FastifyRequest, channel: 'web' | 'mcp'): void {
+  channels.set(request, channel);
+}
+
 export function channelOf(request: FastifyRequest): 'web' | 'mcp' {
-  return request.headers['x-arbitron-channel'] === 'mcp' ? 'mcp' : 'web';
+  return channels.get(request) ?? 'web';
 }
 
 export interface FieldProblem {
