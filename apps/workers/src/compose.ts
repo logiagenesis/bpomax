@@ -19,6 +19,7 @@ import { createMarginProcessor } from './margin.js';
 import { queueNotifier } from './notify.js';
 import { closeQueues, createQueues, type QueueName, type QueueSet } from './queues.js';
 import { createRepriceProcessor } from './reprice.js';
+import { priceRefreshProcessor, schedulePriceRefresh } from './price-refresh.js';
 import { retentionProcessor, scheduleRetention } from './retention.js';
 import { startWorker, type Processor } from './runtime.js';
 import { createScoreProcessor } from './score.js';
@@ -35,8 +36,8 @@ import { createUsageAlert } from './usage-alert.js';
  * test runs.
  *
  * Not consumed here: `notify` (the bot process sends Telegram notices, D-075),
- * `price-refresh` (ARB-514), `rollup` (analytics is a view, D-061), and the queues of a
- * feature that is off (`WorkersConfig.off`), which wait for a process that has it.
+ * `rollup` (analytics is a view, D-061), and the queues of a feature that is off
+ * (`WorkersConfig.off`), which wait for a process that has it.
  */
 export interface ComposeOptions {
   /** A service-role connection: the workers act for every org (D-017). */
@@ -149,6 +150,10 @@ export function composeWorkers(options: ComposeOptions): WorkerRuntime {
       ...(options.now ? { now: options.now } : {}),
     }),
     retention: retentionProcessor({ db, ...(options.now ? { now: options.now } : {}) }),
+    'price-refresh': priceRefreshProcessor({
+      db,
+      ...(options.now ? { now: options.now } : {}),
+    }),
     billing: billingSweepProcessor({ db, ...(options.now ? { now: options.now } : {}) }),
   };
 
@@ -210,6 +215,7 @@ export function composeWorkers(options: ComposeOptions): WorkerRuntime {
       await scheduleInboxSync(queues['inbox-sync']);
       await scheduleSourcingCollect(queues.sourcing);
       await scheduleRetention(queues.retention);
+      await schedulePriceRefresh(queues['price-refresh']);
       await scheduleBillingSweep(queues.billing);
     },
     async ready(timeoutMs = 2_000) {

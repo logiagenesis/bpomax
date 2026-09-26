@@ -110,6 +110,7 @@ describe('the composed runtime', () => {
         'inbox-sync',
         'ingest',
         'margin',
+        'price-refresh',
         'reprice',
         'retention',
         'score',
@@ -119,6 +120,7 @@ describe('the composed runtime', () => {
       ].sort(),
     );
     expect(runtime.running).not.toContain('notify');
+    expect(runtime.running).not.toContain('rollup');
   });
 
   it('turns the model queues off when there is no model', async () => {

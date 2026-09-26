@@ -47,6 +47,7 @@ export * from './money.js';
 export * from './orgs.js';
 export * from './payments.js';
 export * from './plans.js';
+export * from './price-bands.js';
 export * from './privacy.js';
 export * from './scanners.js';
 export * from './scoring.js';
