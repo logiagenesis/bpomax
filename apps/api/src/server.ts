@@ -26,6 +26,7 @@ import { registerOrgRoutes } from './routes/orgs.js';
 import { registerPaymentRoutes } from './routes/payments.js';
 import { registerPlatformAccountRoutes } from './routes/platform-accounts.js';
 import { registerPriceBandRoutes } from './routes/price-bands.js';
+import { registerPrivacyRoutes } from './routes/privacy.js';
 import { registerProposalRoutes } from './routes/proposals.js';
 import { registerScannerRoutes } from './routes/scanners.js';
 import { registerSettingsRoutes } from './routes/settings.js';
@@ -154,6 +155,7 @@ function registerRoutes(app: FastifyInstance, options: ServerOptions): void {
   registerPlatformAccountRoutes(app, options);
   registerUpworkAccountRoutes(app, options);
   registerEventRoutes(app, options);
+  registerPrivacyRoutes(app, options);
   registerScannerRoutes(app, options);
   registerTelegramRoutes(app, options);
 }

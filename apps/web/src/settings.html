@@ -433,6 +433,48 @@
           </div>
         </form>
       </section>
+
+      <section class="card stack" aria-labelledby="data-heading">
+        <h2 id="data-heading">Your data</h2>
+        <p class="section-note">
+          Everything held about you here, as a file: your account, your memberships, and every
+          record that names you, including the audit log entries in your name.
+        </p>
+        <div class="cluster">
+          <button type="button" class="btn btn--secondary" id="export-me">Download my data</button>
+        </div>
+
+        <h3 id="client-data-heading">A client's data</h3>
+        <p class="section-note">
+          When a marketplace client asks what you hold about them, or asks you to erase it, find
+          them by the handle they use on the marketplace. Erasing removes their handle, their
+          messages' words and their discovery answers in this organisation; the records stay,
+          without them, so the pipeline and the audit log stay whole. It cannot be undone.
+        </p>
+        <form id="client-data-form" class="stack" novalidate aria-labelledby="client-data-heading">
+          <div class="field">
+            <label class="field__label" for="client-handle">Client's marketplace handle</label>
+            <input
+              class="input"
+              id="client-handle"
+              name="handle"
+              autocomplete="off"
+              maxlength="100"
+              aria-describedby="client-handle-error"
+            />
+            <p class="field__error" id="client-handle-error" hidden></p>
+          </div>
+          <div class="cluster">
+            <button type="submit" class="btn btn--secondary" id="export-client">
+              Download their data
+            </button>
+            <button type="button" class="btn btn--danger" id="erase-client">
+              Erase their conversations
+            </button>
+          </div>
+          <output id="client-data-out" for="client-handle"></output>
+        </form>
+      </section>
     </main>
   </body>
 </html>
