@@ -69,7 +69,7 @@ export function paystackSignal(status: string | null): BillingSignal | null {
   }
 }
 
-export interface SubscriptionState {
+interface SubscriptionState {
   readonly status: SubscriptionStatus;
   /** When a failed payment's grace period ends; null while none is running or none is set. */
   readonly graceUntil: Date | null;

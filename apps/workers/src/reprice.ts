@@ -20,7 +20,7 @@ import {
  * (docs/02 T-02 names the fee "for employers (when we post sourcing projects)"), taken
  * from the org's fee table like every other fee: without that rule nothing is priced.
  */
-export interface RepriceJobData {
+interface RepriceJobData {
   readonly candidateId: string;
   readonly requestId?: string;
 }
@@ -39,7 +39,7 @@ export interface RepriceDeps {
   readonly alert?: (alert: RepriceAlert) => Promise<unknown>;
 }
 
-export type RepriceResult =
+type RepriceResult =
   | {
       readonly status: 'repriced';
       readonly estimateId: string;

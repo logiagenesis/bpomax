@@ -34,8 +34,8 @@ export interface BillingConfig {
   readonly returnUrl: string | null;
 }
 
-export const PAYSTACK_BASE_URL = 'https://api.paystack.co';
-export const STRIPE_BASE_URL = 'https://api.stripe.com';
+const PAYSTACK_BASE_URL = 'https://api.paystack.co';
+const STRIPE_BASE_URL = 'https://api.stripe.com';
 
 function standIn(value: string | undefined, realHost: string): string | null {
   const url = value?.trim();

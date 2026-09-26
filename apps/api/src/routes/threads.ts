@@ -12,8 +12,8 @@ import { messageOf, refuse, statusOf } from '../errors.js';
  * routes/messages.ts (ARB-122), discovery through routes/discovery.ts (ARB-130), the
  * brief through routes/briefs.ts (ARB-131). Nothing here writes.
  */
-export const THREAD_PAGE_LIMIT = 50;
-export const THREAD_MAX_LIMIT = 200;
+const THREAD_PAGE_LIMIT = 50;
+const THREAD_MAX_LIMIT = 200;
 const STATUSES = new Set(['open', 'awaiting_client', 'awaiting_operator', 'closed']);
 
 interface ThreadRow {
@@ -88,9 +88,9 @@ const MESSAGES_SQL = `
    order by coalesce(m.sent_at, m.created_at), m.created_at`;
 
 /** An outbound app message's state is the approvals page's (ARB-122); anything else was received or observed. */
-export type MessageState = OutboundMessageState | 'received' | 'observed';
+type MessageState = OutboundMessageState | 'received' | 'observed';
 
-export function describeThread(row: ThreadRow) {
+function describeThread(row: ThreadRow) {
   return {
     id: row.id,
     platform: row.platform,
@@ -119,7 +119,7 @@ export function describeThread(row: ThreadRow) {
   };
 }
 
-export function describeMessage(row: MessageRow) {
+function describeMessage(row: MessageRow) {
   const state: MessageState =
     row.direction === 'in'
       ? 'received'

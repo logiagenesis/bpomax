@@ -15,9 +15,9 @@ import { planUsage } from './plan-usage.js';
  * update took. The caller has already checked the person's role; row-level security holds
  * it again for a signed-in caller.
  */
-export type BidChannel = 'web' | 'mcp' | 'telegram';
+type BidChannel = 'web' | 'mcp' | 'telegram';
 
-export interface BidActor {
+interface BidActor {
   readonly orgId: string;
   readonly userId: string;
 }

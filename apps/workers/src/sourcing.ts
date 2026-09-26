@@ -27,13 +27,13 @@ import { enqueueReprice } from './reprice.js';
  * bidder's country and the quoted price in minor units, and updates it when read again.
  * Nothing here awards, pays or messages anyone.
  */
-export const SOURCING_COLLECT_SCHEDULER_ID = 'sourcing-collect';
+const SOURCING_COLLECT_SCHEDULER_ID = 'sourcing-collect';
 /** Bids on a sourcing project are read every half hour while the request is open. */
-export const SOURCING_COLLECT_EVERY_MS = 30 * 60_000;
-export const CREATE_PROJECT_CALL = 'projects/0.1/projects';
-export const PROJECT_BIDS_CALL = 'projects/0.1/projects/{project_id}/bids';
+const SOURCING_COLLECT_EVERY_MS = 30 * 60_000;
+const CREATE_PROJECT_CALL = 'projects/0.1/projects';
+const PROJECT_BIDS_CALL = 'projects/0.1/projects/{project_id}/bids';
 
-export type SourcingJobData =
+type SourcingJobData =
   | { readonly kind: 'post'; readonly postId: string; readonly requestId?: string }
   | { readonly kind: 'collect'; readonly postId: string; readonly requestId?: string }
   | { readonly kind: 'collect-all' };
@@ -49,7 +49,7 @@ export interface SourcingDeps {
   readonly repriceQueue?: Queue;
 }
 
-export type PostResult =
+type PostResult =
   | { readonly status: 'posted'; readonly externalId: string }
   | { readonly status: 'already_posted'; readonly externalId: string | null }
   | {
@@ -65,7 +65,7 @@ export type PostResult =
       readonly message: string;
     };
 
-export interface CollectResult {
+interface CollectResult {
   readonly status: 'collected' | 'skipped';
   readonly added: number;
   readonly updated: number;

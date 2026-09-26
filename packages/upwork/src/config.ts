@@ -37,7 +37,7 @@ export type UpworkConfigResult =
 const REQUIRED = ['UPWORK_CLIENT_ID', 'UPWORK_CLIENT_SECRET', 'APP_URL'] as const;
 
 /** The page Upwork sends the browser back to. */
-export const UPWORK_CALLBACK_PAGE = 'upwork-callback.html';
+const UPWORK_CALLBACK_PAGE = 'upwork-callback.html';
 
 export const UPWORK_PRODUCTION = {
   graphqlUrl: 'https://api.upwork.com/graphql',

@@ -31,7 +31,7 @@ import { messageOf, refuse, statusOf } from '../errors.js';
  * its reason; a sent message can be changed by none of them. 0003's constraint refuses
  * a sent app message without its approval, whatever tries to write it.
  */
-export interface OutboundRow {
+interface OutboundRow {
   readonly id: string;
   readonly thread_id: string;
   readonly external_thread_id: string;
@@ -71,7 +71,7 @@ const OUTBOUND_SQL = `
     ) li on true
    where m.direction = 'out' and m.origin = 'app'`;
 
-export function describeOutbound(row: OutboundRow) {
+function describeOutbound(row: OutboundRow) {
   return {
     id: row.id,
     threadId: row.thread_id,

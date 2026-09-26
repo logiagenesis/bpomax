@@ -10,7 +10,7 @@ import { formatMoney } from './money.js';
  * that cannot be ranked is listed apart with the reason. Nothing here invents a rate:
  * every price is a rate card the owner imported (ARB-200, D-09).
  */
-export const SOURCING_WEIGHTS = {
+const SOURCING_WEIGHTS = {
   rate: 40,
   turnaround: 20,
   quality: 20,
@@ -19,7 +19,7 @@ export const SOURCING_WEIGHTS = {
 } as const;
 
 /** The organisation's own zone (docs/01: Pretoria; SAST is UTC+2 all year). */
-export const HOME_TIME_ZONE = 'Africa/Johannesburg';
+const HOME_TIME_ZONE = 'Africa/Johannesburg';
 
 export interface RankableRateCard {
   readonly currency: string;
@@ -58,7 +58,7 @@ export interface SourcingBrief {
   readonly deadlineFixed: boolean | null;
 }
 
-export interface RankingParts {
+interface RankingParts {
   readonly rate: number;
   readonly turnaround: number;
   readonly quality: number;
@@ -66,7 +66,7 @@ export interface RankingParts {
   readonly paysAfterDelivery: number;
 }
 
-export interface RankedSupplier {
+interface RankedSupplier {
   readonly supplierId: string;
   readonly name: string;
   readonly channel: SupplierChannel;
@@ -84,13 +84,13 @@ export interface RankedSupplier {
   readonly reasons: string[];
 }
 
-export interface ExcludedSupplier {
+interface ExcludedSupplier {
   readonly supplierId: string;
   readonly name: string;
   readonly reason: string;
 }
 
-export interface Ranking {
+interface Ranking {
   readonly ranked: RankedSupplier[];
   readonly excluded: ExcludedSupplier[];
 }

@@ -66,7 +66,7 @@ export type BandSource = (typeof BAND_SOURCE_PRIORITY)[number];
 // ---------------------------------------------------------------------------------------
 // Classification
 
-export interface CategoryOption {
+interface CategoryOption {
   readonly slug: string;
   readonly name: string;
 }
@@ -98,7 +98,7 @@ export const CLASSIFY_SYSTEM_PROMPT =
   'deliverable the client is paying for, not the tools mentioned in passing. If no ' +
   'category fits, answer null rather than forcing one. Reply with JSON only.';
 
-export type ClassifiableJob = Pick<ScorableJob, 'title' | 'description' | 'skills'>;
+type ClassifiableJob = Pick<ScorableJob, 'title' | 'description' | 'skills'>;
 
 /** The classification prompt: the job and the taxonomy, and nothing about the client. */
 export function buildClassifyPrompt(
@@ -157,7 +157,7 @@ export interface EstimateInputs {
   readonly bands: readonly PriceBandSource[];
 }
 
-export interface EstimateChoice {
+interface EstimateChoice {
   readonly method: EstimateMethod;
   readonly currency: string;
   readonly lowMinor: number;
@@ -170,7 +170,7 @@ export interface EstimateChoice {
   readonly basis: Record<string, unknown>;
 }
 
-export interface EstimateDecision {
+interface EstimateDecision {
   readonly choice: EstimateChoice | null;
   /** One line per method, in order, saying why it did or did not apply. */
   readonly considered: readonly string[];

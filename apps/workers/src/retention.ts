@@ -21,7 +21,7 @@ export const RETENTION_SCHEDULER_ID = 'retention-daily';
  */
 export const RETENTION_PATTERN = '0 0 * * *';
 
-export type RetentionJobData = Record<string, never>;
+type RetentionJobData = Record<string, never>;
 
 export interface RetentionRun {
   readonly ranAt: string;
@@ -43,7 +43,7 @@ export async function scheduleRetention(queue: Queue): Promise<void> {
   );
 }
 
-export interface RetentionDeps {
+interface RetentionDeps {
   /** A service-role connection: the run crosses every org, outside RLS (D-017). */
   readonly db: Queryable;
   /** Defaults to the current time; tests fix it. */

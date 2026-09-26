@@ -23,7 +23,7 @@ import { UnrecoverableError, type Job, type Queue } from 'bullmq';
  * on an app message without `approved_by` and `approved_via`, so nothing leaves without
  * the approval event the API wrote.
  */
-export interface SendMessageJobData {
+interface SendMessageJobData {
   readonly messageId: string;
   readonly requestId?: string;
 }
@@ -38,7 +38,7 @@ export interface SendMessageDeps {
   readonly now?: () => Date;
 }
 
-export type SendMessageResult =
+type SendMessageResult =
   | { readonly status: 'sent'; readonly externalMessageId: string }
   | { readonly status: 'already_sent'; readonly externalMessageId: string | null }
   | {
@@ -68,7 +68,7 @@ interface MessageRow {
   external_thread_id: string;
 }
 
-export const SEND_MESSAGE_CALL = 'messages/0.1/threads/{thread_id}/messages';
+const SEND_MESSAGE_CALL = 'messages/0.1/threads/{thread_id}/messages';
 
 export async function sendMessage(
   deps: SendMessageDeps,

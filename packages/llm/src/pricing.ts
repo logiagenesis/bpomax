@@ -13,7 +13,7 @@
 export const PRICES_SOURCE = 'https://platform.claude.com/docs/en/about-claude/pricing';
 export const PRICES_READ_ON = '2026-09-22';
 
-export interface ModelPrice {
+interface ModelPrice {
   /** Standard input tokens. */
   readonly inputNanoPerToken: number;
   readonly outputNanoPerToken: number;

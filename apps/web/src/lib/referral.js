@@ -9,7 +9,7 @@ import { apiBaseUrl } from './api.js';
  * referral link followed is the one kept. A referral never gets in the way of the page:
  * any failure is ignored.
  */
-export const REFERRAL_KEY = 'arbitron.referral';
+const REFERRAL_KEY = 'arbitron.referral';
 
 /** @returns {string | null} the click id this browser kept */
 export function readReferral() {

@@ -22,7 +22,7 @@ export async function recordReferralClick(
   return rows[0]?.id ?? null;
 }
 
-export interface AffiliateReportRow {
+interface AffiliateReportRow {
   id: string;
   code: string;
   owner_email: string | null;

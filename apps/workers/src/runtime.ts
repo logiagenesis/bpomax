@@ -16,7 +16,7 @@ export type Processor<Data = unknown, Result = unknown> = (
   job: Job<Data, Result>,
 ) => Promise<Result>;
 
-export interface StartWorkerOptions {
+interface StartWorkerOptions {
   readonly connection: ConnectionOptions;
   readonly deadLetter: Queue;
   readonly prefix?: string;

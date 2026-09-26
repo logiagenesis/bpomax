@@ -36,19 +36,19 @@ import { enqueueDiscovery } from './discovery.js';
  * wait. A refused token marks the account `expired` and is not retried.
  */
 export const INBOX_SYNC_SCHEDULER_ID = 'inbox-sync';
-export const INBOX_SYNC_EVERY_MS = 60_000;
+const INBOX_SYNC_EVERY_MS = 60_000;
 /** How often each connected account's inbox is read. Two minutes: an interval, not a rush. */
 export const INBOX_POLL_EVERY_MS = 120_000;
 /** The thread list is asked from this long before the last run reached, so a late update is not missed. */
-export const INBOX_LOOKBACK_MS = 5 * 60_000;
-export const ACCOUNT_SCHEDULER_PREFIX = 'inbox:';
-export const THREADS_CALL = 'messages/0.1/threads';
-export const MESSAGES_CALL = 'messages/0.1/messages';
+const INBOX_LOOKBACK_MS = 5 * 60_000;
+const ACCOUNT_SCHEDULER_PREFIX = 'inbox:';
+const THREADS_CALL = 'messages/0.1/threads';
+const MESSAGES_CALL = 'messages/0.1/messages';
 /** How many thread ids go into one message-list call. */
 const THREADS_PER_MESSAGE_CALL = 20;
 const MAX_PAGES = 10;
 
-export type InboxJobData =
+type InboxJobData =
   | { readonly kind: 'sync' }
   | { readonly kind: 'poll'; readonly accountId: string; readonly requestId?: string };
 
@@ -86,7 +86,7 @@ export interface InboxDeps {
   readonly discoveryQueue?: Queue;
 }
 
-export interface InboxSync {
+interface InboxSync {
   readonly wanted: number;
   readonly added: number;
   readonly removed: number;
@@ -169,7 +169,7 @@ interface ThreadRow {
 }
 
 /** The member who is not the account: the client, by username, display name, or id. */
-export function clientHandle(
+function clientHandle(
   thread: FreelancerThread,
   users: Readonly<Record<string, FreelancerUserDetail>>,
   ownId: string,

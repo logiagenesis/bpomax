@@ -6,12 +6,12 @@ import type { FieldError, ValidationResult } from './scanners.js';
  * here is checked again by the API; the wording itself is the owner's and is not
  * written by the build.
  */
-export const MAX_AUTO_REPLY_LENGTH = 2000;
-export const MIN_OFFLINE_AFTER_MINUTES = 1;
-export const MAX_OFFLINE_AFTER_MINUTES = 1440;
-export const DEFAULT_OFFLINE_AFTER_MINUTES = 30;
+const MAX_AUTO_REPLY_LENGTH = 2000;
+const MIN_OFFLINE_AFTER_MINUTES = 1;
+const MAX_OFFLINE_AFTER_MINUTES = 1440;
+const DEFAULT_OFFLINE_AFTER_MINUTES = 30;
 
-export interface AutoReplyInput {
+interface AutoReplyInput {
   readonly body: string;
   readonly active: boolean;
   readonly offlineAfterMinutes: number;

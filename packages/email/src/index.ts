@@ -19,7 +19,7 @@ export interface EmailSender {
   send(message: EmailMessage): Promise<void>;
 }
 
-export type EmailConfigResult =
+type EmailConfigResult =
   | { readonly ok: true; readonly sender: EmailSender }
   | { readonly ok: false; readonly reason: string };
 

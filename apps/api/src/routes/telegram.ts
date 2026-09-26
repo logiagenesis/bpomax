@@ -10,7 +10,7 @@ import type { ServerOptions } from '../context.js';
  * bot links that chat to them. The code is one-time and short-lived, and it is written
  * under the person's own session, so RLS decides who may make one.
  */
-export const LINK_CODE_TTL_MINUTES = 10;
+const LINK_CODE_TTL_MINUTES = 10;
 
 /** Eight characters from an alphabet without look-alikes, for typing on a phone. */
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

@@ -30,7 +30,7 @@ import { messageOf, refuse, statusOf } from '../errors.js';
  * never edited after that: a change is a new version, and every version is kept. An
  * owner or operator writes; the conversations page (ARB-140) is where it is shown.
  */
-export function describeBrief(row: BriefRow) {
+function describeBrief(row: BriefRow) {
   const input = briefInputOf(row);
   return {
     id: row.id,

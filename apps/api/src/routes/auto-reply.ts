@@ -11,7 +11,7 @@ import { messageOf, refuse, statusOf } from '../errors.js';
  * switch on is recorded as its approver (0020), and every reply the worker sends
  * carries that approval. Nothing here sends anything.
  */
-export const AUTO_REPLY_NAME = 'First reply';
+const AUTO_REPLY_NAME = 'First reply';
 
 interface AutoReplyRow {
   readonly id: string;

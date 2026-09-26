@@ -20,7 +20,7 @@ import { graphql, type Fetch } from './http.js';
  */
 export const SEARCH_PAGE_SIZE = 30;
 
-export const JOB_SEARCH_QUERY = `query marketplaceJobPostingsSearch(
+const JOB_SEARCH_QUERY = `query marketplaceJobPostingsSearch(
   $marketPlaceJobFilter: MarketplaceJobPostingsSearchFilter
   $searchType: MarketplaceJobPostingSearchType
   $sortAttributes: [MarketplaceJobPostingSearchSortAttribute]
@@ -59,13 +59,13 @@ export const JOB_SEARCH_QUERY = `query marketplaceJobPostingsSearch(
 }`;
 
 /** `MarketplaceJobPostingsSearchFilter` fields this ingest sends (DOC.jobFilter). */
-export interface JobSearchFilter {
+interface JobSearchFilter {
   readonly searchExpression_eq?: string;
   readonly jobType_eq?: 'HOURLY' | 'FIXED';
   readonly pagination_eq: { readonly after: string; readonly first: number };
 }
 
-export interface BuiltSearch {
+interface BuiltSearch {
   readonly filter: JobSearchFilter;
   /** Applied here, to what comes back, because the filter cannot say it in a documented way. */
   readonly keep: (job: UpworkJob) => boolean;
@@ -145,7 +145,7 @@ export interface UpworkJob {
   readonly raw: Record<string, unknown>;
 }
 
-export interface JobSearchPage {
+interface JobSearchPage {
   readonly jobs: readonly UpworkJob[];
   readonly totalCount: number | null;
 }

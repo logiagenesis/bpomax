@@ -26,11 +26,11 @@ export interface WorkersConfig {
   readonly off: Readonly<Record<string, string>>;
 }
 
-export type WorkersConfigResult =
+type WorkersConfigResult =
   | { readonly ok: true; readonly config: WorkersConfig }
   | { readonly ok: false; readonly problems: readonly string[] };
 
-export const WORKERS_DEFAULT_PORT = 3001;
+const WORKERS_DEFAULT_PORT = 3001;
 
 export function workersConfig(env: Env): WorkersConfigResult {
   const check = new EnvProblems();

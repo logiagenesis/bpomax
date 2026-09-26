@@ -181,7 +181,7 @@ export interface FakeFreelancer {
   close(): Promise<void>;
 }
 
-export interface FakeOptions {
+interface FakeOptions {
   readonly clientId?: string;
   readonly clientSecret?: string;
   readonly user?: FakeUser;

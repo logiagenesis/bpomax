@@ -60,7 +60,7 @@ interface OrderRow {
 }
 
 /** docs/02 T-05, as its row states it, shown with a payment to a supplier outside South Africa. */
-export const T05_NOTICE =
+const T05_NOTICE =
   'docs/02 T-05 is open: the legal structure for paying overseas suppliers (Exchange Control/SARB reporting, invoicing, VAT treatment of export services) is to be confirmed with Logi-Ink’s accountant before the first live supplier payment.';
 
 async function loadItem(tx: Queryable, id: string): Promise<ItemRow> {

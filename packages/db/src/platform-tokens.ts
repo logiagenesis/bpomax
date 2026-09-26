@@ -14,13 +14,13 @@ import type { Queryable } from './client.js';
  *
  * Nothing here logs a token, and no token is ever part of an error message.
  */
-export interface PlatformTokens {
+interface PlatformTokens {
   readonly accessToken: string;
   readonly refreshToken: string | null;
   readonly expiresAt: Date | null;
 }
 
-export interface StoreTokens {
+interface StoreTokens {
   readonly accessToken: string;
   /** Null keeps the refresh token already stored. */
   readonly refreshToken: string | null;

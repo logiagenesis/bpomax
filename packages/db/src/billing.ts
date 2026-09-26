@@ -62,7 +62,7 @@ export async function seenWebhook(
   return rows.length > 0;
 }
 
-export interface CheckoutRow {
+interface CheckoutRow {
   id: string;
   org_id: string;
   provider: BillingProvider;
@@ -154,7 +154,7 @@ interface SubscriptionRow {
   plan: string;
 }
 
-export type SubscriptionMatch =
+type SubscriptionMatch =
   | { readonly provider: BillingProvider; readonly externalRef: string }
   | { readonly provider: BillingProvider; readonly externalCustomer: string };
 

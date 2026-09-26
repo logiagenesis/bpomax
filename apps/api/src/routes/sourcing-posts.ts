@@ -61,7 +61,7 @@ const POST_SQL = `
     from sourcing_posts p
     left join users u on u.id = p.approved_by`;
 
-export function describePost(row: PostRow) {
+function describePost(row: PostRow) {
   return {
     id: row.id,
     sourcingRequestId: row.sourcing_request_id,

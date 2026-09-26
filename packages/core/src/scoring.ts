@@ -8,7 +8,7 @@
  * a confident reply. A missed scam is the expensive mistake; a false alarm costs the
  * operator one glance.
  */
-export const SCORE_VERDICTS = ['go', 'caution', 'skip'] as const;
+const SCORE_VERDICTS = ['go', 'caution', 'skip'] as const;
 export type ScoreVerdict = (typeof SCORE_VERDICTS)[number];
 
 export const RED_FLAGS = [
@@ -157,7 +157,7 @@ const RULES: readonly Rule[] = [
   },
 ];
 
-export interface RuleFinding {
+interface RuleFinding {
   readonly flag: RedFlag;
   readonly why: string;
 }

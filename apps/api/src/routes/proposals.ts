@@ -32,7 +32,7 @@ import { refuseOverLimit } from '../plan-limits.js';
  * of them. RLS decides who may write, and the restrictive policy in 0009 makes sure the
  * approver's name is the caller's own.
  */
-export interface ProposalRow {
+interface ProposalRow {
   readonly id: string;
   readonly job_id: string;
   readonly job_title: string;
@@ -63,7 +63,7 @@ export interface ProposalRow {
 }
 
 const STATUSES = new Set(['queued', 'approved', 'rejected', 'submitted', 'failed', 'draft', 'all']);
-export const BULK_LIMIT = 50;
+const BULK_LIMIT = 50;
 
 const PROPOSAL_SQL = `
   select p.id, p.job_id, j.title as job_title, j.platform::text as platform, p.status::text as status,

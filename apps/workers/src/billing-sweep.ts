@@ -12,7 +12,7 @@ export const BILLING_SCHEDULER_ID = 'billing-daily';
 /** 00:30 UTC, 02:30 SAST: after the retention run, in the same quiet hour. */
 export const BILLING_PATTERN = '30 0 * * *';
 
-export type BillingSweepJobData = Record<string, never>;
+type BillingSweepJobData = Record<string, never>;
 
 export async function scheduleBillingSweep(queue: Queue): Promise<void> {
   await queue.upsertJobScheduler(
@@ -22,7 +22,7 @@ export async function scheduleBillingSweep(queue: Queue): Promise<void> {
   );
 }
 
-export interface BillingSweepDeps {
+interface BillingSweepDeps {
   /** A service-role connection: the sweep crosses every org. */
   readonly db: Queryable;
   readonly now?: () => Date;

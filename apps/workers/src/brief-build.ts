@@ -32,12 +32,12 @@ import { UnrecoverableError, type Job, type Queue } from 'bullmq';
  */
 export const BRIEF_BUILD_THRESHOLD = 70;
 
-export interface BriefBuildJobData {
+interface BriefBuildJobData {
   readonly threadId: string;
   readonly requestId?: string;
 }
 
-export interface BriefBuildDeps {
+interface BriefBuildDeps {
   /** A service-role connection: the worker acts for whichever org owns the thread. */
   readonly db: Queryable;
   readonly transport: LlmTransport;
@@ -45,7 +45,7 @@ export interface BriefBuildDeps {
   readonly now?: () => Date;
 }
 
-export type BriefBuildResult =
+type BriefBuildResult =
   | { readonly status: 'skipped'; readonly reason: 'no_session' | 'below_threshold' | 'exists' }
   | { readonly status: 'drafted'; readonly briefId: string; readonly lockBlockers: string[] };
 

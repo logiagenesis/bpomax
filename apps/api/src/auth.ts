@@ -19,7 +19,7 @@ import type { FastifyRequest } from 'fastify';
  * SHA-256, so the process never holds a usable token it is not using, and it forgets the
  * least recently used token first when full.
  */
-export interface SupabaseAuthOptions {
+interface SupabaseAuthOptions {
   readonly url: string;
   readonly anonKey: string;
   readonly fetch?: typeof fetch;

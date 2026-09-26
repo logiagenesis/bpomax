@@ -9,7 +9,7 @@ import type { BotDeps } from './engine.js';
  * org. It reads the evaluation the reprice worker stored, so every figure on it is the
  * stored one: the quote, the margin and the org's rule as it stood when judged.
  */
-export interface RepriceCard {
+interface RepriceCard {
   readonly jobTitle: string | null;
   readonly candidate: string;
   readonly quoteMinor: number;
@@ -22,10 +22,7 @@ export interface RepriceCard {
   readonly hourly: boolean;
 }
 
-export async function loadRepriceCard(
-  db: Queryable,
-  alert: RepriceAlert,
-): Promise<RepriceCard | null> {
+async function loadRepriceCard(db: Queryable, alert: RepriceAlert): Promise<RepriceCard | null> {
   const { rows } = await db.query<{
     job_title: string | null;
     hourly: boolean;

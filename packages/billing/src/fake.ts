@@ -7,8 +7,8 @@ import type { Fetch } from './http.js';
  * wrong key, and can produce the webhook events a payment, a failed renewal or a
  * cancellation would send, signed the documented way. No real account is touched.
  */
-export const PAYSTACK_STAND_IN = 'https://paystack.stand-in.test';
-export const STRIPE_STAND_IN = 'https://stripe.stand-in.test';
+const PAYSTACK_STAND_IN = 'https://paystack.stand-in.test';
+const STRIPE_STAND_IN = 'https://stripe.stand-in.test';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });

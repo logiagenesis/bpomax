@@ -8,7 +8,7 @@ import type { FieldError, ValidationResult } from './scanners.js';
  * owner's figure, recorded as given and never defaulted; paying it out is not built
  * (D-071).
  */
-export const REFERRAL_CODE = /^[A-Za-z0-9-]{3,40}$/;
+const REFERRAL_CODE = /^[A-Za-z0-9-]{3,40}$/;
 
 /** The query parameter a referral link carries: `https://…/?ref=<code>`. */
 export const REFERRAL_PARAM = 'ref';
@@ -17,7 +17,7 @@ export function isReferralCode(value: unknown): value is string {
   return typeof value === 'string' && REFERRAL_CODE.test(value);
 }
 
-export interface NewAffiliate {
+interface NewAffiliate {
   readonly code: string;
   readonly ownerEmail: string | null;
   /** Per cent of what a referred org pays, as the owner agreed it; null until agreed. */
@@ -70,15 +70,6 @@ export function validateAffiliate(input: unknown): ValidationResult<NewAffiliate
   return errors.length > 0
     ? { ok: false, errors }
     : { ok: true, value: { code, ownerEmail, commissionPct } };
-}
-
-/** One affiliate's funnel, as the owner's report shows it. */
-export interface AffiliateFunnel {
-  readonly clicks: number;
-  /** Clicks followed by an org created in that browser. */
-  readonly signUps: number;
-  /** Of those orgs, the ones whose first plan was paid. */
-  readonly paid: number;
 }
 
 /** Whole per cent, rounded down; null with nothing under it. */

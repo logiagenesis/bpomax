@@ -9,5 +9,3 @@ export * from './reprice.js';
 export * from './server.js';
 export * from './notify.js';
 export * from './config.js';
-
-export const APP_NAME = 'arbitron-telegram';

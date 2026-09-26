@@ -41,12 +41,12 @@ export interface BidPlacer {
   placeBid(payload: BidPayload): Promise<{ platformRef: string; reconciled?: boolean }>;
 }
 
-export interface SubmitJobData {
+interface SubmitJobData {
   readonly proposalId: string;
   readonly requestId?: string;
 }
 
-export interface SubmitDeps {
+interface SubmitDeps {
   /** A service-role connection: the worker acts for whichever org owns the proposal. */
   readonly db: Queryable;
   /** LIVE_MODE from the environment. */
@@ -59,7 +59,7 @@ export interface SubmitDeps {
   readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
 }
 
-export type SubmitBlockReason =
+type SubmitBlockReason =
   | 'paused'
   | 'live_mode_off'
   | 'no_client'
@@ -72,7 +72,7 @@ export type SubmitBlockReason =
   /** ARB-410: the org's plan has no room for another bid this month. */
   | 'plan_limit';
 
-export type SubmitResult =
+type SubmitResult =
   | { readonly status: 'submitted'; readonly platformRef: string; readonly pipelineItemId: string }
   | { readonly status: 'already_submitted'; readonly platformRef: string | null }
   | { readonly status: 'skipped'; readonly reason: 'not_approved' | 'approval_incomplete' }
@@ -434,7 +434,7 @@ export async function submitProposal(
  * (the body and the milestone titles) as fingerprints (ARB-520, P-02). The words are in
  * the proposal, which is locked once sent.
  */
-export function bidForLog(payload: BidPayload) {
+function bidForLog(payload: BidPayload) {
   return {
     ...payload,
     body: textFingerprint(payload.body),

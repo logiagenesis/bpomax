@@ -85,6 +85,10 @@ jobs:
       - name: Typecheck the end-to-end tests (Q-04)
         run: pnpm typecheck:e2e
 
+      # No export that nothing imports (the owner's audit Q-09, D-085).
+      - name: No unused exports
+        run: pnpm knip
+
       - name: Unit and integration tests
         run: pnpm test
 

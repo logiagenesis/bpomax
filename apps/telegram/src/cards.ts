@@ -14,7 +14,7 @@ import type { TelegramButton } from './api.js';
  * Edit / Reject". Every figure is read from a stored row (05 section 3.3); nothing is
  * computed here except the ZAR conversion at the rate the margin evaluation stored.
  */
-export interface Card {
+interface Card {
   readonly proposalId: string;
   readonly status: string;
   readonly jobTitle: string;
@@ -122,7 +122,7 @@ const METHOD_WORDS: Record<string, string> = {
 };
 
 /** The margin in ZAR at the rate the evaluation stored, or a plain statement that there is none. */
-export function marginInZar(margin: NonNullable<Card['margin']>): string {
+function marginInZar(margin: NonNullable<Card['margin']>): string {
   if (margin.currency === 'ZAR') return formatMoney(margin.marginMinor, 'ZAR');
   if (!margin.fxRateUsed) return 'no ZAR rate stored';
   const quote: FxQuote = {

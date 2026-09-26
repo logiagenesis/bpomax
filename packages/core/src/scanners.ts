@@ -11,9 +11,9 @@ export const PLATFORMS = ['freelancer', 'upwork', 'fiverr'] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
 /** Freelancer.com's own polling guidance is the floor; below this we are hammering. */
-export const MIN_POLL_INTERVAL_SECONDS = 60;
-export const MAX_POLL_INTERVAL_SECONDS = 86_400;
-export const MAX_DAILY_CAP = 100;
+const MIN_POLL_INTERVAL_SECONDS = 60;
+const MAX_POLL_INTERVAL_SECONDS = 86_400;
+const MAX_DAILY_CAP = 100;
 
 export interface ScannerFilters {
   readonly keywords?: string[];
@@ -23,17 +23,6 @@ export interface ScannerFilters {
   readonly clientCountriesInclude?: string[];
   readonly clientCountriesExclude?: string[];
   readonly hourly?: boolean;
-}
-
-export interface ScannerInput {
-  readonly name: string;
-  readonly platform?: Platform;
-  readonly filters?: ScannerFilters;
-  readonly pollIntervalSeconds?: number;
-  readonly active?: boolean;
-  readonly autoSend?: boolean;
-  readonly minScore?: number | null;
-  readonly dailyCap?: number;
 }
 
 export interface FieldError {

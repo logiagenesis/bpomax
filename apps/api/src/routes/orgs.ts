@@ -57,7 +57,7 @@ function refusal(
   return null;
 }
 
-export interface OnboardingFactsRow {
+interface OnboardingFactsRow {
   margin_rules_set: boolean;
   freelancer_connected: boolean;
   scanner_count: number;

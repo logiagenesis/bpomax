@@ -29,12 +29,12 @@ export const SUPPLIER_CSV_COLUMNS = [
   'hourly_rate',
   'turnaround_days',
 ] as const;
-export type SupplierCsvColumn = (typeof SUPPLIER_CSV_COLUMNS)[number];
+type SupplierCsvColumn = (typeof SUPPLIER_CSV_COLUMNS)[number];
 
-export const MAX_SUPPLIER_NAME = 200;
-export const MAX_SUPPLIER_NOTES = 2000;
-export const MAX_SUPPLIER_LANGUAGES = 10;
-export const MAX_SUPPLIER_CSV_LINES = 5000;
+const MAX_SUPPLIER_NAME = 200;
+const MAX_SUPPLIER_NOTES = 2000;
+const MAX_SUPPLIER_LANGUAGES = 10;
+const MAX_SUPPLIER_CSV_LINES = 5000;
 /** The template's sample line, which an import refuses so it is never stored as a supplier. */
 export const SUPPLIER_SAMPLE_NAME = 'Example Supplier (sample)';
 
@@ -75,7 +75,7 @@ export interface CsvLineError {
   readonly message: string;
 }
 
-export type SupplierCsvResult =
+type SupplierCsvResult =
   | { readonly ok: true; readonly value: SupplierInput[]; readonly lines: number }
   | { readonly ok: false; readonly errors: CsvLineError[] };
 
@@ -172,7 +172,7 @@ export function parseCsv(text: string):
 }
 
 /** RFC 4180 quoting plus protection against formula injection (as the audit log's export). */
-export function csvCell(value: unknown): string {
+function csvCell(value: unknown): string {
   if (value === null || value === undefined) return '';
   let text = typeof value === 'string' ? value : String(value);
   if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
@@ -464,7 +464,7 @@ export function validateSupplierCsv(
 }
 
 // ------------------------------------------------------------------ export
-export interface SupplierExportRow {
+interface SupplierExportRow {
   readonly name: string;
   readonly countryCode: string | null;
   readonly timeZone: string | null;

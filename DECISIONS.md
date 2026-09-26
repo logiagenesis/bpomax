@@ -2738,3 +2738,39 @@ Q-08
   owner's: docs/BLOCKERS.md D-21.
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 4; docs/05 section 4.2.
+
+## D-085 — ARB-531: no unused exports, held by knip in CI; the demo stand-in split into modules
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-531, session …tJv8), on the owner's audit Q-09
+
+- **Unused exports.**
+  - knip 5.88.1 (`knip.json`, `pnpm knip`) now runs in CI and fails on any export or
+    exported type that nothing imports.
+  - It is told the real entry points:
+    - the web app's page scripts and the demo stand-in, which Vite reaches through HTML;
+    - the end-to-end specs and the root tests;
+    - each package's `exports` and each app's start script.
+  - The internal packages' own exports count too (`includeEntryExports`): they are
+    private workspace code, not a published API.
+  - 180 symbols were reported. Most were used only in their own file and lost their
+    `export`. Fourteen declarations were used nowhere. Eleven were deleted; the other
+    three were constants kept only to derive a type, now written as the type itself.
+  - Nothing was deleted that a test used.
+- **The demo stand-in** (`apps/web/src/demo/`, D-043) was one 3 209-line file whose
+  request function ran to about 2 100 lines. It is now:
+  - `demo.js`, the entry: the dispatcher, Supabase Auth's stand-in, the fetch patch and
+    the banner;
+  - `store.js`, the sample data and the tab's copy of it;
+  - `shared.js`, responses, the sample person and the audit log;
+  - `context.js`, one request's store, path, answer, and the rows and helpers that more
+    than one group of routes reads;
+  - `routes/*.js`, fourteen groups of routes, run in the order the one function ran
+    them.
+- **How the split was made.** It was mechanical: the code was moved, not rewritten. The
+  86 route checks and route strings are the same before and after. The shared helpers
+  are made once per request, as before; their only early write fills an absent
+  collection with the empty array a later request would have given it. The 38 demo
+  tests and the 320 end-to-end tests pass unchanged.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 Q-09.

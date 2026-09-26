@@ -107,11 +107,11 @@ export interface ServerOptions {
 export const RATE_LIMIT_PER_MINUTE = 300;
 export const REFERRAL_CLICKS_PER_MINUTE = 30;
 
-export const CHANNEL_HEADER = 'x-arbitron-channel';
-export const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';
+const CHANNEL_HEADER = 'x-arbitron-channel';
+const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';
 
 /** Constant-time comparison of a sent value with a secret, hashed to one length first. */
-export function secretMatches(sent: unknown, secret: string): boolean {
+function secretMatches(sent: unknown, secret: string): boolean {
   if (typeof sent !== 'string' || secret === '') return false;
   const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest();
   return timingSafeEqual(digest(sent), digest(secret));

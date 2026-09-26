@@ -40,7 +40,7 @@ import {
  * `error_code: "AuthorisationExceptionCodes.RATE_LIMITED"`
  * (https://developers.freelancer.com/docs/api-overview/rate-limiting).
  */
-export const ACTIVE_PROJECTS_MAX_LIMIT = 100;
+const ACTIVE_PROJECTS_MAX_LIMIT = 100;
 
 export type ProjectType = 'fixed' | 'hourly';
 
@@ -77,7 +77,7 @@ export interface FreelancerProject {
   readonly raw: Record<string, unknown>;
 }
 
-export interface ActiveProjectPage {
+interface ActiveProjectPage {
   readonly projects: readonly FreelancerProject[];
   readonly totalCount: number | null;
   readonly requestId: string | null;

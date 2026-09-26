@@ -21,8 +21,8 @@ export interface ApiClient {
   request(request: ApiRequest): Promise<ApiResponse>;
 }
 
-export const CHANNEL_HEADER = 'x-arbitron-channel';
-export const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';
+const CHANNEL_HEADER = 'x-arbitron-channel';
+const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';
 
 /** The query string of a request, leaving out what is not set. */
 export function queryString(query: ApiRequest['query']): string {
@@ -34,7 +34,7 @@ export function queryString(query: ApiRequest['query']): string {
   return text ? `?${text}` : '';
 }
 
-export interface HttpApiOptions {
+interface HttpApiOptions {
   /** The API's base URL, such as https://api.example.test (API_URL in .env). */
   readonly baseUrl: string;
   /** The operator's Supabase access token (docs/02 B-06). */

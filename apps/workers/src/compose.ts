@@ -85,8 +85,6 @@ export interface RuntimeReadiness {
   readonly off: Readonly<Record<string, string>>;
 }
 
-export const MODEL_QUEUES = ['score', 'estimate', 'draft-bid', 'discovery', 'brief-build'] as const;
-
 export function composeWorkers(options: ComposeOptions): WorkerRuntime {
   const { db, config } = options;
   const queues = createQueues({

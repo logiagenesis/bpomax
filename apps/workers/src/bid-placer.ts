@@ -31,7 +31,7 @@ import type { BidPlacer } from './submit.js';
  * total, rounded down to a whole percent (the documented example is a whole number), or
  * 100 for a bid without milestones (D-077).
  */
-export interface FreelancerPlacerDeps {
+interface FreelancerPlacerDeps {
   /** A service-role connection: the placer acts for whichever org owns the proposal. */
   readonly db: Queryable;
   readonly config: FreelancerConfig;

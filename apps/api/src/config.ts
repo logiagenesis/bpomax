@@ -10,7 +10,7 @@ import { EnvProblems, type Env } from '@arbitron/workers';
  * The marketplaces and billing are read as before: not configured, their buttons refuse
  * with the reason.
  */
-export interface ApiConfig {
+interface ApiConfig {
   readonly databaseUrl: string;
   readonly redisUrl: string;
   readonly supabaseUrl: string;
@@ -28,11 +28,11 @@ export interface ApiConfig {
   readonly billing: BillingConfig;
 }
 
-export type ApiConfigResult =
+type ApiConfigResult =
   | { readonly ok: true; readonly config: ApiConfig }
   | { readonly ok: false; readonly problems: readonly string[] };
 
-export const API_DEFAULT_PORT = 3000;
+const API_DEFAULT_PORT = 3000;
 
 export function apiConfig(env: Env): ApiConfigResult {
   const check = new EnvProblems();

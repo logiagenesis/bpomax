@@ -9,7 +9,7 @@ import type { FieldError, ValidationResult } from './scanners.js';
  */
 export const ORG_NAME_MAX = 100;
 
-export interface NewOrg {
+interface NewOrg {
   readonly name: string;
   /** ISO 3166-1 alpha-2, upper case. */
   readonly countryCode: string;
@@ -20,7 +20,7 @@ export interface NewOrg {
   readonly termsVersion: string;
 }
 
-export const TERMS_VERSION_MAX = 40;
+const TERMS_VERSION_MAX = 40;
 
 export function validateNewOrg(input: unknown): ValidationResult<NewOrg> {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -56,7 +56,7 @@ export function validateNewOrg(input: unknown): ValidationResult<NewOrg> {
 }
 
 /** What the onboarding page needs to know about an org to say what is left to do. */
-export interface OnboardingFacts {
+interface OnboardingFacts {
   readonly marginRulesSet: boolean;
   readonly freelancerConnected: boolean;
   readonly scannerCount: number;
@@ -64,10 +64,9 @@ export interface OnboardingFacts {
   readonly telegramLinked: boolean;
 }
 
-export type OnboardingStepKey =
-  'org' | 'margin' | 'freelancer' | 'scanner' | 'template' | 'telegram';
+type OnboardingStepKey = 'org' | 'margin' | 'freelancer' | 'scanner' | 'template' | 'telegram';
 
-export interface OnboardingStep {
+interface OnboardingStep {
   readonly key: OnboardingStepKey;
   readonly title: string;
   /** Why it matters, in one sentence. */

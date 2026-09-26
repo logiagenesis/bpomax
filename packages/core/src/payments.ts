@@ -11,7 +11,7 @@ import type { FieldError, ValidationResult } from './scanners.js';
 export const PAYMENT_KINDS = ['client', 'supplier', 'platform_fee', 'other_cost'] as const;
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];
 
-export const MAX_PAYMENT_REFERENCE = 200;
+const MAX_PAYMENT_REFERENCE = 200;
 
 /** The SAST calendar day of an instant, as ISO `YYYY-MM-DD` (SAST is UTC+2, with no summer time). */
 export function sastDay(now: Date): string {
@@ -22,7 +22,7 @@ export function directionOf(kind: PaymentKind): 'in' | 'out' {
   return kind === 'client' ? 'in' : 'out';
 }
 
-export interface PaymentInput {
+interface PaymentInput {
   readonly kind: PaymentKind;
   readonly amountMinor: number;
   readonly currency: string;
@@ -158,7 +158,7 @@ export interface StoredPayment {
   readonly amountZarMinor: number | null;
 }
 
-export interface RealisedMargin {
+interface RealisedMargin {
   /** Client payments, in rand. */
   readonly inZarMinor: bigint;
   /** Supplier payments, in rand. */

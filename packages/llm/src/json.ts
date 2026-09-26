@@ -74,7 +74,7 @@ function describe(errors: ErrorObject[] | null | undefined): string[] {
   );
 }
 
-export interface CompleteJsonOptions {
+interface CompleteJsonOptions {
   readonly transport: LlmTransport;
   readonly model: string;
   readonly schema: object;
@@ -88,7 +88,7 @@ export interface CompleteJsonOptions {
   readonly batch?: boolean;
 }
 
-export interface LlmJsonResult<T> {
+interface LlmJsonResult<T> {
   readonly value: T;
   readonly usage: TokenUsage;
   readonly costNanoUsd: number;

@@ -32,7 +32,7 @@ export function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
   };
 }
 
-export interface CostOptions {
+interface CostOptions {
   /** The Batch API is half price on input and output alike. */
   readonly batch?: boolean;
 }

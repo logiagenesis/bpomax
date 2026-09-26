@@ -15,7 +15,7 @@ import type { Queryable } from './client.js';
  * bid, a sourcing post), where the retention job reaches them; the fingerprint still
  * proves what was, or would have been, sent.
  */
-export interface TextFingerprint {
+interface TextFingerprint {
   readonly chars: number;
   readonly sha256: string;
 }
@@ -146,7 +146,7 @@ export async function listEventsForRequest(db: Queryable, requestId: string): Pr
   return rows;
 }
 
-export interface EventActor {
+interface EventActor {
   readonly id: string;
   /** Null when the caller cannot see that user's row; the page then shows the id. */
   readonly name: string | null;

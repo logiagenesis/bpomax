@@ -32,7 +32,7 @@ const METRIC_ACTIONS: Record<PlanMetric, string> = {
   bids_submitted: 'sending bids',
 };
 
-export function isPlanMetric(value: unknown): value is PlanMetric {
+function isPlanMetric(value: unknown): value is PlanMetric {
   return typeof value === 'string' && (PLAN_METRICS as readonly string[]).includes(value);
 }
 
