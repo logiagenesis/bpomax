@@ -90,7 +90,15 @@ export interface ServerOptions {
    * both answering. Absent, the route is not served; `main.ts` always supplies it.
    */
   readonly ready?: () => Promise<{ readonly ready: boolean }>;
+  /** Fastify's `trustProxy` (TRUST_PROXY): how many proxies in front may name the caller. */
+  readonly trustProxy?: boolean | number;
+  /** Overrides the rate limits (ARB-501); the tests use small ones. */
+  readonly rateLimit?: { readonly perMinute?: number; readonly clicksPerMinute?: number };
 }
+
+/** Requests per minute per caller, and for the sign-in-free referral click (ARB-501, D-079). */
+export const RATE_LIMIT_PER_MINUTE = 300;
+export const REFERRAL_CLICKS_PER_MINUTE = 30;
 
 export const CHANNEL_HEADER = 'x-arbitron-channel';
 export const CHANNEL_KEY_HEADER = 'x-arbitron-channel-key';

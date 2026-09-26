@@ -44,6 +44,20 @@ describe('apiConfig', () => {
     expect(result.config.billing.paystack.ok).toBe(false);
   });
 
+  it('reads TRUST_PROXY as a switch or a number of proxies, and refuses anything else', () => {
+    const read = (value: string) => apiConfig({ ...BASE, TRUST_PROXY: value });
+    const one = read('1');
+    expect(one.ok && one.config.trustProxy).toBe(1);
+    const on = read('true');
+    expect(on.ok && on.config.trustProxy).toBe(true);
+    const unset = apiConfig(BASE);
+    expect(unset.ok && unset.config.trustProxy).toBeUndefined();
+    expect(read('everyone')).toEqual({
+      ok: false,
+      problems: ['TRUST_PROXY must be true, false or the number of proxies in front'],
+    });
+  });
+
   it('takes the MCP channel key when it is set', () => {
     const result = apiConfig({ ...BASE, MCP_CHANNEL_KEY: ' k3y ' });
     expect(result.ok && result.config.mcpChannelKey).toBe('k3y');

@@ -103,8 +103,9 @@ export async function approveBid(
 }
 
 /**
- * Anything but sent or already rejected → rejected, with the reason on the bid. The log
- * keeps the reason's fingerprint, not its words (ARB-520, P-02).
+ * Anything but sent or already rejected → rejected, with the reason on the bid; an
+ * approval it replaces is cleared, as a rejected reply's is. The log keeps the reason's
+ * fingerprint, not its words (ARB-520, P-02).
  */
 export async function rejectBid(
   db: Queryable,
@@ -116,7 +117,7 @@ export async function rejectBid(
 ): Promise<BidChange> {
   const { rows } = await db.query<{ status_before: string }>(
     `update proposals p
-        set status = 'rejected', failure_reason = $3
+        set status = 'rejected', failure_reason = $3, approved_by = null, approved_via = null
        from (select id, status::text as status_before from proposals
               where id = $1 and org_id = $2 for update) before
       where p.id = before.id and p.status not in ('submitted', 'rejected')

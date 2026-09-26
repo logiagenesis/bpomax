@@ -19,6 +19,7 @@
     "@arbitron/upwork": "workspace:*",
     "@arbitron/workers": "workspace:*",
     "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.2.0",
     "fastify": "^5.12.5",
     "tsx": "^4.23.15"
   }

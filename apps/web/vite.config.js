@@ -1,6 +1,7 @@
 import process from 'node:process';
 import { URL, fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
+import { contentSecurityPolicy, withPolicy } from './csp.js';
 
 // Static multi-page build: every page is its own HTML file (01 section I).
 // Pages are registered here as they are built (ARB-061).
@@ -16,10 +17,22 @@ export default defineConfig(({ mode }) => {
   // ahead of each page's own script. Every other build leaves it out entirely, so a real
   // deployment cannot fall back to sample data.
   const demo = mode === 'demo';
+  // ARB-501: every built page carries the content security policy (csp.js). Only at
+  // build: the dev server injects its own inline code.
+  const policy = contentSecurityPolicy(
+    demo ? {} : { supabaseUrl: env.SUPABASE_URL, apiUrl: env.API_URL },
+  );
+  /** @type {import('vite').Plugin} */
+  const csp = {
+    name: 'arbitron-csp',
+    apply: 'build',
+    transformIndexHtml: { order: 'post', handler: (html) => withPolicy(html, policy) },
+  };
   return {
     root: 'src',
     plugins: demo
       ? [
+          csp,
           {
             name: 'arbitron-demo',
             // 'pre', so Vite then bundles the injected script like the page's own.
@@ -33,7 +46,7 @@ export default defineConfig(({ mode }) => {
             },
           },
         ]
-      : [],
+      : [csp],
     envPrefix: 'ARBITRON_NONE_',
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.SUPABASE_URL ?? ''),

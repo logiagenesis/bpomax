@@ -57,6 +57,7 @@ const app = buildServer({
   // The FX provider waits on docs/02 B-10; a payment not in rand takes a typed rate.
   fx: null,
   ...(config.mcpChannelKey ? { mcpChannelKey: config.mcpChannelKey } : {}),
+  ...(config.trustProxy !== undefined ? { trustProxy: config.trustProxy } : {}),
   ready: async () => {
     const [database, redis] = await Promise.all([
       within(db.query('select 1'), 2_000, 'the database').then(

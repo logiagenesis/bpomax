@@ -76,16 +76,16 @@ at once and names every such variable, never repeating a value. Each answers `/h
 (the process is up) and `/ready` (the database and Redis answer), and on SIGTERM stops
 taking work, finishes what is running and closes its connections.
 
-| Process | Needs                                                                        | Optional                                                                                                                                                                                                 |
-| ------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API     | `DATABASE_URL`, `REDIS_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_URL`  | `PORT`, `LIVE_MODE`, `MCP_CHANNEL_KEY`, `QUEUE_PREFIX`, and the Freelancer.com, Upwork, Paystack and Stripe settings (each refused with its reason when not set)                                         |
-| Workers | `DATABASE_URL`, `REDIS_URL`                                                  | `PORT`, `LIVE_MODE`, `QUEUE_PREFIX`; `ANTHROPIC_API_KEY` with `LLM_MODEL_SCORE` and `LLM_MODEL_DRAFT` (without them scoring, estimating, drafting, discovery and briefs are off); Freelancer.com; Upwork |
-| Bot     | `DATABASE_URL`, `REDIS_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | `PORT`, `QUEUE_PREFIX`, `TELEGRAM_WEBHOOK_URL` (https, ending `/telegram/webhook`; registered with Telegram on start)                                                                                    |
+| Process | Needs                                                                        | Optional                                                                                                                                                                                                                                                    |
+| ------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API     | `DATABASE_URL`, `REDIS_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_URL`  | `PORT`, `LIVE_MODE`, `MCP_CHANNEL_KEY`, `QUEUE_PREFIX`, `TRUST_PROXY` (true, or the number of proxies in front, so the rate limit counts callers), and the Freelancer.com, Upwork, Paystack and Stripe settings (each refused with its reason when not set) |
+| Workers | `DATABASE_URL`, `REDIS_URL`                                                  | `PORT`, `LIVE_MODE`, `QUEUE_PREFIX`; `ANTHROPIC_API_KEY` with `LLM_MODEL_SCORE` and `LLM_MODEL_DRAFT` (without them scoring, estimating, drafting, discovery and briefs are off); Freelancer.com; Upwork                                                    |
+| Bot     | `DATABASE_URL`, `REDIS_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | `PORT`, `QUEUE_PREFIX`, `TELEGRAM_WEBHOOK_URL` (https, ending `/telegram/webhook`; registered with Telegram on start)                                                                                                                                       |
 
 `DATABASE_URL` is the Postgres connection for a service role: the API narrows each
 request to the signed-in person with row-level security (`withUser`), and the workers
 and the bot act across organisations (D-017). For a hosted Postgres, put the provider's
-`sslmode` in the URL. `PORT`, `QUEUE_PREFIX`, `MCP_CHANNEL_KEY` and `TELEGRAM_WEBHOOK_URL`
+`sslmode` in the URL. `PORT`, `QUEUE_PREFIX`, `MCP_CHANNEL_KEY`, `TRUST_PROXY` and `TELEGRAM_WEBHOOK_URL`
 are not in `.env.example`, which holds exactly docs/01 section J's list. The workers never
 hold the bot token: they queue Telegram notices, and the bot sends them.
 

@@ -194,7 +194,9 @@ describe('approval', () => {
          values ($1, $2, 'out', 'Hello', now(), $3, 'web')`,
         [ORG_A, fixtureId('a', ENTITY.thread), USER_OWNER],
       ),
-    ).rejects.toThrow(/row-level security/i);
+      // Since 0038 a person cannot write a message's sending or approval on insert at all;
+      // the column grant refuses it before row-level security would.
+    ).rejects.toThrow(/row-level security|permission denied/i);
 
     await expect(
       db.query(
