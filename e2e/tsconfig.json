@@ -1,4 +1,10 @@
 {
   "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // The specs run in Node and hand functions to the page (page.evaluate, waitForFunction),
+    // so both Node's types and the browser's are in scope.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
   "include": ["**/*.ts"]
 }

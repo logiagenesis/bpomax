@@ -11,10 +11,14 @@ export default defineConfig({
   testMatch: 'demo.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // One retry in CI, only so a failure records a trace (`trace: 'on-first-retry'`); a
+  // test that passes only on its retry still fails the run (ARB-530, the owner's audit
+  // Q-06, D-084), so a flaky test is fixed rather than hidden.
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github']] : [['list']],
-  use: { baseURL: `http://127.0.0.1:${PORT}` },
+  use: { baseURL: `http://127.0.0.1:${PORT}`, trace: 'on-first-retry' },
   projects: [
     {
       name: 'chromium',

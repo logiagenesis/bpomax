@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "lint": "eslint .",
@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
+    "typecheck:e2e": "tsc -p e2e",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm build:web:e2e && playwright test --config e2e/playwright.config.ts",
@@ -31,13 +32,14 @@
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
+    "@types/node": "^26.6.2",
     "eslint": "^9.39.1",
     "lighthouse": "^13.5.0",
     "prettier": "^3.6.2",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
