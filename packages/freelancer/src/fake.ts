@@ -124,6 +124,18 @@ export interface FakeMessage {
   readonly parent_id?: number | null;
 }
 
+/** A bid placed through the stand-in, in the documented create-bid shape (ARB-511). */
+export interface FakePlacedBid {
+  readonly id: number;
+  readonly project_id: number;
+  readonly bidder_id: number;
+  readonly amount: number;
+  readonly period: number;
+  readonly milestone_percentage: number;
+  readonly description: string | null;
+  readonly submitdate: number;
+}
+
 export interface FakeMember {
   readonly id: number;
   readonly username: string;
@@ -163,6 +175,8 @@ export interface FakeFreelancer {
   readonly createdProjects: readonly FakeCreatedProject[];
   /** Bids arriving on a created project, and who placed them. */
   setBids(projectId: number, bids: readonly FakeBid[]): void;
+  /** Every bid placed through `POST /projects/0.1/bids/`, oldest first (ARB-511). */
+  readonly placedBids: readonly FakePlacedBid[];
   setBidders(bidders: readonly FakeBidder[]): void;
   close(): Promise<void>;
 }
@@ -219,6 +233,7 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
   let currencies: readonly FakeCurrency[] = [];
   let jobs: readonly FakeJob[] = [];
   const createdProjects: FakeCreatedProject[] = [];
+  const placedBids: FakePlacedBid[] = [];
   const bidsByProject = new Map<number, readonly FakeBid[]>();
   let bidders: readonly FakeBidder[] = [];
 
@@ -650,6 +665,71 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
         return;
       }
 
+      // Create a bid, as documented
+      // (https://developers.freelancer.com/docs/use-cases/bidding-on-a-project, "Creating a
+      // Bid"): the five required fields, `description` optional; the answer is the bid.
+      if (request.method === 'POST' && url.pathname === '/api/projects/0.1/bids/') {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        const body = (
+          typeof parsedJson === 'object' && parsedJson !== null ? parsedJson : {}
+        ) as Record<string, unknown>;
+        const required = ['project_id', 'bidder_id', 'amount', 'period', 'milestone_percentage'];
+        if (required.some((key) => typeof body[key] !== 'number') || body.bidder_id !== user.id) {
+          apiError(response, 400, 'Invalid bid details', 'ProjectExceptionCodes.INVALID_BID');
+          return;
+        }
+        const now = Math.floor(Date.now() / 1000);
+        const bid: FakePlacedBid = {
+          id: 33_000 + placedBids.length + 1,
+          project_id: body.project_id as number,
+          bidder_id: user.id,
+          amount: body.amount as number,
+          period: body.period as number,
+          milestone_percentage: body.milestone_percentage as number,
+          description: typeof body.description === 'string' ? body.description : null,
+          submitdate: now,
+        };
+        placedBids.push(bid);
+        json(response, 200, {
+          status: 'success',
+          result: {
+            bidder_id: bid.bidder_id,
+            retracted: false,
+            time_submitted: now,
+            milestone_percentage: bid.milestone_percentage,
+            submitdate: now,
+            period: bid.period,
+            amount: bid.amount,
+            project_id: bid.project_id,
+            id: bid.id,
+            description: bid.description ?? 'A proposal has not yet been provided',
+          },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
+      // List bids, filtered by `projects[]` and `bidders[]`
+      // (https://developers.freelancer.com/docs/projects/bids, "List Bids").
+      if (request.method === 'GET' && url.pathname === '/api/projects/0.1/bids/') {
+        const user = bearer(request);
+        if (!user) return notAuthenticated(response);
+        const projectIds = (queryAll['projects[]'] ?? []).map(Number);
+        const bidderIds = (queryAll['bidders[]'] ?? []).map(Number);
+        const found = placedBids.filter(
+          (bid) =>
+            (projectIds.length === 0 || projectIds.includes(bid.project_id)) &&
+            (bidderIds.length === 0 || bidderIds.includes(bid.bidder_id)),
+        );
+        json(response, 200, {
+          status: 'success',
+          result: { bids: found },
+          request_id: randomBytes(16).toString('hex'),
+        });
+        return;
+      }
+
       const projectBids = /^\/api\/projects\/0\.1\/projects\/(\d+)\/bids\/$/.exec(url.pathname);
       if (request.method === 'GET' && projectBids) {
         const user = bearer(request);
@@ -732,6 +812,7 @@ export async function startFakeFreelancer(options: FakeOptions = {}): Promise<Fa
       jobs = list;
     },
     createdProjects,
+    placedBids,
     setBids(projectId, list) {
       bidsByProject.set(projectId, list);
     },

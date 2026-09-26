@@ -6,6 +6,7 @@
  */
 export * from './affiliates.js';
 export * from './allowance.js';
+export * from './approvals.js';
 export * from './billing.js';
 export * from './briefs.js';
 export * from './client.js';

@@ -1,5 +1,13 @@
 import { canApprove, validateProposalEdit, validateRejection } from '@arbitron/core';
-import { recordEvent, textFingerprint, withUser, type Queryable } from '@arbitron/db';
+import {
+  approveBid,
+  editBid,
+  recordEvent,
+  rejectBid,
+  withUser,
+  type BidChange,
+  type Queryable,
+} from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
   channelOf,
@@ -86,15 +94,16 @@ async function approver(tx: Queryable): Promise<Membership> {
   return me;
 }
 
-function notQueued(status: string): never {
-  throw refuse(
-    409,
-    status === 'approved'
-      ? 'This bid is already approved.'
-      : status === 'submitted'
-        ? 'This bid has already been sent.'
-        : `This bid is ${status}, so it cannot be approved.`,
-  );
+/**
+ * The shared change (packages/db approvals.ts, ARB-512) with the API's own words for the
+ * outcomes the page and its tests know: 404 "no such bid" and the per-action 403.
+ */
+function orRefuse(change: BidChange, action: 'approve' | 'reject' | 'edit'): void {
+  if (change.ok) return;
+  if (change.code === 404) throw refuse(404, 'no such bid');
+  if (change.code === 403)
+    throw refuse(403, `you do not have permission to ${action} bids in this org`);
+  throw refuse(change.code, change.message);
 }
 
 async function approveOne(
@@ -104,26 +113,7 @@ async function approveOne(
   requestId: string,
   via: 'web' | 'mcp' = 'web',
 ): Promise<ProposalRow> {
-  const before = await loadProposal(tx, id);
-  if (!before) throw refuse(404, 'no such bid');
-  if (before.status !== 'queued') notQueued(before.status);
-  // ARB-410: an approval hands the bid to the sender, so a plan with no room says so now.
-  await refuseOverLimit(tx, me.orgId, 'bids_submitted');
-  const { rows } = await tx.query<{ id: string }>(
-    `update proposals set status = 'approved', approved_by = $2, approved_via = $3::approval_channel
-     where id = $1 and status = 'queued' returning id`,
-    [id, me.userId, via],
-  );
-  if (!rows[0]) throw refuse(403, 'you do not have permission to approve bids in this org');
-  await recordEvent(tx, {
-    orgId: me.orgId,
-    type: 'proposal.approved',
-    actorUserId: me.userId,
-    subjectTable: 'proposals',
-    subjectId: id,
-    requestId,
-    payload: { via, amount_minor: Number(before.amount_minor), currency: before.currency },
-  });
+  orRefuse(await approveBid(tx, me, id, via, { requestId }), 'approve');
   return (await loadProposal(tx, id))!;
 }
 
@@ -133,27 +123,9 @@ async function rejectOne(
   id: string,
   reason: string,
   requestId: string,
+  via: 'web' | 'mcp' = 'web',
 ): Promise<ProposalRow> {
-  const before = await loadProposal(tx, id);
-  if (!before) throw refuse(404, 'no such bid');
-  if (before.status === 'submitted') throw refuse(409, 'This bid has already been sent.');
-  if (before.status === 'rejected') throw refuse(409, 'This bid is already rejected.');
-  const { rows } = await tx.query<{ id: string }>(
-    `update proposals set status = 'rejected', failure_reason = $2 where id = $1 returning id`,
-    [id, reason],
-  );
-  if (!rows[0]) throw refuse(403, 'you do not have permission to reject bids in this org');
-  await recordEvent(tx, {
-    orgId: me.orgId,
-    type: 'proposal.rejected',
-    actorUserId: me.userId,
-    subjectTable: 'proposals',
-    subjectId: id,
-    requestId,
-    // The reason is the operator's words about the client's job: on the proposal, with
-    // its fingerprint here (ARB-520, P-02).
-    payload: { via: 'web', reason: textFingerprint(reason), status_before: before.status },
-  });
+  orRefuse(await rejectBid(tx, me, id, reason, via, { requestId }), 'reject');
   return (await loadProposal(tx, id))!;
 }
 
@@ -259,7 +231,7 @@ export function registerProposalRoutes(app: FastifyInstance, options: ServerOpti
     try {
       const proposal = await withUser(options.db, authUserId, async (tx) => {
         const me = await approver(tx);
-        return rejectOne(tx, me, id, validated.value.text, request.id);
+        return rejectOne(tx, me, id, validated.value.text, request.id, channelOf(request));
       });
       return reply.send({ proposal });
     } catch (error) {
@@ -280,26 +252,11 @@ export function registerProposalRoutes(app: FastifyInstance, options: ServerOpti
     try {
       const proposal = await withUser(options.db, authUserId, async (tx) => {
         const me = await approver(tx);
-        const before = await loadProposal(tx, id);
-        if (!before) throw refuse(404, 'no such bid');
-        if (before.status === 'submitted')
-          throw refuse(409, 'This bid has already been sent and cannot be changed.');
         // New words need a new approval: the old one covered the old words (D-033).
-        const { rows } = await tx.query<{ id: string }>(
-          `update proposals set body = $2, status = 'queued', approved_by = null, approved_via = null, failure_reason = null
-           where id = $1 returning id`,
-          [id, text],
+        orRefuse(
+          await editBid(tx, me, id, text, channelOf(request), { requestId: request.id }),
+          'edit',
         );
-        if (!rows[0]) throw refuse(403, 'you do not have permission to edit bids in this org');
-        await recordEvent(tx, {
-          orgId: me.orgId,
-          type: 'proposal.edited',
-          actorUserId: me.userId,
-          subjectTable: 'proposals',
-          subjectId: id,
-          requestId: request.id,
-          payload: { via: 'web', bodyLength: text.length, status_before: before.status },
-        });
         return (await loadProposal(tx, id))!;
       });
       return reply.send({ proposal });
@@ -351,8 +308,8 @@ export function registerProposalRoutes(app: FastifyInstance, options: ServerOpti
       try {
         await withUser(options.db, authUserId, async (tx) => {
           const me = await approver(tx);
-          if (action === 'approve') await approveOne(tx, me, id, request.id);
-          else await rejectOne(tx, me, id, reason, request.id);
+          if (action === 'approve') await approveOne(tx, me, id, request.id, channelOf(request));
+          else await rejectOne(tx, me, id, reason, request.id, channelOf(request));
         });
         if (action === 'approve' && options.enqueue?.submit) {
           await options.enqueue.submit({ proposalId: id, requestId: request.id });

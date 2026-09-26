@@ -4,6 +4,7 @@ import type { Fetch } from '@arbitron/freelancer';
 import type { LlmTransport } from '@arbitron/llm';
 import type { ConnectionOptions, Worker } from 'bullmq';
 import { createAutoReplyProcessor } from './auto-reply.js';
+import { freelancerBidPlacer } from './bid-placer.js';
 import { billingSweepProcessor, scheduleBillingSweep } from './billing-sweep.js';
 import { createBriefBuildProcessor } from './brief-build.js';
 import type { WorkersConfig } from './config.js';
@@ -48,7 +49,11 @@ export interface ComposeOptions {
   readonly prefix?: string;
   /** Marketplace calls; defaults to the global fetch. Tests point it at stand-ins. */
   readonly fetch?: Fetch;
-  /** The platform bid call (ARB-511). Null until it exists: live submission is refused. */
+  /**
+   * The platform bid call. Defaults to the Freelancer.com placer (ARB-511) when
+   * Freelancer.com is configured, and to none (live submission refused) when it is not.
+   * It is reached only through the live gate, which is off by default (D-032).
+   */
   readonly placer?: BidPlacer | null;
   /** Owners' usage alerts by email; null until B-13, with the reason recorded. */
   readonly email?: EmailSender | null;
@@ -129,7 +134,17 @@ export function composeWorkers(options: ComposeOptions): WorkerRuntime {
     submit: createSubmitProcessor({
       db,
       liveMode: config.liveMode,
-      placer: options.placer ?? null,
+      placer:
+        options.placer !== undefined
+          ? options.placer
+          : config.freelancer
+            ? freelancerBidPlacer({
+                db,
+                config: config.freelancer,
+                ...(options.fetch ? { fetch: options.fetch } : {}),
+                ...(options.now ? { now: options.now } : {}),
+              })
+            : null,
       usageAlert,
       ...(options.now ? { now: options.now } : {}),
     }),

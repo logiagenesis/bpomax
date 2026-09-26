@@ -2378,3 +2378,78 @@ Decision:
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925, section 3; POPIA's minimality and
 retention conditions as the T-06 adviser will apply them; Upwork's 24-hour rule (D-066).
+
+## D-077 — ARB-511: the Freelancer.com bid placer, and a crash after the platform accepts
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-511, session …tJv8), on the owner's audit E-04 and E-05
+
+Decision:
+
+- **The calls.** `packages/freelancer/src/bidding.ts` makes the two documented calls:
+  - `POST /projects/0.1/bids/` with `project_id`, `bidder_id`, `amount`, `period`,
+    `milestone_percentage` and `description`, answering `result.id`
+    (developers.freelancer.com, "Bidding on a Project", "Creating a Bid"). Its scopes,
+    `basic` and `fln:project_manage`, are advanced scope 2, already asked for at connect.
+  - `GET /projects/0.1/bids/` filtered by `projects[]` and `bidders[]` (reference "Bids",
+    "List Bids").
+
+  The stand-in answers both in the documented shapes. The list envelope is read
+  defensively, as the docs print none (C-02).
+
+- **The placer.** `freelancerBidPlacer` is the submit worker's `BidPlacer`. The runtime
+  builds it when Freelancer.com is configured, and it is reached only through the live
+  gate, which is off by default (D-032).
+  - It bids as the org's connected account, on the job's platform id.
+  - The amount is in the project's currency units, the documented example's form. A bid
+    in any other currency than the project's is refused for good, since no rate may be
+    assumed.
+  - `milestone_percentage` is the first milestone's share of the total, rounded down to a
+    whole percent, as the documented example is a whole number; a bid without milestones
+    gets 100.
+- **Refusals that cannot change.** A refusal that trying again cannot change (no account,
+  another currency, not a Freelancer.com id) is an `UnrecoverableError`. The submit worker
+  treats it as the last attempt: the proposal is marked failed with the reason, and nothing
+  is retried.
+- **The crash window (E-05).** Before placing, the placer asks the platform for this
+  account's bid on the project. If one exists, it answers with that bid, `reconciled`,
+  instead of placing another. The worker then gives back what this attempt reserved (bid
+  allowance, scanner slot, plan count), because the attempt that died had already taken
+  them for the same bid. A fault test kills the process as it writes the platform's
+  answer down; the next attempt sends nothing, records the one bid, and counts it once.
+  Removing either the lookup or the give-back fails it.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-04 and E-05; docs/01 rule 3 (every
+endpoint cited); D-032.
+
+## D-078 — ARB-512: one approval module for the page, MCP and Telegram
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-512, session …tJv8), on the owner's audit E-06
+
+Decision:
+
+- **One module.** `packages/db/src/approvals.ts` (`approveBid`, `rejectBid`, `editBid`) is
+  the only code that changes a bid's approval. The API routes (single, bulk, edit) and the
+  bot call it, each with its channel; bulk actions and edits now carry `mcp` when made
+  through MCP.
+- **Conditional changes.** Each is one conditional update, naming the states it may move
+  the bid from inside the org. The event is written only when the update took. When it did
+  not, the bid is read to say why: no such bid, already approved, already sent, or not
+  permitted.
+  - approve: from `queued` only.
+  - reject: anything but sent or already rejected.
+  - edit: anything but sent. The bid goes back to `queued`, its approval and failure
+    cleared.
+
+  Before this, the bot read the status and then updated unconditionally, so an approval on
+  the page in between was recorded twice and queued twice, and a bid sent meanwhile could
+  be rejected or rewritten. The bot also skipped the plan check on approval (ARB-410).
+
+- **Roles.** The bot checks the person's role when the Edit or Reject text arrives, not
+  only when the button was pressed.
+- **Tests.** The module's tests force a change between another's read and write, and a
+  bot test does the same through Telegram. It fails on the old bot.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-06; docs/01 section H (approval
+records).
