@@ -1,6 +1,6 @@
 import type { FxQuote, Role } from '@arbitron/core';
 import { isRole } from '@arbitron/core';
-import type { Queryable } from '@arbitron/db';
+import type { PublishedTerms, Queryable } from '@arbitron/db';
 import type { BillingConfig, Fetch as BillingFetch } from '@arbitron/billing';
 import type { Fetch, FreelancerConfigResult } from '@arbitron/freelancer';
 import type { Fetch as UpworkFetch, UpworkConfigResult } from '@arbitron/upwork';
@@ -94,6 +94,13 @@ export interface ServerOptions {
   readonly trustProxy?: boolean | number;
   /** Overrides the rate limits (ARB-501); the tests use small ones. */
   readonly rateLimit?: { readonly perMinute?: number; readonly clicksPerMinute?: number };
+  /**
+   * The approved terms of service on show (ARB-522), read from the web app's
+   * `terms.json` when the API starts (`terms.ts`). Recorded before an org is made, so
+   * `app.create_org` knows the version to hold a new owner to. Absent or null while the
+   * terms are pending: no org can then be made (docs/BLOCKERS.md D-16).
+   */
+  readonly terms?: PublishedTerms | null;
 }
 
 /** Requests per minute per caller, and for the sign-in-free referral click (ARB-501, D-079). */

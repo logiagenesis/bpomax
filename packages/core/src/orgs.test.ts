@@ -4,17 +4,27 @@ import { parseTermsOfService } from './terms.js';
 
 describe('validateNewOrg (ARB-400)', () => {
   it('accepts a name, trims it, and defaults the country to ZA', () => {
-    expect(validateNewOrg({ name: '  Acme Studio  ' })).toEqual({
+    expect(validateNewOrg({ name: '  Acme Studio  ', termsVersion: 'v1' })).toEqual({
       ok: true,
-      value: { name: 'Acme Studio', countryCode: 'ZA' },
+      value: { name: 'Acme Studio', countryCode: 'ZA', termsVersion: 'v1' },
     });
   });
 
   it('upper-cases a two-letter country code', () => {
-    expect(validateNewOrg({ name: 'Acme', countryCode: 'gb' })).toEqual({
+    expect(validateNewOrg({ name: 'Acme', countryCode: 'gb', termsVersion: 'v1' })).toEqual({
       ok: true,
-      value: { name: 'Acme', countryCode: 'GB' },
+      value: { name: 'Acme', countryCode: 'GB', termsVersion: 'v1' },
     });
+  });
+
+  it('needs the terms of service accepted, by the version on show (ARB-522)', () => {
+    for (const termsVersion of [undefined, '', '   ', 7, 'v'.repeat(41)]) {
+      const result = validateNewOrg({ name: 'Acme', termsVersion });
+      expect(result).toEqual({
+        ok: false,
+        errors: [{ field: 'terms', message: 'must be accepted to create an organisation' }],
+      });
+    }
   });
 
   it.each([
@@ -32,7 +42,7 @@ describe('validateNewOrg (ARB-400)', () => {
   });
 
   it('accepts a name of exactly the maximum length', () => {
-    expect(validateNewOrg({ name: 'x'.repeat(ORG_NAME_MAX) }).ok).toBe(true);
+    expect(validateNewOrg({ name: 'x'.repeat(ORG_NAME_MAX), termsVersion: 'v1' }).ok).toBe(true);
   });
 
   it('refuses a body that is not an object', () => {

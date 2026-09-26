@@ -1,7 +1,8 @@
 // @ts-check
-import { validateNewOrg } from '@arbitron/core';
+import { parseTermsOfService, validateNewOrg } from '@arbitron/core';
 import { ApiError, apiGet, apiSend } from './lib/api.js';
 import { clearFieldErrors, showFieldErrors } from './lib/forms.js';
+import { formatDate } from './lib/format.js';
 import { clearReferral, readReferral } from './lib/referral.js';
 import { clearSession, loginUrl, readSession, requireSession, signOut } from './lib/session.js';
 import { runAction } from './lib/ui.js';
@@ -10,6 +11,10 @@ import { runAction } from './lib/ui.js';
  * Onboarding (ARB-400). Someone signed in but in no organisation creates one here
  * (`POST /v1/orgs`) and becomes its owner; a member sees the first steps, each ticked
  * from the org's own rows (`GET /v1/onboarding`), never by hand.
+ *
+ * Making an org means accepting the terms of service on show (ARB-522): the version is
+ * sent with the form, and the database makes the org only for that version (0039).
+ * While the terms are pending the form stays closed (D-16).
  */
 
 /** @param {string} id */
@@ -25,6 +30,8 @@ const form = /** @type {HTMLFormElement} */ (byId('create-org'));
 const nameInput = /** @type {HTMLInputElement} */ (byId('name'));
 const countryInput = /** @type {HTMLInputElement} */ (byId('countryCode'));
 const create = /** @type {HTMLButtonElement} */ (byId('create'));
+const terms = /** @type {HTMLInputElement} */ (byId('terms'));
+const termsLabel = byId('terms-label');
 const stepsSection = byId('steps');
 const summary = byId('steps-summary');
 const list = byId('step-list');
@@ -76,6 +83,55 @@ function renderSteps(data) {
   stepsSection.hidden = false;
 }
 
+/** @type {string | null} the version of the terms on show, once they are approved */
+let termsVersion = null;
+
+/** @param {string} message @param {'warning' | 'error'} [kind] */
+function closeForm(message, kind = 'warning') {
+  for (const control of [nameInput, countryInput, terms, create]) control.disabled = true;
+  status.className = `alert alert--${kind}`;
+  status.textContent = message;
+}
+
+/** The terms the new owner accepts, as the sign-up page reads them. */
+async function loadTerms() {
+  let raw;
+  try {
+    const response = await fetch('./terms.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(String(response.status));
+    raw = await response.json();
+  } catch {
+    closeForm(
+      'The terms of service could not be loaded, so an organisation cannot be created now. Reload to try again.',
+      'error',
+    );
+    return;
+  }
+  const parsed = parseTermsOfService(raw);
+  if (!parsed.ok) {
+    closeForm(
+      'The published terms of service are incomplete, so an organisation cannot be created now.',
+      'error',
+    );
+    return;
+  }
+  if (parsed.value.status === 'pending') {
+    closeForm(
+      'Organisations can be created once the terms of service are published. Until then, an owner can add you to theirs.',
+    );
+    return;
+  }
+  termsVersion = parsed.value.version;
+  const link = document.createElement('a');
+  link.href = './terms.html';
+  link.textContent = 'terms of service';
+  termsLabel.replaceChildren(
+    'I accept the ',
+    link,
+    ` (version ${parsed.value.version}, approved ${formatDate(`${parsed.value.approvedOn}T12:00:00Z`)}) for this organisation`,
+  );
+}
+
 async function load() {
   status.className = '';
   status.textContent = '';
@@ -88,7 +144,8 @@ async function load() {
       who.textContent = session?.user?.email ?? 'Signed in';
       stepsSection.hidden = true;
       form.hidden = false;
-      nameInput.focus();
+      await loadTerms();
+      if (termsVersion) nameInput.focus();
       return;
     }
     status.className = 'alert alert--error';
@@ -98,7 +155,12 @@ async function load() {
 
 form.addEventListener('submit', (event) => {
   event.preventDefault();
-  const parsed = validateNewOrg({ name: nameInput.value, countryCode: countryInput.value });
+  if (!termsVersion) return;
+  const parsed = validateNewOrg({
+    name: nameInput.value,
+    countryCode: countryInput.value,
+    termsVersion: terms.checked ? termsVersion : '',
+  });
   if (!parsed.ok) {
     showFieldErrors(form, parsed.errors);
     status.className = 'alert alert--error';

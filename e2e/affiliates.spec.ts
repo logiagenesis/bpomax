@@ -193,13 +193,27 @@ test.describe('a referral link, from the click to the new organisation', () => {
       },
       'POST /v1/sessions': (_r, route) => route.fulfill({ status: 201, json: me() }),
     });
+    // Terms as an owner might publish them (ARB-522); the wording is a placeholder.
+    await page.route('**/terms.json', (route) =>
+      route.fulfill({
+        json: {
+          status: 'approved',
+          approvedBy: 'Approver name',
+          approvedOn: '2026-10-01',
+          version: 'v1',
+          sections: [{ heading: 'Heading one', paragraphs: ['Paragraph one.'] }],
+        },
+      }),
+    );
     await page.goto('/onboarding.html');
     await page.getByLabel('Organisation name').fill('Referred Co');
+    await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Create organisation' }).click();
     await expectStatus(page, 'Referred Co is created, and you are its owner.');
     expect(captured.find((c) => c.path === '/v1/orgs')?.body).toEqual({
       name: 'Referred Co',
       countryCode: 'ZA',
+      termsVersion: 'v1',
       referral: 'bbbbbbbb-0000-4000-8000-000000000001',
     });
     expect(await page.evaluate(() => localStorage.getItem('arbitron.referral'))).toBeNull();

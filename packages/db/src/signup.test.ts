@@ -8,6 +8,7 @@ import {
   identityRows,
   tenantRows,
 } from './fixtures.js';
+import { recordPublishedTerms } from './terms.js';
 import { createTestDatabase, signIn, signInAsNobody, signOut } from './testing.js';
 
 /**
@@ -28,13 +29,14 @@ const AUTH_NEW = fixtureId('e', ENTITY.authUser);
 const USER_NEW = fixtureId('e', ENTITY.user);
 const AUTH_LATE = fixtureId('f', ENTITY.authUser);
 let newOrg: string;
+/** The terms on show, accepted by whoever makes an org (ARB-522, terms.test.ts). */
+const TERMS = 'v1';
 
 async function createOrg(name: string, country = 'ZA'): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(`select app.create_org($1, $2, $3) as id`, [
-    name,
-    country,
-    'req-signup',
-  ]);
+  const { rows } = await db.query<{ id: string }>(
+    `select app.create_org($1, $2, $3, null, $4) as id`,
+    [name, country, 'req-signup', TERMS],
+  );
   return rows[0]!.id;
 }
 
@@ -44,6 +46,7 @@ beforeAll(async () => {
   for (const row of identityRows('a')) await db.exec(row.sql);
   await db.exec(`update orgs set name = 'Logi-Ink' where id = '${LOGI_INK}'`);
   for (const row of tenantRows(LOGI_INK, 'a', 'a')) await db.exec(row.sql);
+  await recordPublishedTerms(db, { version: TERMS, approvedOn: '2026-10-01' });
 
   // The stranger signs up. Their application user is given the fixture id first, so the
   // fixture rows below can point at it; the trigger then links the identity to it.
@@ -113,7 +116,7 @@ describe('app.create_org', () => {
         subject_id: newOrg,
         request_id: 'req-signup',
         outcome: 'ok',
-        payload: { name: 'New Studio', countryCode: 'GB' },
+        payload: { name: 'New Studio', countryCode: 'GB', termsVersion: 'v1' },
       },
     ]);
   });

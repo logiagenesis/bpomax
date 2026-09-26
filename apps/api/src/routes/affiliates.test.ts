@@ -61,6 +61,7 @@ beforeAll(async () => {
   app = buildServer({
     db,
     now: () => NOW,
+    terms: { version: 'v1', approvedOn: '2026-10-01' },
     authenticate: (request) => {
       const header = (request.headers as Record<string, unknown>)['x-test-auth-user'];
       return typeof header === 'string' ? header : null;
@@ -157,7 +158,7 @@ describe('from the click to a paid subscription', () => {
       method: 'POST',
       url: '/v1/orgs',
       headers: as(AUTH_REFERRED),
-      payload: { name: 'Referred Co', referral: clickId },
+      payload: { name: 'Referred Co', referral: clickId, termsVersion: 'v1' },
     });
     expect(created.statusCode).toBe(201);
     orgId = created.json().org.id;
@@ -176,7 +177,7 @@ describe('from the click to a paid subscription', () => {
       method: 'POST',
       url: '/v1/orgs',
       headers: as(AUTH_LATER),
-      payload: { name: 'Later Co', referral: clickId },
+      payload: { name: 'Later Co', referral: clickId, termsVersion: 'v1' },
     });
     expect(later.statusCode).toBe(201);
     expect((await attribution(clickId)).org_id).toBe(orgId);

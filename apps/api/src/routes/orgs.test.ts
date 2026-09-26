@@ -12,6 +12,7 @@ import { buildServer } from '../server.js';
  */
 let db: PGlite;
 let app: FastifyInstance;
+let pending: FastifyInstance;
 const LOGI_INK = fixtureId('a', ENTITY.org);
 const AUTH_LOGI_INK = fixtureId('a', ENTITY.authUser);
 const AUTH_NEW = fixtureId('e', ENTITY.authUser);
@@ -19,8 +20,15 @@ const AUTH_OTHER = fixtureId('f', ENTITY.authUser);
 const AUTH_GHOST = fixtureId('9', ENTITY.authUser);
 
 const as = (authUser: string) => ({ 'x-test-auth-user': authUser });
-const create = (who: string, payload: unknown) =>
-  app.inject({ method: 'POST', url: '/v1/orgs', headers: as(who), payload: payload as object });
+/** The terms on show (ARB-522); each form below accepts them unless it says otherwise. */
+const TERMS = { version: 'v1', approvedOn: '2026-10-01' };
+const create = (who: string, payload: Record<string, unknown>, server = () => app) =>
+  server().inject({
+    method: 'POST',
+    url: '/v1/orgs',
+    headers: as(who),
+    payload: { termsVersion: TERMS.version, ...payload },
+  });
 const onboarding = (who: string) =>
   app.inject({ method: 'GET', url: '/v1/onboarding', headers: as(who) });
 
@@ -37,18 +45,20 @@ beforeAll(async () => {
   ] as const) {
     await db.query(`insert into auth.users (id, email) values ($1, $2)`, [auth, email]);
   }
-  app = buildServer({
-    db,
-    authenticate: (request) => {
-      const header = (request.headers as Record<string, unknown>)['x-test-auth-user'];
-      return typeof header === 'string' ? header : null;
-    },
-  });
+  const authenticate = (request: { headers: unknown }) => {
+    const header = (request.headers as Record<string, unknown>)['x-test-auth-user'];
+    return typeof header === 'string' ? header : null;
+  };
+  app = buildServer({ db, authenticate, terms: TERMS });
   await app.ready();
+  // The same API before the owner publishes the terms (D-16).
+  pending = buildServer({ db, authenticate, terms: null });
+  await pending.ready();
 }, 60_000);
 
 afterAll(async () => {
   await app.close();
+  await pending.close();
   await db.close();
 });
 
@@ -76,6 +86,32 @@ describe('before an org exists', () => {
     const { rows } = await db.query<{ count: number }>(`select count(*)::int as count from orgs`);
     expect(rows[0]?.count).toBe(1);
   });
+
+  it('while the terms of service are pending, no org can be made (ARB-522)', async () => {
+    const response = await create(AUTH_NEW, { name: 'Too Soon' }, () => pending);
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error).toMatch(/until the terms of service are published/);
+    const { rows } = await db.query<{ count: number }>(`select count(*)::int as count from orgs`);
+    expect(rows[0]?.count).toBe(1);
+  });
+
+  it('needs the terms accepted, and the version on show (ARB-522)', async () => {
+    const none = await create(AUTH_NEW, { name: 'No Terms', termsVersion: undefined });
+    expect(none.statusCode).toBe(422);
+    expect(none.json().errors).toEqual([
+      { field: 'terms', message: 'must be accepted to create an organisation' },
+    ]);
+    const stale = await create(AUTH_NEW, { name: 'Old Terms', termsVersion: 'v0' });
+    expect(stale.statusCode).toBe(422);
+    expect(stale.json().errors).toEqual([
+      {
+        field: 'terms',
+        message: 'must be the terms of service on show now: reload the page and accept them',
+      },
+    ]);
+    const { rows } = await db.query<{ count: number }>(`select count(*)::int as count from orgs`);
+    expect(rows[0]?.count).toBe(1);
+  });
 });
 
 describe('POST /v1/orgs', () => {
@@ -97,6 +133,13 @@ describe('POST /v1/orgs', () => {
     );
     expect(events.rows).toHaveLength(1);
     expect(events.rows[0]?.request_id).toBeTruthy();
+
+    const accepted = await db.query<{ version: string }>(
+      `select a.version from terms_acceptances a join users u on u.id = a.user_id
+        where u.auth_user_id = $1`,
+      [AUTH_NEW],
+    );
+    expect(accepted.rows).toEqual([{ version: 'v1' }]);
   });
 
   it('refuses a second org for the same person', async () => {

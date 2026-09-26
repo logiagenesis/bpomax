@@ -2,6 +2,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from './fixtures.js';
 import { loadOrgPlan, planUsage, releasePlanUsage, reservePlanUsage } from './plan-usage.js';
+import { recordPublishedTerms } from './terms.js';
 import { createTestDatabase, signIn, signOut } from './testing.js';
 
 /**
@@ -218,8 +219,11 @@ describe('who may write the counters and the plan (RLS)', () => {
     await db.query(`insert into auth.users (id, email) values ($1, 'late@example.test')`, [
       fixtureId('f', ENTITY.authUser),
     ]);
+    await recordPublishedTerms(db, { version: 'v1', approvedOn: '2026-10-01' });
     await signIn(db, fixtureId('f', ENTITY.authUser));
-    const { rows } = await db.query<{ id: string }>(`select app.create_org('Late Co') as id`);
+    const { rows } = await db.query<{ id: string }>(
+      `select app.create_org('Late Co', 'ZA', null, null, 'v1') as id`,
+    );
     await signOut(db);
     expect((await loadOrgPlan(db, rows[0]!.id))?.orgPlan.kind).toBe('none');
   });

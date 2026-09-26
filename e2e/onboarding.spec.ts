@@ -34,8 +34,18 @@ function steps(done: string[] = ['org']) {
 
 const NO_ORG = { status: 403, json: { error: 'you are not a member of an organisation' } };
 
+/** Terms as an owner might publish them; the wording is a placeholder (D-068). */
+const APPROVED_TERMS = {
+  status: 'approved',
+  approvedBy: 'Approver name',
+  approvedOn: '2026-10-01',
+  version: 'v1',
+  sections: [{ heading: 'Heading one', paragraphs: ['Paragraph one.'] }],
+};
+
 test.beforeEach(async ({ page }) => {
   await signedIn(page);
+  await page.route('**/terms.json', (route) => route.fulfill({ json: APPROVED_TERMS }));
 });
 
 test('someone in no organisation is offered the form, and nothing else', async ({ page }) => {
@@ -71,7 +81,63 @@ test('checks the form before sending it', async ({ page }) => {
   await expect(page.locator('#countryCode-error')).toHaveText(
     'Must be a two-letter ISO 3166-1 code, such as ZA.',
   );
+  await expect(page.locator('#terms-error')).toHaveText(
+    'Must be accepted to create an organisation.',
+  );
   expect(captured.filter((c) => c.path === '/v1/orgs')).toHaveLength(0);
+});
+
+test('names the terms on show, and stays closed while they are pending (ARB-522)', async ({
+  page,
+}) => {
+  await serveApi(page, { 'GET /v1/onboarding': (_r, route) => route.fulfill(NO_ORG) });
+  await page.goto('/onboarding.html');
+  await expect(page.locator('#terms-label')).toHaveText(
+    'I accept the terms of service (version v1, approved 01/10/2026) for this organisation',
+  );
+  await expect(page.locator('#terms-label a')).toHaveAttribute('href', './terms.html');
+
+  await page.route('**/terms.json', (route) => route.fulfill({ json: { status: 'pending' } }));
+  const captured = await serveApi(page, {
+    'GET /v1/onboarding': (_r, route) => route.fulfill(NO_ORG),
+  });
+  await page.reload();
+  await expect(page.locator('#status')).toHaveText(
+    'Organisations can be created once the terms of service are published. Until then, an owner can add you to theirs.',
+  );
+  for (const control of ['Organisation name', 'Country']) {
+    await expect(page.getByLabel(control)).toBeDisabled();
+  }
+  await expect(page.getByRole('button', { name: 'Create organisation' })).toBeDisabled();
+  expect(captured.filter((c) => c.path === '/v1/orgs')).toHaveLength(0);
+});
+
+test('terms that changed since the page loaded are named against the checkbox', async ({
+  page,
+}) => {
+  await serveApi(page, {
+    'GET /v1/onboarding': (_r, route) => route.fulfill(NO_ORG),
+    'POST /v1/orgs': (_r, route) =>
+      route.fulfill({
+        status: 422,
+        json: {
+          error: 'the request was not accepted',
+          errors: [
+            {
+              field: 'terms',
+              message: 'must be the terms of service on show now: reload the page and accept them',
+            },
+          ],
+        },
+      }),
+  });
+  await page.goto('/onboarding.html');
+  await page.getByLabel('Organisation name').fill('New Studio');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Create organisation' }).click();
+  await expect(page.locator('#terms-error')).toHaveText(
+    'Must be the terms of service on show now: reload the page and accept them.',
+  );
 });
 
 test('creates the organisation, records the sign-in, then lists the steps', async ({ page }) => {
@@ -95,12 +161,13 @@ test('creates the organisation, records the sign-in, then lists the steps', asyn
   await page.goto('/onboarding.html');
   await page.getByLabel('Organisation name').fill('  New Studio ');
   await page.getByLabel('Country').fill('za');
+  await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Create organisation' }).click();
   await expect(page.locator('#status')).toHaveText('New Studio is created, and you are its owner.');
 
   const create = captured.find((c) => c.path === '/v1/orgs');
   expect(create?.method).toBe('POST');
-  expect(create?.body).toEqual({ name: 'New Studio', countryCode: 'ZA' });
+  expect(create?.body).toEqual({ name: 'New Studio', countryCode: 'ZA', termsVersion: 'v1' });
   expect(create?.auth).toBe('Bearer e2e-access-token');
   expect(captured.some((c) => c.path === '/v1/sessions' && c.method === 'POST')).toBe(true);
 
@@ -120,6 +187,7 @@ test('a refusal from the API is shown as it is', async ({ page }) => {
   });
   await page.goto('/onboarding.html');
   await page.getByLabel('Organisation name').fill('Another');
+  await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Create organisation' }).click();
   await expect(page.locator('#status')).toHaveText(
     'You are already a member of an organisation. Sign in to use it.',
