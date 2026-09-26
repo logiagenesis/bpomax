@@ -61,3 +61,11 @@ ARB-410: an approval, single or bulk, is refused with 402 and the plan's own wor
 the plan has no room to send another bid this month; the bid stays waiting (test "a plan
 with no room to send refuses the approval in its own words (ARB-410)"; the API side in
 `apps/api/src/routes/usage.test.ts`).
+
+ARB-513: a bid's price in rand is shown with VAT at the org's rate (`/v1/me`'s
+`org.vatPct`, the settings page's VAT field) and without it: `R2 300,00 incl. 15% VAT
+(R2 000,00 excl.)`. A rate of 0 shows the price as stored, as does a price in another
+currency. The estimated cost and the margin are not prices and are shown as stored. The
+Approve dialog names the amount that will be sent to the marketplace, as sent (test
+"with VAT at 15%, a rand price shows with VAT and without; the approval names the amount
+sent (ARB-513)"; the arithmetic, worked by hand, in `packages/core/src/vat.test.ts`; D-082).

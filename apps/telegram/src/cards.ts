@@ -1,4 +1,10 @@
-import { convertMinor, formatMoney, formatPercent, type FxQuote } from '@arbitron/core';
+import {
+  convertMinor,
+  formatMoney,
+  formatPercent,
+  formatPrice,
+  type FxQuote,
+} from '@arbitron/core';
 import type { Queryable } from '@arbitron/db';
 import type { TelegramButton } from './api.js';
 
@@ -16,6 +22,8 @@ export interface Card {
   readonly verdict: string | null;
   readonly amountMinor: number;
   readonly currency: string;
+  /** The org's VAT rate: a rand price is shown with VAT at it (ARB-513, D-082). */
+  readonly vatPct?: string | null;
   readonly deliveryDays: number;
   readonly milestoneCount: number;
   readonly estimate: {
@@ -38,6 +46,7 @@ interface CardRow {
   title: string;
   amount_minor: string;
   currency: string;
+  vat_pct: string | null;
   delivery_days: number;
   milestones: unknown[];
   body: string;
@@ -57,9 +66,11 @@ export async function loadCard(db: Queryable, proposalId: string): Promise<Card 
     `select p.id, p.status, j.title, p.amount_minor::text, p.currency, p.delivery_days, p.milestones, p.body,
             s.score, s.verdict::text as verdict,
             e.expected_minor::text, e.currency as estimate_currency, e.method::text as method,
-            m.margin_minor::text, m.margin_pct::text, m.currency as margin_currency, m.fx_rate_used::text
+            m.margin_minor::text, m.margin_pct::text, m.currency as margin_currency, m.fx_rate_used::text,
+            st.vat_pct::text as vat_pct
      from proposals p
      join jobs j on j.id = p.job_id
+     left join settings st on st.org_id = p.org_id
      left join lateral (
        select score, verdict from job_scores where job_id = p.job_id order by created_at desc limit 1
      ) s on true
@@ -78,6 +89,7 @@ export async function loadCard(db: Queryable, proposalId: string): Promise<Card 
     verdict: row.verdict,
     amountMinor: Number(row.amount_minor),
     currency: row.currency,
+    vatPct: row.vat_pct,
     deliveryDays: row.delivery_days,
     milestoneCount: Array.isArray(row.milestones) ? row.milestones.length : 0,
     estimate:
@@ -134,7 +146,7 @@ export function renderCard(card: Card): string {
     `Bid for approval — ${card.status}`,
     card.jobTitle,
     `Score: ${card.score === null ? 'not scored' : `${String(card.score)} (${card.verdict ?? '?'})`}`,
-    `Price: ${formatMoney(card.amountMinor, card.currency)} · ${String(card.deliveryDays)} days${unit}`,
+    `Price: ${formatPrice(card.amountMinor, card.currency, card.vatPct)} · ${String(card.deliveryDays)} days${unit}`,
     `Estimated cost: ${
       card.estimate
         ? `${formatMoney(card.estimate.expectedMinor, card.estimate.currency)} (${METHOD_WORDS[card.estimate.method] ?? card.estimate.method})`

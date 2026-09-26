@@ -1,6 +1,7 @@
 // @ts-check
 import {
   canApprove,
+  formatPrice,
   MAX_REJECTION_REASON_LENGTH,
   validateMessageDraft,
   validateProposalEdit,
@@ -86,6 +87,9 @@ const empty = byId('empty');
 const paused = byId('paused');
 
 let mayApprove = false;
+/** The org's VAT rate: a rand price is shown with VAT at it (ARB-513, D-082). */
+/** @type {string | null | undefined} */
+let vatPct = null;
 /** @type {Proposal[]} */
 let shown = [];
 
@@ -184,7 +188,7 @@ function card(p) {
   figures.append(
     ...figure(
       'Price',
-      `${formatMoney(BigInt(p.amount_minor), p.currency)} · ${String(p.delivery_days)} days · ${String(p.milestones.length)} milestone${p.milestones.length === 1 ? '' : 's'}`,
+      `${formatPrice(BigInt(p.amount_minor), p.currency, vatPct)} · ${String(p.delivery_days)} days · ${String(p.milestones.length)} milestone${p.milestones.length === 1 ? '' : 's'}`,
     ),
     ...figure(
       'Score',
@@ -761,5 +765,6 @@ if (wanted && [...stateSelect.options].some((option) => option.value === wanted)
 void mountShell().then((me) => {
   if (!me) return;
   mayApprove = canApprove(me.role);
+  vatPct = me.org.vatPct;
   void load(applyButton);
 });

@@ -23,7 +23,9 @@ export function me(role: Role = 'owner') {
       fullName: 'Ayanda Nkosi',
       telegramLinked: false,
     },
-    org: { id: ORG, name: 'Logi-Ink', baseCurrency: 'ZAR' },
+    // An org VAT does not apply to (rate 0), so rand prices read as stored; the VAT
+    // tests (ARB-513) answer /v1/me with 15.
+    org: { id: ORG, name: 'Logi-Ink', baseCurrency: 'ZAR', vatPct: '0.000' },
     role,
   };
 }

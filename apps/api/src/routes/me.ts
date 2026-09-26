@@ -16,7 +16,7 @@ export function describeMembership(me: Membership) {
       fullName: me.fullName,
       telegramLinked: me.telegramLinked,
     },
-    org: { id: me.orgId, name: me.orgName, baseCurrency: me.baseCurrency },
+    org: { id: me.orgId, name: me.orgName, baseCurrency: me.baseCurrency, vatPct: me.vatPct },
     role: me.role,
   };
 }

@@ -3,6 +3,7 @@ import {
   expectEveryLinkGoesSomewhere,
   expectNoSidewaysScroll,
   expectStatus,
+  me,
   serveApi,
   signedIn,
   type Captured,
@@ -102,6 +103,8 @@ interface Options {
   order?: ReturnType<typeof order>;
   /** The API's answer to recording a payment, in place of the stand-in's own. */
   payment?: { status: number; json: unknown };
+  /** ARB-513: the org's VAT rate, as /v1/me gives it. */
+  vatPct?: string;
 }
 
 /** The job's payments as GET /v1/pipeline-items/:id/payments gives them (ARB-311). */
@@ -316,6 +319,12 @@ async function serve(page: Page, options: Options = {}): Promise<Captured[]> {
           milestones: current.milestones.map((m, i) => (i === index ? { ...m, status } : m)),
         });
         return route.fulfill({ json: { order: current } });
+      },
+      'GET /v1/me': (_req, route) => {
+        const base = me(options.role);
+        return route.fulfill({
+          json: { ...base, org: { ...base.org, vatPct: options.vatPct ?? base.org.vatPct } },
+        });
       },
     },
     { role: options.role },
@@ -567,6 +576,22 @@ async function openPayments(page: Page, options: Options = {}): Promise<Captured
   );
   return requests;
 }
+
+test('with VAT at 15%, a deal value shows with VAT and without; payments and margin as recorded (ARB-513)', async ({
+  page,
+}) => {
+  await openPayments(page, { vatPct: '15.000' });
+  // R15 000,00 × 1,15 = R17 250,00.
+  await expect(page.locator(`#board article[data-id="${WON}"]`)).toContainText(
+    'R17 250,00 incl. 15% VAT (R15 000,00 excl.)',
+  );
+  await expect(page.locator('#payments-meta')).toContainText(
+    'Value R17 250,00 incl. 15% VAT (R15 000,00 excl.) · stage won',
+  );
+  const figures = page.locator('#margin-figures');
+  await expect(figures).toContainText('Client payments (in)R16 625,00');
+  await expect(figures).toContainText('Realised marginR13 625,00');
+});
 
 test('Payments shows realised margin as the API works it, and each payment with its rate and rand figure', async ({
   page,

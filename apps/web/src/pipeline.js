@@ -1,6 +1,7 @@
 // @ts-check
 import {
   canWrite,
+  formatPrice,
   minorToCsvAmount,
   parseAmountText,
   reconcileMilestones,
@@ -188,6 +189,9 @@ const MILESTONE_WORDS = /** @type {Record<string, string>} */ ({
 });
 
 let mayWrite = false;
+/** The org's VAT rate: a rand deal value is shown with VAT at it (ARB-513, D-082). */
+/** @type {string | null | undefined} */
+let vatPct = null;
 /** @type {Order | null} */
 let current = null;
 /** @type {string[]} */
@@ -232,10 +236,10 @@ function itemCard(item) {
   facts.className = 'field__hint';
   facts.textContent = [
     item.valueMinor && item.currency
-      ? formatMoney(BigInt(item.valueMinor), item.currency)
+      ? formatPrice(BigInt(item.valueMinor), item.currency, vatPct)
       : 'No value recorded',
     item.retainer && item.retainerMonthlyMinor && item.currency
-      ? `retainer ${formatMoney(BigInt(item.retainerMonthlyMinor), item.currency)} a month`
+      ? `retainer ${formatPrice(BigInt(item.retainerMonthlyMinor), item.currency, vatPct)} a month`
       : null,
     `since ${formatDate(item.stageChangedAt)}`,
     item.deliveryStatus
@@ -921,7 +925,7 @@ function renderPayments(view) {
   paymentsTitle.textContent = `Payments for ${item.jobTitle}`;
   paymentsMeta.textContent = [
     item.valueMinor && item.currency
-      ? `Value ${formatMoney(BigInt(item.valueMinor), item.currency)}`
+      ? `Value ${formatPrice(BigInt(item.valueMinor), item.currency, vatPct)}`
       : 'No value recorded',
     `stage ${STAGE_WORDS[item.stage]?.toLowerCase() ?? item.stage}`,
     view.paidInFull ? 'paid in full' : 'not paid in full',
@@ -1170,6 +1174,7 @@ const linked = new URLSearchParams(location.search).get('order');
 void mountShell().then(async (me) => {
   if (!me) return;
   mayWrite = canWrite(me.role);
+  vatPct = me.org.vatPct;
   await load(refreshButton);
   if (linked) {
     try {
