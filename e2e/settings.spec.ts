@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import {
   expectEveryLinkGoesSomewhere,
@@ -141,6 +142,7 @@ async function open(page: Page, options: Options = {}) {
   ];
   const role = options.role ?? 'owner';
   let autoReply: Record<string, unknown> | null = options.autoReply ?? null;
+  let clientErased = false;
   const toNumeric = (value: unknown) =>
     value === null || value === '' ? null : Number(value).toFixed(3);
 
@@ -277,6 +279,56 @@ async function open(page: Page, options: Options = {}) {
           status: 201,
           json: { code: 'ABCD2345', expiresAt: '2026-09-22T10:10:00Z' },
         }),
+      // ARB-521: as apps/api/src/routes/privacy.ts answers.
+      'GET /v1/privacy/me': (_request, route) =>
+        route.fulfill({
+          body: JSON.stringify({ person: { id: 'aaaaaaaa-0000-4000-8000-000000000002' } }),
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'content-disposition': 'attachment; filename="my-data-20260922.json"',
+            'access-control-expose-headers': 'content-disposition',
+          },
+        }),
+      'GET /v1/privacy/clients/:handle': (request, route) => {
+        const handle = decodeURIComponent(request.path.split('/').at(-1)!);
+        const held = handle.toLowerCase() === 'acme_ltd' && !clientErased;
+        return route.fulfill({
+          body: JSON.stringify({
+            handle,
+            threads: held ? [{ id: 't1' }] : [],
+            messages: [],
+            discoverySessions: [],
+            briefs: [],
+          }),
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'content-disposition': 'attachment; filename="client-data-20260922.json"',
+            'access-control-expose-headers': 'content-disposition',
+          },
+        });
+      },
+      'POST /v1/privacy/clients/:handle/erase': (request, route) => {
+        const handle = decodeURIComponent(request.path.split('/').at(-2)!);
+        const confirm = String((request.body as { confirm?: unknown }).confirm ?? '');
+        if (confirm.trim().toLowerCase() !== handle.toLowerCase()) {
+          return route.fulfill({
+            status: 422,
+            json: {
+              error: 'the request was not accepted',
+              errors: [{ field: 'confirm', message: "must be the client's handle again" }],
+            },
+          });
+        }
+        const held = handle.toLowerCase() === 'acme_ltd' && !clientErased;
+        clientErased = true;
+        return route.fulfill({
+          json: {
+            erased: held
+              ? { threads: 1, messages: 3, discoverySessions: 1 }
+              : { threads: 0, messages: 0, discoverySessions: 0 },
+          },
+        });
+      },
     },
     { role },
   );
@@ -774,6 +826,100 @@ test('a saved auto-reply is shown as it is, off or on', async ({ page }) => {
   await expect(page.getByLabel('Send after nobody has replied for (minutes)')).toHaveValue('45');
   await expect(page.getByLabel('Auto-reply on')).not.toBeChecked();
   await expect(page.locator('#auto-reply-state')).toHaveText('Off. Nothing is sent automatically.');
+});
+
+test('anyone downloads their own data as a file', async ({ page }) => {
+  const requests = await open(page, { role: 'viewer' });
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download my data' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('my-data-20260922.json');
+  expect(JSON.parse(readFileSync(await download.path(), 'utf8'))).toEqual({
+    person: { id: 'aaaaaaaa-0000-4000-8000-000000000002' },
+  });
+  await expectStatus(page, 'Your data is downloaded.');
+  expect(posts(requests, 'GET', '/v1/privacy/me')).toHaveLength(1);
+});
+
+test("a client's data is the owner's to answer: the others see why they cannot", async ({
+  page,
+}) => {
+  await open(page, { role: 'operator' });
+  for (const name of ['Download their data', 'Erase their conversations']) {
+    const button = page.getByRole('button', { name });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute(
+      'title',
+      "Only an owner answers a client's request for their data.",
+    );
+  }
+  await expect(page.getByRole('button', { name: 'Download my data' })).toBeEnabled();
+});
+
+test("an owner downloads a client's data by handle, and is told when nothing is held", async ({
+  page,
+}) => {
+  const requests = await open(page);
+  await page.getByRole('button', { name: 'Download their data' }).click();
+  await expect(page.locator('#client-handle-error')).toHaveText("Enter the client's handle.");
+  expect(posts(requests, 'GET', /\/v1\/privacy\/clients\//)).toHaveLength(0);
+
+  await page.getByLabel("Client's marketplace handle").fill('Acme_Ltd');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download their data' }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe('client-data-20260922.json');
+  await expect(page.locator('#client-data-out')).toHaveText(
+    '1 conversation with Acme_Ltd downloaded.',
+  );
+
+  await page.getByLabel("Client's marketplace handle").fill('nobody here');
+  await page.getByRole('button', { name: 'Download their data' }).click();
+  await expect(page.locator('#client-data-out')).toHaveText(
+    'Nothing is held about nobody here in this organisation.',
+  );
+  expect(posts(requests, 'GET', /\/v1\/privacy\/clients\//).map((r) => r.path)).toEqual([
+    '/v1/privacy/clients/Acme_Ltd',
+    '/v1/privacy/clients/nobody%20here',
+  ]);
+});
+
+test('erasing asks for the handle again; cancelling or a mismatch erases nothing', async ({
+  page,
+}) => {
+  const requests = await open(page);
+  await page.getByLabel("Client's marketplace handle").fill('acme_ltd');
+  const erase = page.getByRole('button', { name: 'Erase their conversations' });
+
+  await erase.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText("Erase acme_ltd's conversations?");
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toBeHidden();
+  expect(posts(requests, 'POST', /\/erase$/)).toHaveLength(0);
+
+  await erase.click();
+  await dialog.getByLabel('Type acme_ltd again to erase. It cannot be undone.').fill('acme');
+  await dialog.getByRole('button', { name: 'Erase' }).click();
+  await expectStatus(page, 'The handle typed again did not match. Nothing was erased.');
+  await expect(page.locator('#status')).toHaveClass(/alert--error/);
+
+  await erase.click();
+  await dialog.getByLabel('Type acme_ltd again to erase. It cannot be undone.').fill('ACME_LTD');
+  await dialog.getByRole('button', { name: 'Erase' }).click();
+  await expectStatus(page, 'Erased 3 messages in 1 conversation with acme_ltd.');
+  const sent = posts(requests, 'POST', /\/erase$/);
+  expect(sent.map((r) => [r.path, r.body])).toEqual([
+    ['/v1/privacy/clients/acme_ltd/erase', { confirm: 'acme' }],
+    ['/v1/privacy/clients/acme_ltd/erase', { confirm: 'ACME_LTD' }],
+  ]);
+
+  await erase.click();
+  await dialog.getByLabel('Type acme_ltd again to erase. It cannot be undone.').fill('acme_ltd');
+  await dialog.getByRole('button', { name: 'Erase' }).click();
+  await expectStatus(
+    page,
+    'Nothing is held about acme_ltd in this organisation; nothing was erased.',
+  );
 });
 
 test('reload asks again', async ({ page }) => {

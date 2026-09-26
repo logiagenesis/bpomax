@@ -2506,3 +2506,53 @@ Decision:
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 2; docs/01 rule 3 (no
 undocumented call).
+
+## D-080 — ARB-521: a person's data export; a client's export and erasure; delete designed, not built
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-521, session …tJv8), on the owner's audit P-03, P-04
+
+- **A person's export.** `GET /v1/privacy/me` (settings, "Download my data") gives
+  anyone signed in a JSON file: their account, their memberships, and every row naming
+  them. "Every row" is found from the database, every foreign key to `users`, so a table
+  added later is in the export the day it exists. A test holds the list of ten columns
+  and fails when an eleventh appears, so the new column gets looked at. For the audit
+  log the whole event is given (its payload holds ids and fingerprints, never client
+  text, D-076); for the other rows, their id and time, not what else they hold about
+  others. It runs as the person, so row-level security keeps it to their own rows in
+  organisations they still belong to. Rows about them in an organisation they have left
+  are answered by the operator on request with `exportPerson` under the service role.
+  The API records `privacy.exported` in their name, since a viewer may not write to the
+  audit log.
+- **A client's export and erasure.** Marketplace clients are the other people held
+  here. An owner, and only an owner, finds a client by the handle they use on the
+  marketplace (in any letter case, in their own organisation only). The owner can
+  download what is held about them, or erase their conversations.
+  - Erasure redacts as the retention job does (D-040): the handle, the messages' words
+    and the discovery answers go. The rows stay, so the pipeline, payments and the audit
+    log stay whole. Briefs are kept, as retention keeps them, until T-06 says otherwise.
+  - It cannot be undone, so the handle is typed again, and the API checks it (`confirm`).
+  - The owner check runs as the person. The redaction runs under the API's own
+    connection, because 0038 does not grant the redaction columns to a signed-in person.
+  - The audit log records `privacy.exported` and `privacy.erased` with counts only,
+    never the handle, which is what was erased.
+- **Deleting a person or an organisation: designed, not built (D-17).** The audit log is
+  append-only (0007), and its `org_id` cascades, so deleting an org fails as built. The
+  three designs the owner chooses between, with the T-06 adviser:
+  1. Delete the org's audit log with the org. This needs 0007's append-only rule lifted
+     for that one cascade.
+  2. Keep it for a stated period, then delete it.
+  3. Keep it, with the person's details removed: `actor_user_id` set to null and the
+     `users` row anonymised, not deleted.
+
+  Which fields count as personal is the adviser's to say. ARB-521 stays
+  BUILT-PENDING-CREDENTIALS on that decision.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 P-03 and P-04. POPIA section 23
+lets a data subject ask a responsible party what personal information it holds about
+them. Section 24 lets them ask for it to be corrected or deleted where it is inaccurate,
+irrelevant, excessive, out of date, incomplete, misleading or unlawfully obtained, or no
+longer authorised to be kept (https://popia.co.za/section-24-correction-of-personal-information/).
+The owner, as the responsible party, answers; these give them the means. What counts as
+a valid request, and the reply's wording, are the owner's and the T-06 adviser's; no
+legal wording is written here (docs/01 rule 3).

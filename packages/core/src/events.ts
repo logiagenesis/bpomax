@@ -80,6 +80,9 @@ export const EVENT_TYPES = [
   'external.call',
   'external.blocked_by_live_mode',
   'retention.purged',
+  // data subject access and erasure (ARB-521)
+  'privacy.exported',
+  'privacy.erased',
   // plans and usage (ARB-410)
   'usage.threshold_reached',
   'usage.alert_sent',

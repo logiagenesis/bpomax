@@ -9,7 +9,8 @@ import {
   validatePlanRecord,
   validateScanner,
 } from '@arbitron/core';
-import { apiGet, apiSend } from './lib/api.js';
+import { ApiError, apiGet, apiGetFile, apiSend } from './lib/api.js';
+import { downloadBlob } from './lib/download.js';
 import {
   clearFieldErrors,
   minorToRandInput,
@@ -18,7 +19,7 @@ import {
 } from './lib/forms.js';
 import { formatDate, formatDateTime, formatMoney, formatPercent } from './lib/format.js';
 import { backToLoginOn401, mountShell } from './lib/shell.js';
-import { confirmAction, runAction } from './lib/ui.js';
+import { confirmAction, promptText, runAction } from './lib/ui.js';
 
 /**
  * Settings (ARB-061, docs/01 section I). Each section is its own form against its own
@@ -1077,6 +1078,122 @@ autoReplyForm.addEventListener('submit', async (event) => {
   );
 });
 
+// ----------------------------------------------------------------- your data
+const exportMe = /** @type {HTMLButtonElement} */ (byId('export-me'));
+const clientForm = /** @type {HTMLFormElement} */ (byId('client-data-form'));
+const clientHandle = /** @type {HTMLInputElement} */ (byId('client-handle'));
+const exportClient = /** @type {HTMLButtonElement} */ (byId('export-client'));
+const eraseClient = /** @type {HTMLButtonElement} */ (byId('erase-client'));
+const clientOut = byId('client-data-out');
+
+const today = () => new Date().toISOString().slice(0, 10).replaceAll('-', '');
+
+/**
+ * ARB-521: anyone downloads their own data; only an owner answers a client's request
+ * (D-080), so the client controls are disabled for the others with the reason.
+ */
+function renderDataRole() {
+  const owner = role === 'owner';
+  for (const control of [clientHandle, exportClient, eraseClient]) {
+    control.disabled = !owner;
+    control.title = owner ? '' : "Only an owner answers a client's request for their data.";
+  }
+}
+
+/** The handle as typed, or null with the field marked. */
+function readHandle() {
+  clearFieldErrors(clientForm);
+  const handle = clientHandle.value.trim();
+  if (handle) return handle;
+  showFieldErrors(
+    clientForm,
+    [{ field: 'handle', message: "enter the client's handle" }],
+    'client-',
+  );
+  return null;
+}
+
+exportMe.addEventListener('click', () => {
+  void runAction(
+    exportMe,
+    status,
+    async () => {
+      try {
+        const file = await apiGetFile('/v1/privacy/me');
+        downloadBlob(file.filename ?? `my-data-${today()}.json`, file.blob);
+      } catch (e) {
+        bail(e);
+      }
+    },
+    { success: 'Your data is downloaded.' },
+  );
+});
+
+clientForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const handle = readHandle();
+  if (!handle) return;
+  void runAction(
+    exportClient,
+    status,
+    async () => {
+      try {
+        const file = await apiGetFile(`/v1/privacy/clients/${encodeURIComponent(handle)}`);
+        downloadBlob(file.filename ?? `client-data-${today()}.json`, file.blob);
+        const data = /** @type {{ threads: unknown[] }} */ (JSON.parse(await file.blob.text()));
+        clientOut.textContent =
+          data.threads.length === 0
+            ? `Nothing is held about ${handle} in this organisation.`
+            : `${String(data.threads.length)} conversation${data.threads.length === 1 ? '' : 's'} with ${handle} downloaded.`;
+      } catch (e) {
+        bail(e);
+      }
+    },
+    { success: "The client's data is downloaded." },
+  );
+});
+
+eraseClient.addEventListener('click', () => {
+  const handle = readHandle();
+  if (!handle) return;
+  void (async () => {
+    const confirm = await promptText({
+      title: `Erase ${handle}'s conversations?`,
+      label: `Type ${handle} again to erase. It cannot be undone.`,
+      confirmLabel: 'Erase',
+      danger: true,
+      maxLength: 100,
+    });
+    if (confirm === null) return;
+    await runAction(
+      eraseClient,
+      status,
+      async () => {
+        try {
+          const body = /** @type {{ erased: { threads: number, messages: number } }} */ (
+            await apiSend('POST', `/v1/privacy/clients/${encodeURIComponent(handle)}/erase`, {
+              confirm,
+            })
+          );
+          return body.erased;
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 422) {
+            throw new Error('The handle typed again did not match. Nothing was erased.');
+          }
+          bail(e);
+          return { threads: 0, messages: 0 };
+        }
+      },
+      {
+        success: ({ threads, messages }) =>
+          threads === 0
+            ? `Nothing is held about ${handle} in this organisation; nothing was erased.`
+            : `Erased ${String(messages)} message${messages === 1 ? '' : 's'} in ${String(threads)} conversation${threads === 1 ? '' : 's'} with ${handle}.`,
+      },
+    );
+  })();
+});
+
 // --------------------------------------------------------------------- load
 async function load() {
   await runAction(
@@ -1105,6 +1222,7 @@ async function load() {
         if (!canWrite(role)) linkCode.title = 'Your role cannot link Telegram.';
         const autoReply = /** @type {{ autoReply: any }} */ (await apiGet('/v1/auto-reply'));
         renderAutoReply(autoReply.autoReply);
+        renderDataRole();
         await loadUsage();
         await loadScanners();
         await loadBands();
