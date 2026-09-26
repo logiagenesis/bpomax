@@ -2582,3 +2582,26 @@ Decided by: Claude Code (ARB-522, session …tJv8), on the owner's audit P-07, P
 - **What is kept from sign-up.** Sign-up keeps its own checkbox and still records the
   version in the person's Supabase metadata. The acceptance that counts is the one made
   when the org is made, because that is when the owner takes the terms on for the org.
+- **P-07, the data inventory.** `docs/privacy-data-inventory.md` now lists every store of
+  personal information:
+  - the tables, by whom they are about;
+  - the audit log's payloads;
+  - Redis;
+  - who receives what, including the model, Telegram, the payment providers and the
+    operator's MCP client;
+  - what removes each item today, and what nothing removes yet.
+
+  Every row was read from the migrations and the code that writes or sends it.
+
+  Three facts were corrected:
+  - Tokens are in Supabase Vault, not pgsodium (0017).
+  - `jobs.client_country` and `client_rating` exist but nothing fills them.
+  - `users.full_name` exists but nothing fills it.
+
+  The adviser's questions grew from six to eight:
+  - the audit log for a person who asks to be erased (D-17);
+  - whether the notice must say a client's message goes to the model and to the
+    operator's Telegram.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 P-07 and P-08; D-068 (no legal
+wording is written by the build).
