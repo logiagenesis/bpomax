@@ -10,8 +10,8 @@ Mark each item done by writing the answer or "DONE dd/mm/yyyy" in the Answer col
 
 | # | Item | Type | Blocks | What to do | Answer |
 |---|---|---|---|---|---|
-| B-01 | GitHub organisation/account `logiagenesis` accessible from the machine running Claude Code | HARD | Start | Install GitHub CLI (https://cli.github.com), run `gh auth login`, confirm `gh auth status` shows logiagenesis access | |
-| B-02 | Claude Code installed and signed in | HARD | Start | Install per https://docs.claude.com/en/docs/claude-code/overview | |
+| B-01 | GitHub organisation/account `logiagenesis` accessible from the machine running Claude Code | HARD | Start | Install GitHub CLI (https://cli.github.com), run `gh auth login`, confirm `gh auth status` shows logiagenesis access | Done, evidently: the build pushes to logiagenesis/bpomax and opens and merges its pull requests there, through the session's GitHub connection rather than the `gh` CLI (recorded by Claude Code, ARB-540, 26/09/2026) |
+| B-02 | Claude Code installed and signed in | HARD | Start | Install per https://docs.claude.com/en/docs/claude-code/overview | Done, evidently: the whole build, every commit and pull request on the board, is Claude Code's work (recorded by Claude Code, ARB-540, 26/09/2026) |
 | B-03 | Freelancer.com developer app (client ID, client secret, redirect URI) | HARD | ARB-020 | Register at https://developers.freelancer.com. Record the scopes granted. Create both a sandbox app and a live app if the portal separates them | |
 | B-04 | Freelancer.com sandbox test accounts (one freelancer, one employer) | HARD | ARB-020 onward | Create at https://www.freelancer-sandbox.com | |
 | B-05 | Which live Freelancer.com account will be connected (Logi-Ink company account or personal) and confirmation it is ID-verified | HARD | Live mode | Decide and verify in account settings | |

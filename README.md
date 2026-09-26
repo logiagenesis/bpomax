@@ -191,18 +191,22 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome pnpm test:e2e
 ## Layout
 
 ```
-apps/web         Vite static multi-page front end, vanilla JS ES modules
-apps/api         Fastify API
-apps/mcp         MCP server: the operator's tools over the API (ARB-330)
-apps/workers     BullMQ workers
-apps/telegram    Telegram webhook bot
-packages/core    Margin maths, scoring schemas, taxonomy, brief schema
-packages/db      Supabase migrations, seed data, generated types
-packages/llm     Provider-agnostic LLM client and prompt templates
-docs/            Specification, project board, audit protocol, blockers
-brand-assets/    Owner-supplied brand images (docs/03-IMAGE-GENERATION.md)
-tests/           Repository-level tests
-e2e/             Playwright end-to-end tests
+apps/web            Vite static multi-page front end, vanilla JS ES modules (22 pages);
+                    src/demo/ is the in-browser stand-in of a demo build (D-043)
+apps/api            Fastify API
+apps/mcp            MCP server: the operator's tools over the API (ARB-330)
+apps/workers        BullMQ workers
+apps/telegram       Telegram webhook bot
+packages/core       Margin maths, scoring schemas, taxonomy, brief schema, VAT, bands
+packages/db         Supabase migrations, seed data, generated types
+packages/llm        Provider-agnostic LLM client and prompt templates
+packages/freelancer Freelancer.com: OAuth, projects, messaging, bidding (every call cited)
+packages/upwork     Upwork, read only: OAuth and job search (every call cited)
+packages/billing    Paystack and Stripe checkout and webhooks (every call cited)
+packages/email      Owners' alert emails; a stand-in until a provider is chosen (B-13)
+docs/               Specification, project board, audit protocol, blockers
+tests/              Repository-level tests
+e2e/                Playwright end-to-end tests and Lighthouse
 ```
 
 ## Deploy
