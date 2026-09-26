@@ -56,3 +56,8 @@ Page-level: no session → login with `next`; 401 → login; no horizontal scrol
 `?order=` opens the order. Rule 6: the stage select is labelled and the Move and Open
 buttons follow it in reading order; Enter opens an order — "the controls are labelled and
 reached by keyboard; Enter opens the order".
+
+ARB-513: a job's value and retainer in rand are shown with VAT at the org's rate and
+without it, on the board and in Payments. Payments and the realised margin are what was
+recorded and are shown as recorded (test "with VAT at 15%, a deal value shows with VAT
+and without; payments and margin as recorded (ARB-513)"; D-082).

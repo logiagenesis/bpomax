@@ -3,6 +3,7 @@ import {
   expectEveryLinkGoesSomewhere,
   expectNoSidewaysScroll,
   expectStatus,
+  me,
   serveApi,
   signedIn,
   type Role,
@@ -104,6 +105,8 @@ async function open(
     posts?: ReturnType<typeof sourcingPost>[];
     /** ARB-410: the API refuses approvals, as it does when the plan has no room. */
     approveRefusal?: { status: number; error: string };
+    /** ARB-513: the org's VAT rate, as /v1/me gives it. */
+    vatPct?: string;
   } = {},
 ) {
   const replies = options.replies ?? [];
@@ -229,6 +232,12 @@ async function open(
         row.status = 'queued';
         return route.fulfill({ json: { proposal: row } });
       },
+      'GET /v1/me': (_request, route) => {
+        const base = me(options.role);
+        return route.fulfill({
+          json: { ...base, org: { ...base.org, vatPct: options.vatPct ?? base.org.vatPct } },
+        });
+      },
     },
     { role: options.role },
   );
@@ -302,6 +311,24 @@ test('the filter shows other states, including sent bids with their approver, an
   await page.getByLabel('Show', { exact: true }).selectOption('all');
   await page.getByRole('button', { name: 'Apply filter' }).click();
   await expectStatus(page, 'Loaded 3 bids.');
+});
+
+test('with VAT at 15%, a rand price shows with VAT and without; the approval names the amount sent (ARB-513)', async ({
+  page,
+}) => {
+  await open(page, { vatPct: '15.000' });
+  const cards = page.locator('#list article');
+  // R2 000,00 × 1,15 = R2 300,00.
+  await expect(cards.nth(0)).toContainText(
+    'R2 300,00 incl. 15% VAT (R2 000,00 excl.) · 7 days · 2 milestones',
+  );
+  // Costs and margins are not prices: as stored.
+  await expect(cards.nth(0)).toContainText('R1 500,00 (rate card)');
+  await expect(cards.nth(0)).toContainText('R750,00 (37,500%) · R750,00 in rand');
+  // A price in dollars is shown as stored.
+  await expect(cards.nth(1)).toContainText('USD 1 500,00 · 7 days · 0 milestones');
+  await page.getByRole('button', { name: 'Approve Shopify store rebuild' }).click();
+  await expect(page.getByRole('dialog')).toContainText('R2 000,00 for “Shopify store rebuild”');
 });
 
 test('approve asks for confirmation; cancelling sends nothing', async ({ page }) => {

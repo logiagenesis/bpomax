@@ -155,7 +155,7 @@ describe('GET /v1/me and POST /v1/sessions', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       user: { id: USER_A, email: 'a@example.test', fullName: 'User a', telegramLinked: true },
-      org: { id: ORG_A, name: 'Org a', baseCurrency: 'ZAR' },
+      org: { id: ORG_A, name: 'Org a', baseCurrency: 'ZAR', vatPct: '15.000' },
       role: 'owner',
     });
     const viewer = await app.inject({ method: 'GET', url: '/v1/me', headers: as(AUTH_VIEWER) });

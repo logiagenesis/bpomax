@@ -721,7 +721,12 @@ function me(store) {
       fullName: 'Demo Owner',
       telegramLinked: store.telegramLinked,
     },
-    org: { id: ORG, name: 'Logi-Ink (demo)', baseCurrency: 'ZAR' },
+    org: {
+      id: ORG,
+      name: 'Logi-Ink (demo)',
+      baseCurrency: 'ZAR',
+      vatPct: store.settings?.vatPct ?? '15.000',
+    },
     role: 'owner',
   };
 }

@@ -12,7 +12,7 @@ import { clearSession, loginUrl, requireSession, signOut } from './session.js';
  * means the person is in no organisation yet, and the page goes to onboarding.
  *
  * @typedef {{ user: { id: string, email: string | null, fullName: string | null, telegramLinked: boolean },
- *             org: { id: string, name: string, baseCurrency: string },
+ *             org: { id: string, name: string, baseCurrency: string, vatPct?: string | null },
  *             role: 'owner' | 'operator' | 'viewer' }} Me
  * @returns {Promise<Me | null>}
  */

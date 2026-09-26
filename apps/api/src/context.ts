@@ -169,6 +169,8 @@ export interface Membership {
   readonly orgId: string;
   readonly orgName: string;
   readonly baseCurrency: string;
+  /** `settings.vat_pct` as text (`"15.000"`): rand prices are shown with VAT at it (ARB-513). */
+  readonly vatPct: string | null;
   readonly role: Role;
 }
 
@@ -186,13 +188,16 @@ export async function currentMembership(tx: Queryable): Promise<Membership | nul
     org_id: string;
     org_name: string;
     base_currency: string;
+    vat_pct: string | null;
     role: string;
   }>(
     `select u.id as user_id, u.email, u.full_name, u.telegram_chat_id,
-            m.org_id, o.name as org_name, o.base_currency, m.role::text as role
+            m.org_id, o.name as org_name, o.base_currency, s.vat_pct::text as vat_pct,
+            m.role::text as role
      from memberships m
      join users u on u.id = m.user_id
      join orgs o on o.id = m.org_id
+     left join settings s on s.org_id = m.org_id
      where m.user_id = app.current_user_id()
      order by (m.role = 'owner') desc, (m.role = 'operator') desc, m.created_at
      limit 1`,
@@ -207,6 +212,7 @@ export async function currentMembership(tx: Queryable): Promise<Membership | nul
     orgId: row.org_id,
     orgName: row.org_name,
     baseCurrency: row.base_currency,
+    vatPct: row.vat_pct,
     role: row.role,
   };
 }

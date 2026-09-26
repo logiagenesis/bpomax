@@ -57,4 +57,5 @@ export * from './submitting.js';
 export * from './suppliers.js';
 export * from './templates.js';
 export * from './terms.js';
+export * from './vat.js';
 export const PACKAGE_NAME = '@arbitron/core';

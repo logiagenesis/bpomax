@@ -267,7 +267,8 @@ describe('/queue and the approval card', () => {
         'Bid for approval — queued',
         'Job card',
         'Score: 78 (go)',
-        'Price: R4 500,00 · 7 days · 2 milestones',
+        // The org's VAT rate, 15%: R4 500,00 × 1,15 = R5 175,00 (ARB-513).
+        'Price: R5 175,00 incl. 15% VAT (R4 500,00 excl.) · 7 days · 2 milestones',
         'Estimated cost: R2 500,00 (rate card)',
         'Projected margin: R1 550,00 (34,4%)',
         '',

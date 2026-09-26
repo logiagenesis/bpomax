@@ -2605,3 +2605,33 @@ Decided by: Claude Code (ARB-522, session …tJv8), on the owner's audit P-07, P
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 P-07 and P-08; D-068 (no legal
 wording is written by the build).
+
+## D-082 — ARB-513: rand prices shown to the operator with VAT, beside the price without it
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-513, session …tJv8), on the owner's audit E-07 (docs/01
+section G: "all ZAR prices shown to the operator VAT-inclusive at 15% where VAT applies")
+
+- **What is a price.** The amounts the org charges a client in rand: a bid's amount, a
+  deal's value, a monthly retainer. They are stored as the margin engine priced them,
+  without VAT. VAT is nowhere in the margin rule, and the bid is placed on the
+  marketplace at that amount.
+- **What is not a price.** Estimated costs, supplier quotes, margins and recorded
+  payments are shown as stored. Adding VAT to a margin or a payment already made would
+  misstate it.
+- **How a price is shown.** `R2 300,00 incl. 15% VAT (R2 000,00 excl.)`, on the
+  approvals page, the pipeline board, the payments panel and the Telegram bid card.
+  - The rate is the org's `settings.vat_pct`: 15 unless changed. `/v1/me` now carries it
+    as `org.vatPct`.
+  - A rate of 0 is how an org says VAT does not apply to it: prices then show as stored.
+  - A price in another currency is shown as stored.
+  - The Approve dialog names the amount that will leave, as it leaves.
+- **The arithmetic.** It is `packages/core`'s `withVat`, in whole cents, with the rate
+  read as thousandths of a percent and rounded half away from zero. It is tested with
+  hand-worked figures (R999,99 at 15% is R1 149,99).
+- **Not decided here.** Whether VAT goes on top of a marketplace bid, which clients it
+  applies to, and whether a recorded payment includes it are the owner's questions for
+  their accountant (docs/BLOCKERS.md D-20). No tax rule is invented.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-07; docs/01 rule 3 (no invented
+figures or rules).
