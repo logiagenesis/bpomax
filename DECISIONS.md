@@ -2774,3 +2774,43 @@ Decided by: Claude Code (ARB-531, session …tJv8), on the owner's audit Q-09
   tests and the 320 end-to-end tests pass unchanged.
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 Q-09.
+
+## D-086 — ARB-540: the docs match the tree
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-540, session …tJv8), on the owner's audit section 5 (D-A to
+D-H)
+
+- **D-A, D-H.** `docs/HANDOFF.md` is rewritten for the end of Phase 5. The old
+  statements are gone: "nothing to build", "PR #34 merges next", "the host's start script
+  binds them", and the hourly routine. It now gives the board count, the owner's list
+  with the ticket each item unblocks, the audit's launch gate as it stands, and the
+  exact next step.
+- **D-B.** ARB-015, 044, 050 and 070 are where the audit wanted them. The engineering
+  their rows lacked is built:
+  - ARB-510 (D-075): entry points and composition;
+  - ARB-511 and ARB-512 (D-077, D-078): the placer, the crash window, approvals;
+  - ARB-500 (D-074): the link-code takeover;
+  - ARB-520 (D-076): retention.
+
+  What each row still waits on is only what its BLOCKERS entry names. D-036 now applies
+  as written.
+
+- **D-C.** BLOCKERS C-01 no longer says "all 16 migrations". There are 39 today (0001 to
+  0039), applied on every push.
+- **D-D.** BLOCKERS has rows for S-01 and P-01 (fixed, as defects), D-17 (P-03, delete),
+  D-18 (the Freelancer.com multi-tenant terms), and D-19 to D-22 from this phase.
+- **D-E.** The README's layout now matches the tree:
+  - it no longer lists a `brand-assets/` folder, which does not exist (the assets are
+    the owner's, docs/03);
+  - it names the email, billing, freelancer and upwork packages;
+  - it counts the web app's 22 pages.
+- **D-F.** docs/02 B-01 and B-02 are answered from evidence and marked as recorded by
+  the build: every commit and pull request on the board is Claude Code's, pushed to and
+  merged in `logiagenesis/bpomax`.
+- **D-G.** The repository is public: the GitHub API reports `"visibility": "public"`,
+  read 26/09/2026. docs/01 rule 1 asks for a private one, and D-001 changed only its
+  name. Visibility is a repository setting and the owner's call, so it is recorded as
+  BLOCKERS D-22, not changed by the build.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 5.
