@@ -2282,3 +2282,52 @@ Decision:
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 2; docs/01 section I (the
 link code is the person's); docs/05 section 4.
+
+## D-075 — ARB-510: three start commands, a Postgres pool in PGlite's shapes, the bot sends the workers' notices
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-510, session …tJv8), on the owner's audit E-01, E-02, E-03
+
+Decision:
+
+- **Start.** `pnpm --filter @arbitron/{api,workers,telegram} start` runs `tsx src/main.ts`
+  (tsx is now a runtime dependency of each app, as it already ran the MCP server). Each
+  process reads its environment in its own `config.ts` through the shared `EnvProblems`
+  (apps/workers/src/env.ts): a required variable missing or malformed stops it with exit
+  code 1 and every problem named, never repeating a value. Required: the API needs
+  DATABASE_URL, REDIS_URL, SUPABASE_URL, SUPABASE_ANON_KEY and APP_URL; the workers
+  DATABASE_URL and REDIS_URL; the bot those two with TELEGRAM_BOT_TOKEN and
+  TELEGRAM_WEBHOOK_SECRET. Redis is required by the API so an approval can never again be
+  saved with no job made (E-02). LIVE_MODE is `true` or `false` exactly; anything else
+  stops the process.
+- **Features off, not failures.** Without ANTHROPIC_API_KEY and the two models, the workers
+  start without the five model queues (score, estimate, draft-bid, discovery, brief-build)
+  and say so at start and on `/ready` (E-03's "flag scoring and drafting off"); a model
+  named but not in the price table stops the process instead (ARB-031's rule). Freelancer.com,
+  Upwork and billing are read as before and refuse with their reason. The FX provider (B-10),
+  the email provider (B-13) and the bid placer (ARB-511) are null; each already has its
+  refusal path.
+- **Database.** `createPool` (packages/db/src/pool.ts, node-postgres 8.23) implements the same
+  `Queryable` as PGlite and answers in PGlite's shapes, because every other test runs on
+  PGlite: bigint as a number, date at midnight UTC, interval as text, affected rows as
+  `affectedRows`. `pool.test.ts` holds the two side by side on 19 types against a real
+  Postgres 16, which CI now runs as a service for it and for the process tests.
+- **Composition.** `composeWorkers` (apps/workers/src/compose.ts) is the one place every
+  processor is built, fed the queues it feeds, and every schedule is created; `main.ts` and
+  the slice test both use it. `apiEnqueue` binds the API's `Enqueue` to real queues.
+- **Telegram notices.** A new `notify` queue carries the workers' Telegram notices (the
+  inbound card, the reprice breach card, a new bid's approval card, the usage alert text);
+  the bot process's `notify` worker sends them. So only the bot process holds the bot token,
+  and the workers need no dependency on the bot package. The approval card on a new draft
+  (`notifyQueued`, written for ARB-050, never called until now) is pushed this way.
+- **Health.** Each process answers `/health` (up) and `/ready` (the database and Redis
+  answer within 2 seconds). On SIGTERM or SIGINT each stops taking work, finishes what is
+  running, closes its connections and exits 0; after 25 seconds it exits 1.
+- **Logs.** One JSON line per event on stdout. The API and bot log a request as its method,
+  path and id only: a query string or header can carry a token or an OAuth code.
+- **Outside section J.** `PORT`, `QUEUE_PREFIX` (one Redis for several environments),
+  `MCP_CHANNEL_KEY` (D-074) and `TELEGRAM_WEBHOOK_URL` are documented in the README, not
+  `.env.example`, which the test holds to docs/01 section J.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925, section 1 (E-01 to E-03), and its
+launch gate ("API, workers and bot start and fail closed").

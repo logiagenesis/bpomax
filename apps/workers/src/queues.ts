@@ -22,11 +22,13 @@ export const QUEUE_NAMES = [
   'price-refresh',
   'rollup',
   // Not in section E: the scheduled retention run ARB-015 asks for (D-039), the
-  // approved-message sender ARB-122 asks for (D-048), and ARB-420's daily billing sweep
-  // (D-070).
+  // approved-message sender ARB-122 asks for (D-048), ARB-420's daily billing sweep
+  // (D-070), and the Telegram notices the bot process sends for the workers (ARB-510,
+  // D-075), so only the bot holds the bot token.
   'retention',
   'send-message',
   'billing',
+  'notify',
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];

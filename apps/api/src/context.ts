@@ -85,6 +85,11 @@ export interface ServerOptions {
    * carries this key; unset, no request can claim the MCP channel (ARB-500, S-06).
    */
   readonly mcpChannelKey?: string;
+  /**
+   * `GET /ready` (ARB-510): whether the API can do its work now, the database and Redis
+   * both answering. Absent, the route is not served; `main.ts` always supplies it.
+   */
+  readonly ready?: () => Promise<{ readonly ready: boolean }>;
 }
 
 export const CHANNEL_HEADER = 'x-arbitron-channel';

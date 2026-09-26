@@ -45,6 +45,12 @@ export interface DraftDeps {
   readonly model: string;
   /** ARB-410: the 80 % and 100 % alerts (`createUsageAlert`). */
   readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
+  /**
+   * Told of each bid drafted for approval, after it is saved (ARB-510): the Telegram card
+   * is pushed to the org's approvers (the bot's `notifyQueued`, through the notify queue).
+   * A failure here does not undo the draft; the bid still waits in /queue and on the page.
+   */
+  readonly onQueued?: ((proposalId: string) => Promise<unknown>) | null;
 }
 
 export type DraftResult =
@@ -393,6 +399,7 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
     return id;
   });
 
+  if (deps.onQueued) await deps.onQueued(proposalId).catch(() => undefined);
   return { status: 'drafted', proposalId };
 }
 

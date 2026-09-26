@@ -200,9 +200,20 @@ describe('a draft', () => {
     const requestId = randomUUID();
     const transport = new ScriptedTransport([reply({ ids: [ownWork] })]);
 
-    const result = await draftBid({ db, transport, model: MODEL }, { jobId, requestId });
+    const told: string[] = [];
+    const result = await draftBid(
+      {
+        db,
+        transport,
+        model: MODEL,
+        onQueued: (proposalId) => Promise.resolve(told.push(proposalId)),
+      },
+      { jobId, requestId },
+    );
     expect(result).toMatchObject({ status: 'drafted' });
     if (result.status !== 'drafted') return;
+    // ARB-510: the approvers are told, once the bid is saved.
+    expect(told).toEqual([result.proposalId]);
 
     const [proposal] = await proposalFor(evaluationId);
     expect(proposal).toMatchObject({

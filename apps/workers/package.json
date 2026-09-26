@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "start": "tsx src/main.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,7 +18,8 @@
     "@arbitron/freelancer": "workspace:*",
     "@arbitron/llm": "workspace:*",
     "@arbitron/upwork": "workspace:*",
-    "bullmq": "^5.81.5"
+    "bullmq": "^5.81.5",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
