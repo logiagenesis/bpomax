@@ -1,4 +1,10 @@
-import { insertBriefVersion, listEvents, lockBrief, putPlatformTokens } from '@arbitron/db';
+import {
+  insertBriefVersion,
+  listEvents,
+  lockBrief,
+  putPlatformTokens,
+  textFingerprint,
+} from '@arbitron/db';
 import { ENTITY, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import { exchangeCode, freelancerConfig, type FreelancerConfig } from '@arbitron/freelancer';
@@ -189,8 +195,9 @@ describe('posting an approved Freelancer.com post', () => {
     const blocked = await listEvents(db, { type: 'external.blocked_by_live_mode' });
     // Hand-worked: R8 000,00 to R12 000,00 is 8000 to 12000 in the currency's units.
     expect(blocked[0]?.payload).toMatchObject({
+      // The words are on the post; the log keeps their fingerprint (ARB-520, P-02).
       wouldSend: {
-        title: 'Shopify: An online shop',
+        title: textFingerprint('Shopify: An online shop'),
         currency: 'ZAR',
         budget: { minimum: 8000, maximum: 12000 },
         skill: 'Shopify',

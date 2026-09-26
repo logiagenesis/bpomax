@@ -1,4 +1,4 @@
-import { listEvents } from '@arbitron/db';
+import { listEvents, textFingerprint } from '@arbitron/db';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
@@ -549,8 +549,10 @@ describe('proposals', () => {
       failure_reason: 'Budget too low for the scope',
     });
     const events = await listEvents(db, { type: 'proposal.rejected' });
+    // The reason is on the bid; the log keeps its fingerprint (ARB-520, P-02).
+    expect(JSON.stringify(events[0]?.payload)).not.toContain('Budget too low');
     expect(events[0]?.payload).toMatchObject({
-      reason: 'Budget too low for the scope',
+      reason: textFingerprint('Budget too low for the scope'),
       via: 'web',
     });
     const again = await app.inject({

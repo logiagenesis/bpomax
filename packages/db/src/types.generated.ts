@@ -1744,6 +1744,7 @@ export type Database = {
           job_id: string;
           margin_evaluation_id: string | null;
           milestones: Json;
+          operator_notes: string | null;
           org_id: string;
           platform_ref: string | null;
           status: Database['public']['Enums']['proposal_status'];
@@ -1764,6 +1765,7 @@ export type Database = {
           job_id: string;
           margin_evaluation_id?: string | null;
           milestones?: Json;
+          operator_notes?: string | null;
           org_id: string;
           platform_ref?: string | null;
           status?: Database['public']['Enums']['proposal_status'];
@@ -1784,6 +1786,7 @@ export type Database = {
           job_id?: string;
           margin_evaluation_id?: string | null;
           milestones?: Json;
+          operator_notes?: string | null;
           org_id?: string;
           platform_ref?: string | null;
           status?: Database['public']['Enums']['proposal_status'];

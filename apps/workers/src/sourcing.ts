@@ -1,5 +1,5 @@
 import { liveGate, minorToCsvAmount, toMinor } from '@arbitron/core';
-import { recordEvent, type Queryable } from '@arbitron/db';
+import { recordEvent, textFingerprint, type Queryable } from '@arbitron/db';
 import {
   AccountNotConnectedError,
   FreelancerError,
@@ -234,8 +234,8 @@ export async function postSourcingProject(
         closedBy: gate.closedBy,
         wouldSend: {
           call: CREATE_PROJECT_CALL,
-          title: post.title,
-          description: post.body,
+          title: textFingerprint(post.title),
+          description: textFingerprint(post.body),
           currency: post.currency,
           budget: { minimum: units(low, post.currency), maximum: units(high, post.currency) },
           skill: post.category_name,
@@ -298,11 +298,8 @@ export async function postSourcingProject(
       `update sourcing_posts set status = 'posted', external_id = $2, posted_at = $3, failure_reason = null where id = $1`,
       [post.id, created.id, now.toISOString()],
     );
-    await note('ok', {
-      external_id: created.id,
-      title_as_created: created.title,
-      seo_url: created.seoUrl,
-    });
+    // The platform's echo of the title and its slug stay out of the log (P-02).
+    await note('ok', { external_id: created.id });
     return { status: 'posted', externalId: created.id };
   } catch (error) {
     if (!(error instanceof FreelancerError)) throw error;

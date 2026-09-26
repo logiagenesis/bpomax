@@ -360,6 +360,7 @@ export async function pollInbox(
   let syncedTo: Date | null = account.inbox_synced_to ? new Date(account.inbox_synced_to) : null;
   await inTransaction(db, async (tx) => {
     const threadIds = new Map<string, string>();
+    const handles = new Map<string, string | null>();
     for (const thread of threads) {
       const job = thread.contextId
         ? await tx.query<{ id: string }>(
@@ -368,17 +369,22 @@ export async function pollInbox(
           )
         : null;
       const handle = clientHandle(thread, users, account.external_user_id);
+      // A thread is the org's own (0037, the owner's audit P-06). A thread the retention
+      // job has redacted keeps its handle removed: listing it again is not a reason to
+      // hold the client's name again (P-05); a new message is, below.
       const upserted = await tx.query<ThreadRow>(
         `insert into threads (org_id, job_id, platform, external_thread_id, client_handle)
          values ($1, $2, 'freelancer', $3, $4)
-         on conflict (platform, external_thread_id) do update
+         on conflict (org_id, platform, external_thread_id) do update
            set job_id = coalesce(threads.job_id, excluded.job_id),
-               client_handle = coalesce(excluded.client_handle, threads.client_handle)
+               client_handle = case when threads.redacted_at is not null then null
+                                    else coalesce(excluded.client_handle, threads.client_handle) end
          returning id, (xmax = 0) as inserted`,
         [account.org_id, job?.rows[0]?.id ?? null, thread.id, handle],
       );
       const row = upserted.rows[0]!;
       threadIds.set(thread.id, row.id);
+      handles.set(row.id, handle);
       if (row.inserted) newThreads += 1;
       if (thread.timeUpdated && (!syncedTo || thread.timeUpdated > syncedTo)) {
         syncedTo = thread.timeUpdated;
@@ -412,15 +418,22 @@ export async function pollInbox(
       if (!row) continue;
       if (inbound) newInbound += 1;
       else newOutbound += 1;
+      // A new message is new activity: the thread is open again, even if it had been
+      // closed or redacted (the owner's audit P-01, P-05). What was redacted stays
+      // redacted; the new message, and the handle it came with, start a new retention
+      // period, so the retention job redacts them in their turn.
       await tx.query(
         `update threads
             set last_message_at = greatest(coalesce(last_message_at, $2), $2),
-                status = case when status = 'closed' then status else $3::thread_status end
+                status = $3::thread_status,
+                redacted_at = null,
+                client_handle = coalesce(client_handle, $4)
           where id = $1`,
         [
           threadId,
           message.timeCreated?.toISOString() ?? now.toISOString(),
           inbound ? 'awaiting_operator' : 'awaiting_client',
+          handles.get(threadId) ?? null,
         ],
       );
       if (inbound) {
@@ -436,7 +449,8 @@ export async function pollInbox(
             thread_id: threadId,
             external_thread_id: message.threadId,
             external_message_id: message.id,
-            from_user: message.fromUser,
+            // Not the client's platform user id: an identifier of theirs the retention
+            // job could never reach here (P-02).
             sent_at: message.timeCreated?.toISOString() ?? null,
           },
         });

@@ -1,7 +1,7 @@
 import type { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { withUser } from './client.js';
-import { listEvents, listEventsForRequest, recordEvent } from './events.js';
+import { listEvents, listEventsForRequest, recordEvent, textFingerprint } from './events.js';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from './fixtures.js';
 import { createTestDatabase } from './testing.js';
 
@@ -148,5 +148,18 @@ describe('the log as a whole', () => {
     await expect(
       withUser(db, AUTH_B, (tx) => recordEvent(tx, { orgId: ORG_A, type: 'settings.changed' })),
     ).rejects.toThrow(/row-level security|was not recorded/i);
+  });
+});
+
+describe('textFingerprint (ARB-520, the owner audit P-02)', () => {
+  it('keeps the length and the SHA-256 of a text, never the words', () => {
+    // The SHA-256 of "abc" is the FIPS 180-2 test vector.
+    expect(textFingerprint('abc')).toEqual({
+      chars: 3,
+      sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    });
+    const fingerprint = textFingerprint('Hi Thandi, can you start on Monday?');
+    expect(JSON.stringify(fingerprint)).not.toContain('Thandi');
+    expect(fingerprint.chars).toBe(35);
   });
 });

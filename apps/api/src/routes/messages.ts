@@ -6,7 +6,7 @@ import {
   validateRejection,
   type OutboundMessageState,
 } from '@arbitron/core';
-import { recordEvent, withUser, type Queryable } from '@arbitron/db';
+import { recordEvent, textFingerprint, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
   channelOf,
@@ -267,7 +267,11 @@ export function registerMessageRoutes(app: FastifyInstance, options: ServerOptio
           subjectTable: 'messages',
           subjectId: id,
           requestId: request.id,
-          payload: { via: 'web', reason: validated.value.text, state_before: state },
+          payload: {
+            via: 'web',
+            reason: textFingerprint(validated.value.text),
+            state_before: state,
+          },
         });
         return (await loadOutbound(tx, id))!;
       });

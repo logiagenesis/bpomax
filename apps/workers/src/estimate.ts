@@ -8,7 +8,13 @@ import {
   type PriceBandSource,
   type RateCardSource,
 } from '@arbitron/core';
-import { inTransaction, recordEvent, recordLlmCall, type Queryable } from '@arbitron/db';
+import {
+  inTransaction,
+  recordEvent,
+  recordLlmCall,
+  textFingerprint,
+  type Queryable,
+} from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
 import { UnrecoverableError, type Job, type Queue } from 'bullmq';
 import { enqueueMargin } from './margin.js';
@@ -301,7 +307,8 @@ export async function estimateJob(
   if (!category.slug) {
     return skip(db, job, requestId, 'no_category', {
       confidence: category.confidence,
-      modelReason: category.reason,
+      // The model's reason restates the job; the log keeps its fingerprint (P-02).
+      modelReason: textFingerprint(category.reason ?? ''),
     });
   }
 
@@ -364,7 +371,7 @@ export async function estimateJob(
         expectedMinor: choice.expectedMinor,
         highMinor: choice.highMinor,
         turnaroundDays: choice.turnaroundDays,
-        basis: choice.basis,
+        basis: withoutSupplierNames(choice.basis),
         considered: decision.considered,
       },
     });
@@ -381,6 +388,19 @@ export async function estimateJob(
   }
 
   return { status: 'estimated', estimateId, method: choice.method, categorySlug: category.slug };
+}
+
+/** The basis as the log keeps it: supplier ids, not names (ARB-520, P-02). */
+function withoutSupplierNames(basis: Record<string, unknown>): Record<string, unknown> {
+  const suppliers = basis.suppliers;
+  if (!Array.isArray(suppliers)) return basis;
+  return {
+    ...basis,
+    suppliers: suppliers.map((supplier: Record<string, unknown>) => {
+      const { name: _name, ...rest } = supplier;
+      return rest;
+    }),
+  };
 }
 
 export function createEstimateProcessor(deps: EstimateDeps) {

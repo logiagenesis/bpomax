@@ -1,5 +1,5 @@
 import { canApprove, validateProposalEdit, validateRejection } from '@arbitron/core';
-import { recordEvent, withUser, type Queryable } from '@arbitron/db';
+import { recordEvent, textFingerprint, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
 import {
   channelOf,
@@ -150,7 +150,9 @@ async function rejectOne(
     subjectTable: 'proposals',
     subjectId: id,
     requestId,
-    payload: { via: 'web', reason, status_before: before.status },
+    // The reason is the operator's words about the client's job: on the proposal, with
+    // its fingerprint here (ARB-520, P-02).
+    payload: { via: 'web', reason: textFingerprint(reason), status_before: before.status },
   });
   return (await loadProposal(tx, id))!;
 }

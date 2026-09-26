@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { textFingerprint } from '@arbitron/db';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { LlmRequest, LlmResponse, LlmTransport } from '@arbitron/llm';
@@ -254,9 +255,16 @@ describe('a draft', () => {
       amountMinor: 450_000,
       deliveryDays: 7,
       timelineSource: 'estimate',
-      operatorNotes: 'Check the page count.',
+      // The notes are on the bid; the log keeps their fingerprint (ARB-520, P-02).
+      operatorNotes: textFingerprint('Check the page count.'),
       citations: [{ id: ownWork, kind: 'own_work' }],
     });
+    expect(JSON.stringify(events.rows[0]?.payload)).not.toContain('Check the page count.');
+    const notes = await db.query<{ operator_notes: string | null }>(
+      'select operator_notes from proposals where id = $1',
+      [result.proposalId],
+    );
+    expect(notes.rows[0]?.operator_notes).toBe('Check the page count.');
   });
 
   it('is asked for with the price, the timeline, the template and the permitted items only, never the cost', async () => {

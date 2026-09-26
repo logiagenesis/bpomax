@@ -1,5 +1,11 @@
 import { bidPeriod, canApprove, isRole, type Role } from '@arbitron/core';
-import { bidUsage, inTransaction, recordEvent, type Queryable } from '@arbitron/db';
+import {
+  bidUsage,
+  inTransaction,
+  recordEvent,
+  textFingerprint,
+  type Queryable,
+} from '@arbitron/db';
 import { enqueueSubmit } from '@arbitron/workers';
 import type { Queue } from 'bullmq';
 import type { Incoming, IncomingCallback, IncomingMessage, TelegramApi } from './api.js';
@@ -112,7 +118,8 @@ async function link(deps: BotDeps, incoming: IncomingMessage, code: string): Pro
       actorUserId: row.user_id,
       subjectTable: 'users',
       subjectId: row.user_id,
-      payload: { chatId: incoming.chatId },
+      // No chat id in the log: it is on the person's row, and moves with it (P-02).
+      payload: { via: 'telegram' },
     });
     return row;
   });
@@ -341,7 +348,7 @@ async function completePending(
     actorUserId: user.userId,
     subjectTable: 'proposals',
     subjectId: pending.proposal_id,
-    payload: { via: 'telegram', reason: text },
+    payload: { via: 'telegram', reason: textFingerprint(text) },
   });
   await api.sendMessage(incoming.chatId, `Rejected: ${text}`);
 }

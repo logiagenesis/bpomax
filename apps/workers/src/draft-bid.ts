@@ -14,6 +14,7 @@ import {
   recordEvent,
   recordLlmCall,
   releasePlanUsage,
+  textFingerprint,
   type Queryable,
 } from '@arbitron/db';
 import { LlmOutputError, completeJson, type LlmTransport } from '@arbitron/llm';
@@ -334,8 +335,8 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
     const inserted = await tx.query<{ id: string }>(
       `insert into proposals
          (org_id, job_id, margin_evaluation_id, template_variant_id, body, amount_minor,
-          currency, delivery_days, milestones, status)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'queued')
+          currency, delivery_days, milestones, operator_notes, status)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, 'queued')
        returning id`,
       [
         job.org_id,
@@ -347,6 +348,7 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
         evaluation.currency,
         deliveryDays,
         JSON.stringify(milestones),
+        draft.operator_notes.trim() || null,
       ],
     );
     const id = inserted.rows[0]?.id;
@@ -391,9 +393,11 @@ export async function draftBid(deps: DraftDeps, data: DraftJobData): Promise<Dra
         currency: evaluation.currency,
         deliveryDays,
         timelineSource,
-        milestones,
-        citations: citations.map((item) => ({ id: item.id, title: item.title, kind: item.kind })),
-        operatorNotes: draft.operator_notes,
+        // The bid's words (its milestone titles, the model's notes to the operator) are on
+        // the proposal; the log keeps amounts, ids and fingerprints (ARB-520, P-02).
+        milestones: milestones.map((m) => ({ ...m, title: textFingerprint(m.title) })),
+        citations: citations.map((item) => ({ id: item.id, kind: item.kind })),
+        operatorNotes: textFingerprint(draft.operator_notes),
       },
     });
     return id;

@@ -463,7 +463,6 @@ export function registerDeliveryRoutes(app: FastifyInstance, options: ServerOpti
             via: 'web',
             sourcing_request_id: id,
             supplier_candidate_id: candidateId,
-            supplier: c.display_name,
             agreed_cost_minor: c.quoted_price_minor,
             currency: c.currency.trim(),
           },

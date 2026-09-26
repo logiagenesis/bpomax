@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { BidPayload } from '@arbitron/core';
+import { textFingerprint } from '@arbitron/db';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
@@ -176,13 +177,15 @@ describe('with LIVE_MODE off', () => {
         amountMinor: 450_000,
         currency: 'ZAR',
         deliveryDays: 7,
+        // The words are on the proposal; the log keeps their fingerprints (ARB-520, P-02).
         milestones: [
-          { title: 'Design', amount_minor: 150_000 },
-          { title: 'Build', amount_minor: 300_000 },
+          { title: textFingerprint('Design'), amount_minor: 150_000 },
+          { title: textFingerprint('Build'), amount_minor: 300_000 },
         ],
-        body: 'Thanks for the brief.',
+        body: textFingerprint('Thanks for the brief.'),
       },
     });
+    expect(JSON.stringify(events[0]?.payload)).not.toContain('Thanks for the brief.');
     expect(events[1]?.payload).toMatchObject({ reason: 'live_mode_off', closedBy: 'environment' });
     const pipeline = await db.query('select 1 from pipeline_items where proposal_id = $1', [
       proposalId,
