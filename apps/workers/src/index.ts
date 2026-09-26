@@ -29,4 +29,5 @@ export * from './usage-alert.js';
 export * from './billing-sweep.js';
 
 export const APP_NAME = 'arbitron-workers';
+export * from './price-refresh.js';
 export * from './retention.js';

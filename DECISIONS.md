@@ -2635,3 +2635,50 @@ section G: "all ZAR prices shown to the operator VAT-inclusive at 15% where VAT 
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-07; docs/01 rule 3 (no invented
 figures or rules).
+
+## D-083 — ARB-514: the weekly price refresh works bands from the house org's own accepted deliveries
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-514, session …tJv8), on the owner's audit E-08 (docs/01
+section E: "price-refresh | weekly | Updates market bands from completed-project data
+where the API allows; otherwise from owner CSV import")
+
+- **What a band is.** A market band is what a category of work costs to deliver. The
+  estimate worker takes its p50 as the delivery cost when no rate card covers the job
+  (D-029's order), and the margin rule subtracts it. So "completed-project data" is what
+  completed deliveries actually cost, not what clients paid.
+- **What counts as a sample.** A delivery order with all of these:
+  - accepted (`status = 'accepted'`) within the last 365 days
+    (`BAND_LOOKBACK_DAYS`);
+  - in a house organisation (`orgs.billing_exempt`, D-069);
+  - on a fixed-price job with a category;
+  - at its agreed cost;
+  - by an outside supplier, or a marketplace candidate. In-house and AI-build deliveries
+    are the org's own cost, not the market's, and hourly work is not a project price.
+- **Why only the house org's deliveries.** Bands are shared by every organisation, so
+  reading a customer's deliveries would publish their supplier prices to the others.
+  D-14 also asks for bands "from your own completed projects".
+- **The figures.** p25, p50 and p75 per category and currency, by linear interpolation
+  between the closest ranks. This is the rule of Postgres's `percentile_cont` and a
+  spreadsheet's PERCENTILE.INC, worked in whole cents and rounded half up.
+- **When a band exists.** Only with 5 samples or more (`MIN_BAND_SAMPLE`). Fewer is
+  reported in the run's event, not priced.
+- **What a run writes.**
+  - A `completed_projects` band that no longer has enough samples is removed, so no
+    band outlives its evidence.
+  - Seed, CSV and marketplace bands are never touched. The estimate already prefers
+    `completed_projects` over them (D-029).
+- **When it runs.** Weekly, Mondays at 01:00 UTC (03:00 SAST), from one BullMQ scheduler
+  that every worker process upserts. Each run is recorded as `price_bands.refreshed` in
+  the house org's audit log, with the bands, the groups with too few samples and the
+  removals.
+- **Not built, and why.**
+  - Marketplace samples ("where the API allows"): no marketplace call is added without
+    its documentation (docs/01 rule 3).
+  - An owner CSV import of bands: the owner's figures (D-14) go in through
+    `packages/db/seed/market-price-bands.json`, the idempotent seed (ARB-013), until a
+    CSV import is asked for.
+- **Changeable.** The two numbers, 5 and 365, are engineering defaults in
+  `packages/core/src/price-bands.ts`, not market figures. The owner can change either.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-08; D-14 (no invented band).

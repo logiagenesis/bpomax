@@ -83,6 +83,8 @@ export const EVENT_TYPES = [
   // data subject access and erasure (ARB-521)
   'privacy.exported',
   'privacy.erased',
+  // the weekly price refresh (ARB-514)
+  'price_bands.refreshed',
   // plans and usage (ARB-410)
   'usage.threshold_reached',
   'usage.alert_sent',
