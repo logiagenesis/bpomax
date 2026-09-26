@@ -218,6 +218,36 @@ describe('linking a chat with a one-time code', () => {
     await message(OWNER_CHAT, '/start');
     expect(api.sent[2]?.text).toMatch(/^Already linked to Org a/);
   });
+
+  it('links one chat when two send the same code at once (the owner audit, S-01)', async () => {
+    await db.query(
+      `insert into telegram_link_codes (org_id, user_id, code, expires_at) values ($1, $2, 'RACECODE', $3)`,
+      [ORG, OWNER, new Date(NOW.getTime() + 60_000).toISOString()],
+    );
+    const linkedEvents = async () =>
+      (
+        await db.query<{ count: number }>(
+          `select count(*)::int as count from events where type = 'telegram.linked'`,
+        )
+      ).rows[0]?.count ?? 0;
+    const before = await linkedEvents();
+    await Promise.all([
+      message(OWNER_CHAT, '/start RACECODE'),
+      message(STRANGER_CHAT, '/start RACECODE'),
+    ]);
+    const texts = api.sent.map((m) => m.text);
+    expect(texts.filter((t) => /^Linked to/.test(t))).toHaveLength(1);
+    expect(texts.filter((t) => /not valid or has expired/.test(t))).toHaveLength(1);
+    const linkedChats = await db.query<{ telegram_chat_id: string }>(
+      'select telegram_chat_id from users where id = $1',
+      [OWNER],
+    );
+    const winner = linkedChats.rows[0]?.telegram_chat_id;
+    expect([OWNER_CHAT, STRANGER_CHAT]).toContain(winner);
+    expect((await linkedEvents()) - before).toBe(1);
+    // The later tests act as the owner from the owner's chat.
+    await db.query('update users set telegram_chat_id = $2 where id = $1', [OWNER, OWNER_CHAT]);
+  });
 });
 
 describe('/queue and the approval card', () => {

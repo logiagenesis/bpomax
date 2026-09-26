@@ -99,12 +99,17 @@ organisation's rows only, the approval rules and the live gate. An approval made
 it is recorded in your name with the channel `mcp`. Nothing is sent to a marketplace by the
 MCP server itself; an approved bid still goes through the submit worker and `LIVE_MODE`.
 
-It needs two settings, and refuses to start without them:
+It needs three settings, and refuses to start without them. The channel key is a long
+random string the owner generates (for example `openssl rand -hex 32`) and sets as
+`MCP_CHANNEL_KEY` where the API runs; with it the API records an approval as made through
+MCP, and without it no request can claim to be (D-074). It is not in `.env.example`, which
+holds exactly docs/01 section J's variables.
 
-| Setting                 | What it is                                                                    |
-| ----------------------- | ----------------------------------------------------------------------------- |
-| `ARBITRON_API_URL`      | The API's address (https; http only for localhost)                            |
-| `ARBITRON_ACCESS_TOKEN` | Your Supabase access token from signing in (docs/02 B-06); it is never logged |
+| Setting                    | What it is                                                                    |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `ARBITRON_API_URL`         | The API's address (https; http only for localhost)                            |
+| `ARBITRON_ACCESS_TOKEN`    | Your Supabase access token from signing in (docs/02 B-06); it is never logged |
+| `ARBITRON_MCP_CHANNEL_KEY` | The API's `MCP_CHANNEL_KEY`, from the owner; it is never logged               |
 
 The API has no hosted address yet (ARB-070), so until it has one the server is exercised by
 its test (`apps/mcp/src/server.test.ts`), which calls every tool against the real API and
@@ -118,6 +123,7 @@ the settings and the name, as the Claude Code docs describe
 ```bash
 claude mcp add --env ARBITRON_API_URL=https://api.example.test \
   --env ARBITRON_ACCESS_TOKEN=<your token> \
+  --env ARBITRON_MCP_CHANNEL_KEY=<the channel key> \
   --transport stdio arbitron -- /path/to/bpomax/node_modules/.bin/tsx /path/to/bpomax/apps/mcp/src/main.ts
 ```
 
@@ -136,7 +142,8 @@ Claude Desktop:
       "args": ["/path/to/bpomax/apps/mcp/src/main.ts"],
       "env": {
         "ARBITRON_API_URL": "https://api.example.test",
-        "ARBITRON_ACCESS_TOKEN": "<your token>"
+        "ARBITRON_ACCESS_TOKEN": "<your token>",
+        "ARBITRON_MCP_CHANNEL_KEY": "<the channel key>"
       }
     }
   }

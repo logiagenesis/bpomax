@@ -4,6 +4,7 @@ import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { channelOf, decideChannel } from './context.js';
 import { buildServer } from './server.js';
 
 /** ARB-014: the audit log viewer API, over the same policies the rest of the app uses. */
@@ -53,6 +54,58 @@ describe('GET /health', () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok', service: 'arbitron-api' });
+  });
+});
+
+describe('the approval channel (ARB-500, the owner audit S-06)', () => {
+  const KEY = 'channel-key-for-tests';
+  const as = (headers: Record<string, string>) => ({ headers });
+
+  it('is web without the header, and mcp only with the key the API was given', () => {
+    expect(decideChannel(as({}), KEY)).toBe('web');
+    expect(decideChannel(as({ 'x-arbitron-channel': 'mcp' }), KEY)).toBe('refused');
+    expect(
+      decideChannel(
+        as({ 'x-arbitron-channel': 'mcp', 'x-arbitron-channel-key': 'a wrong guess' }),
+        KEY,
+      ),
+    ).toBe('refused');
+    expect(
+      decideChannel(as({ 'x-arbitron-channel': 'mcp', 'x-arbitron-channel-key': KEY }), KEY),
+    ).toBe('mcp');
+    expect(decideChannel(as({ 'x-arbitron-channel': 'telegram' }), KEY)).toBe('refused');
+    // No key configured: nobody can claim the MCP channel, whatever they send.
+    expect(
+      decideChannel(as({ 'x-arbitron-channel': 'mcp', 'x-arbitron-channel-key': '' }), undefined),
+    ).toBe('refused');
+  });
+
+  it('refuses a request that claims the MCP channel without the key, before any route runs', async () => {
+    const keyed = buildServer({ db, authenticate: () => null, mcpChannelKey: KEY });
+    let seen: string | undefined;
+    keyed.get('/channel-probe', async (request) => {
+      seen = channelOf(request);
+      return { channel: seen };
+    });
+    await keyed.ready();
+    const forged = await keyed.inject({
+      method: 'GET',
+      url: '/channel-probe',
+      headers: { 'x-arbitron-channel': 'mcp' },
+    });
+    expect(forged.statusCode).toBe(403);
+    expect(forged.json<{ error: string }>().error).toMatch(/ARBITRON_MCP_CHANNEL_KEY/);
+    expect(seen).toBeUndefined();
+
+    const web = await keyed.inject({ method: 'GET', url: '/channel-probe' });
+    expect(web.json()).toEqual({ channel: 'web' });
+    const mcp = await keyed.inject({
+      method: 'GET',
+      url: '/channel-probe',
+      headers: { 'x-arbitron-channel': 'mcp', 'x-arbitron-channel-key': KEY },
+    });
+    expect(mcp.json()).toEqual({ channel: 'mcp' });
+    await keyed.close();
   });
 });
 

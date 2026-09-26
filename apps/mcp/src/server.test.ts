@@ -42,6 +42,9 @@ const enqueue = {
   sendMessage: vi.fn(async () => undefined),
 };
 
+/** The API's MCP_CHANNEL_KEY, given to both sides as the owner would (ARB-500, S-06). */
+const CHANNEL_KEY = 'test-mcp-channel-key';
+
 let db: PGlite;
 let app: ReturnType<typeof buildServer>;
 let baseUrl: string;
@@ -52,7 +55,9 @@ const clients: Client[] = [];
 
 /** An MCP client connected to a fresh server that calls the API with `token`. */
 async function connect(token: string): Promise<Client> {
-  const server = createArbitronMcpServer(httpApiClient({ baseUrl, token }));
+  const server = createArbitronMcpServer(
+    httpApiClient({ baseUrl, token, channelKey: CHANNEL_KEY }),
+  );
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'arbitron-test', version: '0.0.0' });
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
@@ -176,6 +181,7 @@ beforeAll(async () => {
       return UUID.test(token) ? token : null;
     },
     enqueue,
+    mcpChannelKey: CHANNEL_KEY,
     now: () => NOW,
     liveMode: false,
   });
