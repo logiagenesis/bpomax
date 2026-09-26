@@ -2552,6 +2552,69 @@ export type Database = {
           },
         ];
       };
+      terms_acceptances: {
+        Row: {
+          created_at: string;
+          id: string;
+          request_id: string | null;
+          updated_at: string;
+          user_id: string;
+          version: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          request_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+          version: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          request_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          version?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'terms_acceptances_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'terms_acceptances_version_fkey';
+            columns: ['version'];
+            isOneToOne: false;
+            referencedRelation: 'terms_versions';
+            referencedColumns: ['version'];
+          },
+        ];
+      };
+      terms_versions: {
+        Row: {
+          approved_on: string;
+          created_at: string;
+          updated_at: string;
+          version: string;
+        };
+        Insert: {
+          approved_on: string;
+          created_at?: string;
+          updated_at?: string;
+          version: string;
+        };
+        Update: {
+          approved_on?: string;
+          created_at?: string;
+          updated_at?: string;
+          version?: string;
+        };
+        Relationships: [];
+      };
       threads: {
         Row: {
           client_handle: string | null;

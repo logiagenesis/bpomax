@@ -57,6 +57,8 @@ const EXPECTED_TABLES = [
   'telegram_pending',
   'template_variants',
   'templates',
+  'terms_acceptances',
+  'terms_versions',
   'threads',
   'usage_counters',
   'users',

@@ -65,6 +65,7 @@ describe('what names a person who uses the app', () => {
       'proposals.approved_by',
       'sourcing_posts.approved_by',
       'telegram_link_codes.user_id',
+      'terms_acceptances.user_id',
     ]);
   });
 });

@@ -13,7 +13,14 @@ export interface NewOrg {
   readonly name: string;
   /** ISO 3166-1 alpha-2, upper case. */
   readonly countryCode: string;
+  /**
+   * The version of the terms of service the person accepted (ARB-522). The database
+   * makes the org only when it is the version on show (migration 0039).
+   */
+  readonly termsVersion: string;
 }
+
+export const TERMS_VERSION_MAX = 40;
 
 export function validateNewOrg(input: unknown): ValidationResult<NewOrg> {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
@@ -38,7 +45,14 @@ export function validateNewOrg(input: unknown): ValidationResult<NewOrg> {
     });
   }
 
-  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: { name, countryCode } };
+  const termsVersion = typeof body.termsVersion === 'string' ? body.termsVersion.trim() : '';
+  if (termsVersion.length === 0 || termsVersion.length > TERMS_VERSION_MAX) {
+    errors.push({ field: 'terms', message: 'must be accepted to create an organisation' });
+  }
+
+  return errors.length > 0
+    ? { ok: false, errors }
+    : { ok: true, value: { name, countryCode, termsVersion } };
 }
 
 /** What the onboarding page needs to know about an org to say what is left to do. */

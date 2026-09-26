@@ -1,7 +1,13 @@
 import { onboardingSteps, validateNewOrg } from '@arbitron/core';
-import { withUser, type Queryable } from '@arbitron/db';
+import { recordPublishedTerms, withUser, type Queryable } from '@arbitron/db';
 import type { FastifyInstance } from 'fastify';
-import { currentMembership, invalid, UUID, type ServerOptions } from '../context.js';
+import {
+  currentMembership,
+  invalid,
+  UUID,
+  type FieldProblem,
+  type ServerOptions,
+} from '../context.js';
 import { describeMembership } from './me.js';
 
 /**
@@ -11,10 +17,31 @@ import { describeMembership } from './me.js';
  *
  * The work is `app.create_org` (migration 0032), called under the person's own session,
  * so the database decides who it is for: the route passes a name and a country, never a
- * user or an org id.
+ * user or an org id. Since ARB-522 it also passes the version of the terms of service the
+ * person accepted, and the database makes the org only for the version on show.
  */
-function refusal(error: unknown): { status: number; error: string } | null {
+function refusal(
+  error: unknown,
+): { status: number; error: string; errors?: readonly FieldProblem[] } | null {
   const message = error instanceof Error ? error.message : String(error);
+  if (/terms of service are not published yet/.test(message)) {
+    return {
+      status: 409,
+      error:
+        'Organisations cannot be made until the terms of service are published. An owner can add you to theirs.',
+    };
+  }
+  if (/accept the current terms of service/.test(message)) {
+    return {
+      ...invalid([
+        {
+          field: 'terms',
+          message: 'must be the terms of service on show now: reload the page and accept them',
+        },
+      ]),
+      status: 422,
+    };
+  }
   if (/already a member of an organisation/.test(message)) {
     return {
       status: 409,
@@ -68,15 +95,19 @@ export function registerOrgRoutes(app: FastifyInstance, options: ServerOptions):
     if (!parsed.ok) return reply.code(422).send(invalid(parsed.errors));
 
     try {
+      // The version on show is recorded first (once; recording it again changes nothing),
+      // so the database knows what to hold the new owner to.
+      if (options.terms) await recordPublishedTerms(options.db, options.terms);
       const me = await withUser(options.db, authUserId, async (tx) => {
         // ARB-430: the referral click this browser kept, if any; create_org takes it only
         // while it is attached to no org.
         const referral = (request.body as { referral?: unknown } | null)?.referral;
-        await tx.query(`select app.create_org($1, $2, $3, $4)`, [
+        await tx.query(`select app.create_org($1, $2, $3, $4, $5)`, [
           parsed.value.name,
           parsed.value.countryCode,
           request.id,
           typeof referral === 'string' && UUID.test(referral) ? referral : null,
+          parsed.value.termsVersion,
         ]);
         return currentMembership(tx);
       });
@@ -84,7 +115,10 @@ export function registerOrgRoutes(app: FastifyInstance, options: ServerOptions):
       return reply.code(201).send(describeMembership(me));
     } catch (error) {
       const refused = refusal(error);
-      if (refused) return reply.code(refused.status).send({ error: refused.error });
+      if (refused) {
+        const { status, ...body } = refused;
+        return reply.code(status).send(body);
+      }
       throw error;
     }
   });

@@ -13,6 +13,7 @@ import {
 import { supabaseAuthenticator } from './auth.js';
 import { apiConfig } from './config.js';
 import { buildServer } from './server.js';
+import { readTermsOnShow } from './terms.js';
 
 /**
  * The API process (ARB-510, the owner's audit E-01 and E-02): `pnpm --filter
@@ -36,6 +37,12 @@ const db = createPool({
   onError: (error) =>
     logLine(SERVICE, 'warn', 'idle database connection lost', { error: error.message }),
 });
+// The terms of service on show; until they are approved no org can be made (D-16).
+const termsOnShow = readTermsOnShow();
+if (termsOnShow.status === 'unreadable') {
+  logLine(SERVICE, 'warn', 'terms of service unreadable', { reason: termsOnShow.reason });
+}
+
 const queues = createQueues({
   connection: redisConnection(config.redisUrl),
   ...(config.queuePrefix ? { prefix: config.queuePrefix } : {}),
@@ -58,6 +65,7 @@ const app = buildServer({
   fx: null,
   ...(config.mcpChannelKey ? { mcpChannelKey: config.mcpChannelKey } : {}),
   ...(config.trustProxy !== undefined ? { trustProxy: config.trustProxy } : {}),
+  terms: termsOnShow.status === 'approved' ? termsOnShow.terms : null,
   ready: async () => {
     const [database, redis] = await Promise.all([
       within(db.query('select 1'), 2_000, 'the database').then(
@@ -77,6 +85,10 @@ logLine(SERVICE, 'info', 'started', {
   freelancer: config.freelancer.ok ? 'on' : config.freelancer.reason,
   upwork: config.upwork.ok ? 'on' : config.upwork.reason,
   mcpChannel: config.mcpChannelKey ? 'on' : 'off: MCP_CHANNEL_KEY is not set',
+  terms:
+    termsOnShow.status === 'approved'
+      ? termsOnShow.terms.version
+      : 'pending: no org can be made until the terms are published (D-16)',
 });
 
 onShutdown(SERVICE, async () => {

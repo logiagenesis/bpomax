@@ -2556,3 +2556,52 @@ longer authorised to be kept (https://popia.co.za/section-24-correction-of-perso
 The owner, as the responsible party, answers; these give them the means. What counts as
 a valid request, and the reply's wording, are the owner's and the T-06 adviser's; no
 legal wording is written here (docs/01 rule 3).
+
+## D-081 — ARB-522: the terms of service enforced where an org is made; the data inventory completed
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-522, session …tJv8), on the owner's audit P-07, P-08
+
+- **P-08, terms enforced in the database.** Until now, sign-up asked for the terms but
+  `app.create_org` did not check them, so anyone signed in could make an org with a call
+  that never mentioned them. Migration 0039 changes that:
+  - It records the published versions in `terms_versions`: the version and its approval
+    date. The wording stays in `terms.json`, the owner's (D-16).
+  - `create_org` makes an org only for a person who names the latest version. It records
+    their acceptance in `terms_acceptances` and puts the version on the `org.created`
+    event.
+  - With no version published, no org can be made at all.
+  - Nobody signed in can write either table by hand.
+- **How the version reaches the database.** The API reads the same `terms.json` the web
+  app shows when it starts. It records the version, idempotently, just before an org is
+  made. Recording it there, rather than at start-up, means the API still starts when the
+  database is briefly away.
+- **The onboarding form.** It now carries the checkbox, naming the version and its
+  approval date, and it stays closed while the terms are pending. Terms that change
+  after the page loaded are refused against the checkbox, with a reload asked for.
+- **What is kept from sign-up.** Sign-up keeps its own checkbox and still records the
+  version in the person's Supabase metadata. The acceptance that counts is the one made
+  when the org is made, because that is when the owner takes the terms on for the org.
+- **P-07, the data inventory.** `docs/privacy-data-inventory.md` now lists every store of
+  personal information:
+  - the tables, by whom they are about;
+  - the audit log's payloads;
+  - Redis;
+  - who receives what, including the model, Telegram, the payment providers and the
+    operator's MCP client;
+  - what removes each item today, and what nothing removes yet.
+
+  Every row was read from the migrations and the code that writes or sends it.
+
+  Three facts were corrected:
+  - Tokens are in Supabase Vault, not pgsodium (0017).
+  - `jobs.client_country` and `client_rating` exist but nothing fills them.
+  - `users.full_name` exists but nothing fills it.
+
+  The adviser's questions grew from six to eight:
+  - the audit log for a person who asks to be erased (D-17);
+  - whether the notice must say a client's message goes to the model and to the
+    operator's Telegram.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 P-07 and P-08; D-068 (no legal
+wording is written by the build).
