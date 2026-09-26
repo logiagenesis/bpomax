@@ -8,8 +8,8 @@ into `main` as soon as CI is green. `main` is the only branch that matters.
 
 - **Phase 5 is built.** The owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 found
   engineering work the handoff of 24/09/2026 had missed (D-073). All of it is now on
-  `main`: ARB-500 to ARB-540. Pull requests #35 to #45 are merged, and ARB-540 is this
-  handoff's own.
+  `main`: ARB-500 to ARB-540. Pull requests #35 to #46 are merged; #46 (ARB-540)
+  carried this handoff.
 - **Board.** 69 tickets:
   - 49 DONE;
   - 16 BUILT-PENDING-CREDENTIALS;
@@ -28,7 +28,7 @@ into `main` as soon as CI is green. `main` is the only branch that matters.
 | --- | --- |
 | Repository | https://github.com/logiagenesis/bpomax (branch `main`; public, D-22) |
 | Live web app | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043) |
-| Last merges | PR #45 (ARB-531), then the ARB-540 pull request carrying this file |
+| Last merges | PR #45 (ARB-531), PR #46 (ARB-540, 12049e7), then a follow-up recording that SHA |
 | CI | Four jobs on Node 24, on every push and pull request (details below) |
 | Other writer on `main` | None. Board changes travel in each ticket's own pull request (D-073). |
 
