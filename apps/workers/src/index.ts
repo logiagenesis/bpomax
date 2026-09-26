@@ -22,6 +22,7 @@ export * from './estimate.js';
 export * from './margin.js';
 export * from './draft-bid.js';
 export * from './submit.js';
+export * from './bid-placer.js';
 export * from './sourcing.js';
 export * from './reprice.js';
 export * from './usage-alert.js';

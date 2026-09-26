@@ -32,8 +32,13 @@ import { meter, type UsageAlert } from './usage-alert.js';
  * sent either, and the bid that would have been sent is written to the audit log.
  */
 export interface BidPlacer {
-  /** Places the bid on the platform and returns its reference there. Throws when the platform refuses or cannot be reached. */
-  placeBid(payload: BidPayload): Promise<{ platformRef: string }>;
+  /**
+   * Places the bid on the platform and returns its reference there. Throws when the
+   * platform refuses or cannot be reached; an `UnrecoverableError` when trying again
+   * cannot help. `reconciled` is true when the bid was already on the platform, placed
+   * before a crash, and was found rather than placed again (ARB-511, E-05).
+   */
+  placeBid(payload: BidPayload): Promise<{ platformRef: string; reconciled?: boolean }>;
 }
 
 export interface SubmitJobData {
@@ -362,10 +367,13 @@ export async function submitProposal(
   }
 
   let platformRef: string;
+  let reconciled = false;
   try {
-    ({ platformRef } = await deps.placer.placeBid(payload));
+    ({ platformRef, reconciled = false } = await deps.placer.placeBid(payload));
   } catch (error) {
     const message = (error as Error).message;
+    // A refusal that trying again cannot change is the last attempt, whatever the count.
+    const finalAttempt = (options.finalAttempt ?? false) || error instanceof UnrecoverableError;
     await giveBackBid();
     await giveBackSlot();
     await releasePlanUsage(db, { orgId: proposal.org_id, metric: 'bids_submitted', now });
@@ -380,16 +388,25 @@ export async function submitProposal(
         action: 'place_bid',
         platform: proposal.platform,
         message,
-        finalAttempt: options.finalAttempt ?? false,
+        finalAttempt,
       },
     });
-    if (!options.finalAttempt) throw error;
+    if (!finalAttempt) throw error;
     await db.query(`update proposals set status = 'failed', failure_reason = $2 where id = $1`, [
       proposal.id,
       message,
     ]);
     await note('error', { reason: 'platform', message });
     return { status: 'failed', message };
+  }
+
+  // Found on the platform, placed by an attempt that died before recording it (E-05): that
+  // attempt already took the allowance, the scanner slot and the plan's count for this bid,
+  // so this attempt gives its own back rather than count one bid twice.
+  if (reconciled) {
+    await giveBackBid();
+    await giveBackSlot();
+    await releasePlanUsage(db, { orgId: proposal.org_id, metric: 'bids_submitted', now });
   }
 
   // The call is on record before the bookkeeping, so a crash between the two is recoverable.
@@ -404,6 +421,7 @@ export async function submitProposal(
       action: 'place_bid',
       platform: proposal.platform,
       platformRef,
+      ...(reconciled ? { reconciled: true } : {}),
       sent: bidForLog(payload),
     },
   });

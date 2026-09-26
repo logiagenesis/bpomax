@@ -3,6 +3,7 @@
  * is cited from the official docs where it is called. The stand-in lives at
  * `@arbitron/freelancer/fake` so production code never imports it.
  */
+export * from './bidding.js';
 export * from './config.js';
 export * from './employer.js';
 export * from './http.js';

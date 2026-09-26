@@ -1,9 +1,11 @@
 import { bidPeriod, canApprove, isRole, type Role } from '@arbitron/core';
 import {
+  approveBid,
   bidUsage,
+  editBid,
   inTransaction,
   recordEvent,
-  textFingerprint,
+  rejectBid,
   type Queryable,
 } from '@arbitron/db';
 import { enqueueSubmit } from '@arbitron/workers';
@@ -304,52 +306,32 @@ async function completePending(
     await api.sendMessage(incoming.chatId, 'Nothing changed: the message was empty.');
     return;
   }
-  const { rows } = await db.query<{ status: string; org_id: string }>(
-    'select status, org_id from proposals where id = $1',
-    [pending.proposal_id],
-  );
-  const proposal = rows[0];
-  if (!proposal || proposal.org_id !== user.orgId) {
-    await api.sendMessage(incoming.chatId, 'That bid no longer exists.');
+  // The role is held again here, not only when the button was pressed: it may have
+  // changed in between, and the bot acts under service_role.
+  if (!canApprove(user.role)) {
+    await api.sendMessage(incoming.chatId, 'Your role cannot change bids.');
     return;
   }
-  if (proposal.status === 'submitted') {
+  // One module for the page and the bot (ARB-512): a conditional change, told what
+  // happened, so a bid sent or changed meanwhile is not overwritten.
+  const change =
+    pending.action === 'edit'
+      ? await editBid(db, user, pending.proposal_id, text, 'telegram')
+      : await rejectBid(db, user, pending.proposal_id, text, 'telegram');
+  if (!change.ok) {
     await api.sendMessage(
       incoming.chatId,
-      'That bid has already been sent and cannot be changed here.',
+      change.code === 409 && pending.action === 'edit'
+        ? 'That bid has already been sent and cannot be changed here.'
+        : change.message,
     );
     return;
   }
   if (pending.action === 'edit') {
-    // New words need a new approval: the old one covered the old words.
-    await db.query(
-      `update proposals set body = $2, status = 'queued', approved_by = null, approved_via = null where id = $1`,
-      [pending.proposal_id, text],
-    );
-    await recordEvent(db, {
-      orgId: user.orgId,
-      type: 'proposal.edited',
-      actorUserId: user.userId,
-      subjectTable: 'proposals',
-      subjectId: pending.proposal_id,
-      payload: { via: 'telegram', bodyLength: text.length },
-    });
     await api.sendMessage(incoming.chatId, 'Updated. Approve it when you are happy with it.');
     await sendCard(deps, incoming.chatId, pending.proposal_id);
     return;
   }
-  await db.query(`update proposals set status = 'rejected', failure_reason = $2 where id = $1`, [
-    pending.proposal_id,
-    text,
-  ]);
-  await recordEvent(db, {
-    orgId: user.orgId,
-    type: 'proposal.rejected',
-    actorUserId: user.userId,
-    subjectTable: 'proposals',
-    subjectId: pending.proposal_id,
-    payload: { via: 'telegram', reason: textFingerprint(text) },
-  });
   await api.sendMessage(incoming.chatId, `Rejected: ${text}`);
 }
 
@@ -406,37 +388,25 @@ async function approve(
     await api.answerCallbackQuery(incoming.callbackQueryId, 'Your role cannot approve bids.');
     return;
   }
-  const { rows } = await db.query<{ status: string; title: string }>(
-    `select p.status, j.title from proposals p join jobs j on j.id = p.job_id where p.id = $1 and p.org_id = $2`,
-    [proposalId, user.orgId],
-  );
-  const proposal = rows[0];
-  if (!proposal) {
-    await api.answerCallbackQuery(incoming.callbackQueryId, 'That bid no longer exists.');
-    return;
-  }
-  if (proposal.status !== 'queued') {
+  // The same approval as the page's (ARB-512): the plan check, and one conditional change,
+  // so an approval made on the page a moment before is not made twice.
+  const change = await approveBid(db, user, proposalId, 'telegram');
+  if (!change.ok) {
     const word =
-      proposal.status === 'approved'
-        ? 'Already approved.'
-        : proposal.status === 'submitted'
-          ? 'Already sent.'
-          : `This bid is ${proposal.status}.`;
+      change.code === 404
+        ? 'That bid no longer exists.'
+        : change.message === 'This bid is already approved.'
+          ? 'Already approved.'
+          : change.message === 'This bid has already been sent.'
+            ? 'Already sent.'
+            : change.message;
     await api.answerCallbackQuery(incoming.callbackQueryId, word);
     return;
   }
-  await db.query(
-    `update proposals set status = 'approved', approved_by = $2, approved_via = 'telegram' where id = $1 and status = 'queued'`,
-    [proposalId, user.userId],
+  const { rows } = await db.query<{ title: string | null }>(
+    `select j.title from proposals p join jobs j on j.id = p.job_id where p.id = $1`,
+    [proposalId],
   );
-  await recordEvent(db, {
-    orgId: user.orgId,
-    type: 'proposal.approved',
-    actorUserId: user.userId,
-    subjectTable: 'proposals',
-    subjectId: proposalId,
-    payload: { via: 'telegram' },
-  });
   if (deps.submitQueue) await enqueueSubmit(deps.submitQueue, { proposalId });
   if (incoming.messageId !== null)
     await api.editMessageReplyMarkup(incoming.chatId, incoming.messageId, null);
@@ -444,7 +414,7 @@ async function approve(
   const paused = await isPaused(db, user.orgId);
   await api.sendMessage(
     incoming.chatId,
-    `Approved: ${proposal.title}. ${paused ? 'Bidding is paused; it will be sent after /resume.' : 'Sending now.'}`,
+    `Approved: ${rows[0]?.title ?? 'the bid'}. ${paused ? 'Bidding is paused; it will be sent after /resume.' : 'Sending now.'}`,
   );
 }
 

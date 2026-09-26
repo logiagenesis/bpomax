@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { textFingerprint } from '@arbitron/db';
+import { approveBid, textFingerprint } from '@arbitron/db';
 import { ENTITY, REFERENCE_ROWS, fixtureId, identityRows, tenantRows } from '@arbitron/db/fixtures';
 import { createTestDatabase } from '@arbitron/db/testing';
 import type { PGlite } from '@electric-sql/pglite';
@@ -316,6 +316,43 @@ describe('Approve', () => {
     await press(OWNER_CHAT, `approve:${proposalId}`);
     expect(api.answered[1]?.text).toBe('Already approved.');
     expect(queue.added).toHaveLength(1);
+    await db.query(`update proposals set status = 'rejected' where id = $1`, [proposalId]);
+  });
+
+  it('an approval made on the page between the bot reading the bid and changing it is not made twice (ARB-512)', async () => {
+    const { proposalId } = await queuedProposal('race');
+    // The page approves just after the bot's first look at the bid.
+    let fired = false;
+    const racingDb = {
+      query: async <T>(sql: string, params?: unknown[]) => {
+        const result = await db.query<T>(sql, params);
+        if (!fired && /proposals/.test(sql)) {
+          fired = true;
+          await approveBid(db, { orgId: ORG, userId: OWNER }, proposalId, 'web');
+        }
+        return result;
+      },
+    };
+    await handleUpdate(
+      { ...deps(), db: racingDb as unknown as BotDeps['db'] },
+      {
+        kind: 'callback',
+        chatId: OWNER_CHAT,
+        fromId: OWNER_CHAT,
+        callbackQueryId: 'q-race',
+        messageId: 5,
+        data: `approve:${proposalId}`,
+      },
+    );
+    const approvals = await db.query<{ count: number }>(
+      `select count(*)::int as count from events where type = 'proposal.approved' and subject_id = $1`,
+      [proposalId],
+    );
+    expect(approvals.rows[0]?.count).toBe(1);
+    expect(
+      queue.added.filter((j) => (j.data as { proposalId?: string }).proposalId === proposalId)
+        .length,
+    ).toBeLessThanOrEqual(1);
     await db.query(`update proposals set status = 'rejected' where id = $1`, [proposalId]);
   });
 
