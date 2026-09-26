@@ -6,9 +6,9 @@ import type { FieldError, ValidationResult } from './scanners.js';
  * the state an outbound message is in, read from its columns rather than kept in one.
  */
 /** The form's own limit; Freelancer.com's, if any, is not documented and is not guessed. */
-export const MAX_MESSAGE_LENGTH = 4000;
+const MAX_MESSAGE_LENGTH = 4000;
 
-export interface MessageDraftInput {
+interface MessageDraftInput {
   readonly text: string;
 }
 
@@ -40,7 +40,7 @@ export const OUTBOUND_MESSAGE_STATES = [
 ] as const;
 export type OutboundMessageState = (typeof OUTBOUND_MESSAGE_STATES)[number];
 
-export interface OutboundMessageColumns {
+interface OutboundMessageColumns {
   readonly sentAt: string | Date | null;
   readonly approvedBy: string | null;
   readonly rejectedAt: string | Date | null;

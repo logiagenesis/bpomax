@@ -15,7 +15,7 @@ export const MIN_BAND_SAMPLE = 5;
 /** Deliveries accepted within this many days count; older prices are left out (D-083). */
 export const BAND_LOOKBACK_DAYS = 365;
 
-export interface Quartiles {
+interface Quartiles {
   readonly p25Minor: bigint;
   readonly p50Minor: bigint;
   readonly p75Minor: bigint;

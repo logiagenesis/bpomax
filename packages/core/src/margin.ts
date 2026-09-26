@@ -18,11 +18,11 @@ import { PLATFORMS, type FieldError, type Platform, type ValidationResult } from
 /** The margin rules are set in ZAR (01 section G), so ZAR is the currency margins are judged in. */
 export const HOME_CURRENCY = 'ZAR';
 
-export const PROJECT_TYPES = ['fixed', 'hourly'] as const;
+const PROJECT_TYPES = ['fixed', 'hourly'] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
 
 /** Which side of a platform pays the fee: us bidding as a freelancer, or us posting as an employer. */
-export const FEE_SIDES = ['freelancer', 'employer'] as const;
+const FEE_SIDES = ['freelancer', 'employer'] as const;
 export type FeeSide = (typeof FEE_SIDES)[number];
 
 export interface FeeRule {

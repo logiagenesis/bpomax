@@ -13,12 +13,12 @@ export interface LlmConfig {
   readonly baseUrl?: string;
 }
 
-export interface ConfigProblem {
+interface ConfigProblem {
   readonly variable: string;
   readonly message: string;
 }
 
-export type LlmConfigResult =
+type LlmConfigResult =
   | { readonly ok: true; readonly config: LlmConfig }
   | { readonly ok: false; readonly problems: ConfigProblem[] };
 

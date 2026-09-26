@@ -6,7 +6,7 @@ import { graphql, UpworkError, type Fetch } from './http.js';
  * needs "Common Entities - Read-Only Access", the permission every key has (DOC.user,
  * DOC.permissions). Only `id` and `name` are asked for.
  */
-export const CURRENT_USER_QUERY = `query user {
+const CURRENT_USER_QUERY = `query user {
   user {
     id
     name

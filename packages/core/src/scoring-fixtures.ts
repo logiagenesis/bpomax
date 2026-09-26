@@ -5,7 +5,7 @@ import type { RedFlag, ScorableJob } from './scoring.js';
  * any marketplace; the red-flag ones follow patterns marketplaces warn freelancers about.
  * `ruleFlags` is what the rules must find — exactly that, no more.
  */
-export interface ScoringFixture {
+interface ScoringFixture {
   readonly key: string;
   readonly job: ScorableJob;
   readonly ruleFlags: readonly RedFlag[];

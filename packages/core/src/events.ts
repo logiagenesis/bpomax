@@ -109,9 +109,7 @@ export const EVENT_OUTCOMES = ['ok', 'error', 'blocked', 'skipped'] as const;
 
 export type EventOutcome = (typeof EVENT_OUTCOMES)[number];
 
-export const ACTOR_KINDS = ['user', 'system'] as const;
-
-export type ActorKind = (typeof ACTOR_KINDS)[number];
+export type ActorKind = 'user' | 'system';
 
 export interface EventInput {
   readonly orgId: string;

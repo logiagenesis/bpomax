@@ -27,7 +27,7 @@ export interface OAuthTokens {
   readonly expiresAt: Date | null;
 }
 
-export interface OAuthDeps {
+interface OAuthDeps {
   readonly fetch?: Fetch;
   readonly now?: () => Date;
 }

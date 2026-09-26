@@ -39,10 +39,10 @@ import { enqueueScore } from './score.js';
  */
 export const INGEST_SYNC_SCHEDULER_ID = 'ingest-sync';
 export const INGEST_SYNC_EVERY_MS = 60_000;
-export const SCANNER_SCHEDULER_PREFIX = 'scanner:';
-export const FREELANCER_SEARCH_CALL = 'projects/0.1/projects/active';
+const SCANNER_SCHEDULER_PREFIX = 'scanner:';
+const FREELANCER_SEARCH_CALL = 'projects/0.1/projects/active';
 
-export type IngestJobData =
+type IngestJobData =
   | { readonly kind: 'sync' }
   | { readonly kind: 'poll'; readonly scannerId: string; readonly requestId?: string };
 
@@ -74,7 +74,7 @@ export interface IngestDeps {
   readonly upwork?: UpworkConfig | null;
 }
 
-export interface IngestSync {
+interface IngestSync {
   readonly wanted: number;
   readonly added: number;
   readonly changed: number;
@@ -187,7 +187,7 @@ export function usdText(minor: number): string {
   return `${String(whole)}.${String(cents).padStart(2, '0')}`;
 }
 
-export interface BuiltQuery {
+interface BuiltQuery {
   readonly query: ActiveProjectQuery;
   /** Applied here, to what comes back, because the endpoint has no such parameter. */
   readonly keep: (project: FreelancerProject) => boolean;

@@ -36,7 +36,7 @@ interface FactsRow {
   readonly model_cost_nano_usd: string;
 }
 
-export async function readJobFacts(tx: Queryable, since: string | null): Promise<JobFacts[]> {
+async function readJobFacts(tx: Queryable, since: string | null): Promise<JobFacts[]> {
   const { rows } = await tx.query<FactsRow>(
     `select job_id, category_slug, category_name, template_id, template_name, supplier_key,
             supplier_name, scanner_id, scanner_name, replied, won, lost,

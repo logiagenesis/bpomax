@@ -45,8 +45,8 @@ export const DEAD_LETTER_QUEUE = 'dead-letter';
  * is 5 s, 10 s, 20 s, 40 s — a little over a minute — which rides out a marketplace
  * rate-limit window or a brief network drop without holding a job for hours.
  */
-export const DEFAULT_ATTEMPTS = 5;
-export const DEFAULT_BACKOFF_MS = 5_000;
+const DEFAULT_ATTEMPTS = 5;
+const DEFAULT_BACKOFF_MS = 5_000;
 
 export function defaultJobOptions(
   overrides: { attempts?: number; backoffMs?: number } = {},
@@ -80,7 +80,7 @@ export function redisConnection(url: string): ConnectionOptions {
   };
 }
 
-export interface QueueSetOptions {
+interface QueueSetOptions {
   readonly connection: ConnectionOptions;
   /** Prefixes every key, so tests and environments sharing one Redis never collide. */
   readonly prefix?: string;

@@ -34,13 +34,12 @@ export const PIPELINE_STAGES = [
   'paid',
   'lost',
 ] as const;
-export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
 export const MILESTONE_STATUSES = ['pending', 'delivered', 'accepted'] as const;
 export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number];
 
-export const MAX_DELIVERY_MILESTONES = 20;
-export const MAX_MILESTONE_TITLE = 120;
+const MAX_DELIVERY_MILESTONES = 20;
+const MAX_MILESTONE_TITLE = 120;
 
 export interface DeliveryMilestone {
   readonly title: string;
@@ -56,7 +55,7 @@ export interface HandoverItem {
   readonly done: boolean;
 }
 
-export interface DeliveryOrderEdit {
+interface DeliveryOrderEdit {
   readonly agreedCostMinor: number;
   readonly currency: string;
   readonly milestones: DeliveryMilestone[];
@@ -332,7 +331,7 @@ export function pipelineStageFor(to: DeliveryStatus): string | null {
   return null;
 }
 
-export interface RetainerEdit {
+interface RetainerEdit {
   readonly retainer: boolean;
   /** Whole minor units of the job's currency each month; null when not a retainer. */
   readonly retainerMonthlyMinor: number | null;

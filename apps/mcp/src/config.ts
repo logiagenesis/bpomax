@@ -5,7 +5,7 @@
  * with it the API records an approval as made through MCP (ARB-500, S-06). Neither is
  * ever logged.
  */
-export type McpConfig =
+type McpConfig =
   | {
       readonly ok: true;
       readonly baseUrl: string;

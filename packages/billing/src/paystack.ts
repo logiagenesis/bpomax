@@ -20,7 +20,7 @@ function data(body: Record<string, unknown>): Record<string, unknown> {
   return typeof inner === 'object' && inner !== null ? (inner as Record<string, unknown>) : {};
 }
 
-export interface PaystackCheckoutInput {
+interface PaystackCheckoutInput {
   readonly email: string;
   /** The plan's code on Paystack; "This would invalidate the value provided in amount". */
   readonly planCode: string;
@@ -69,7 +69,7 @@ export async function initializePaystackCheckout(
   return { authorizationUrl, reference: text(result.reference) ?? input.reference };
 }
 
-export interface PaystackTransaction {
+interface PaystackTransaction {
   readonly status: string | null;
   readonly reference: string | null;
   readonly amountMinor: number | null;
@@ -101,7 +101,7 @@ export async function verifyPaystackTransaction(
   };
 }
 
-export interface PaystackSubscription {
+interface PaystackSubscription {
   readonly subscriptionCode: string | null;
   /** active, non-renewing, attention, completed or cancelled (DOC.paystackStatuses). */
   readonly status: string | null;

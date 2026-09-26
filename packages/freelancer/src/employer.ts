@@ -32,7 +32,7 @@ import {
  *   bidder's country sits (`location.country.code`, as on a project) are read
  *   defensively and are open under docs/BLOCKERS.md C-02 until the sandbox shows them.
  */
-export interface CreatedProject {
+interface CreatedProject {
   readonly id: string;
   readonly seoUrl: string | null;
   readonly title: string | null;
@@ -40,7 +40,7 @@ export interface CreatedProject {
   readonly rateLimit: RateLimit;
 }
 
-export interface ProjectDraft {
+interface ProjectDraft {
   readonly title: string;
   readonly description: string;
   readonly currencyId: number;
@@ -63,7 +63,7 @@ export interface FreelancerBid {
   readonly bidderCountryCode: string | null;
 }
 
-export interface BidPage {
+interface BidPage {
   readonly bids: readonly FreelancerBid[];
   readonly requestId: string | null;
   readonly rateLimit: RateLimit;

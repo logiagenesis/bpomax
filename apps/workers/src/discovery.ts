@@ -29,12 +29,12 @@ import { BRIEF_BUILD_THRESHOLD, enqueueBriefBuild } from './brief-build.js';
  * question is open, the next batch is drafted as an unapproved outbound message on the
  * thread. Nothing here sends anything (ARB-122).
  */
-export interface DiscoveryJobData {
+interface DiscoveryJobData {
   readonly messageId: string;
   readonly requestId?: string;
 }
 
-export interface DiscoveryDeps {
+interface DiscoveryDeps {
   /** A service-role connection: the worker acts for whichever org owns the thread. */
   readonly db: Queryable;
   readonly transport: LlmTransport;
@@ -44,7 +44,7 @@ export interface DiscoveryDeps {
   readonly briefQueue?: Queue;
 }
 
-export type DiscoveryResult =
+type DiscoveryResult =
   | { readonly status: 'skipped'; readonly reason: 'no_session' | 'not_inbound' | 'complete' }
   | {
       readonly status: 'updated';

@@ -1,6 +1,6 @@
 // @ts-check
 import { EVENT_TYPES } from '@arbitron/core';
-import { ApiError, apiGet, apiGetFile } from './lib/api.js';
+import { apiGet, apiGetFile } from './lib/api.js';
 import { downloadBlob } from './lib/download.js';
 import { formatDateTime } from './lib/format.js';
 import { runAction } from './lib/ui.js';
@@ -348,5 +348,3 @@ void loadActors().then(() => {
     void fetchAndRender(applyButton);
   }
 });
-
-export { ApiError };

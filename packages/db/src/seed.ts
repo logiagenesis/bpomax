@@ -11,14 +11,14 @@ import { validatePlan, type Plan } from '@arbitron/core';
  */
 const SEED_DIR = fileURLToPath(new URL('../seed/', import.meta.url));
 
-export interface ServiceCategorySeed {
+interface ServiceCategorySeed {
   readonly slug: string;
   readonly name: string;
   /** The owner's decision (docs/02 D-04); false until they make it. */
   readonly inHouse?: boolean;
 }
 
-export interface MarketPriceBandSeed {
+interface MarketPriceBandSeed {
   readonly categorySlug: string;
   readonly currency: string;
   readonly p25Minor: number;

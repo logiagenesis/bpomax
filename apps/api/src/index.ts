@@ -12,5 +12,3 @@
  */
 export * from './auth.js';
 export * from './server.js';
-
-export const APP_NAME = 'arbitron-api';

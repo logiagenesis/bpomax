@@ -31,7 +31,7 @@ import { messageOf, refuse, statusOf } from '../errors.js';
  * a message the model did not read; and asks for the next batch. The worker does the
  * same on each client reply. The conversations page (ARB-140) is where this is shown.
  */
-export function describeSession(session: DiscoverySessionRow) {
+function describeSession(session: DiscoverySessionRow) {
   return {
     id: session.id,
     threadId: session.thread_id,

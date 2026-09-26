@@ -29,12 +29,12 @@ import { enqueueMargin } from './margin.js';
  * when there is no such row the job gets no estimate and an event saying why — not a
  * number from nowhere.
  */
-export interface EstimateJobData {
+interface EstimateJobData {
   readonly jobId: string;
   readonly requestId?: string;
 }
 
-export interface EstimateDeps {
+interface EstimateDeps {
   /** A service-role connection: the worker acts for whichever org owns the job. */
   readonly db: Queryable;
   readonly transport: LlmTransport;
@@ -43,10 +43,9 @@ export interface EstimateDeps {
   readonly marginQueue?: Queue;
 }
 
-export type EstimateSkipReason =
-  'no_score' | 'verdict_skip' | 'no_currency' | 'no_category' | 'no_source';
+type EstimateSkipReason = 'no_score' | 'verdict_skip' | 'no_currency' | 'no_category' | 'no_source';
 
-export type EstimateResult =
+type EstimateResult =
   | {
       readonly status: 'estimated';
       readonly estimateId: string;

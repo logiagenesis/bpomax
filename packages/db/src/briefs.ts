@@ -155,7 +155,7 @@ export async function updateBrief(
   return rows[0] ?? null;
 }
 
-export type LockOutcome =
+type LockOutcome =
   | { readonly ok: true; readonly brief: BriefRow }
   | { readonly ok: false; readonly missing: string[] };
 

@@ -10,7 +10,7 @@ import { WEBHOOK_PATH } from './server.js';
  * setWebhook requires (https://core.telegram.org/bots/api#setwebhook), and end in the
  * path the bot serves.
  */
-export interface BotConfig {
+interface BotConfig {
   readonly databaseUrl: string;
   readonly redisUrl: string;
   readonly token: string;
@@ -21,11 +21,11 @@ export interface BotConfig {
   readonly queuePrefix: string | null;
 }
 
-export type BotConfigResult =
+type BotConfigResult =
   | { readonly ok: true; readonly config: BotConfig }
   | { readonly ok: false; readonly problems: readonly string[] };
 
-export const BOT_DEFAULT_PORT = 3002;
+const BOT_DEFAULT_PORT = 3002;
 
 export function botConfig(env: Env): BotConfigResult {
   const check = new EnvProblems();

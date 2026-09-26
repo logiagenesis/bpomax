@@ -156,7 +156,7 @@ export function validateMarginRules(input: unknown): ValidationResult<MarginRule
   return { ok: true, value };
 }
 
-export interface LiveModeInputs {
+interface LiveModeInputs {
   readonly minMarginPct: number | string | null;
   readonly minMarginZarMinor: number | string | null;
   readonly fxBufferPct: number | string | null;
@@ -179,13 +179,13 @@ export function liveModeBlockers(settings: LiveModeInputs): string[] {
   return missing;
 }
 
-export interface PlanRecordInput {
+interface PlanRecordInput {
   readonly planName: string | null;
   readonly monthlyBidAllowance: number | null;
 }
 
-export const MAX_PLAN_NAME_LENGTH = 80;
-export const MAX_MONTHLY_BID_ALLOWANCE = 10_000;
+const MAX_PLAN_NAME_LENGTH = 80;
+const MAX_MONTHLY_BID_ALLOWANCE = 10_000;
 
 /** The membership plan and its monthly bid allowance, as recorded on a platform account (D-030, docs/02 T-03). */
 export function validatePlanRecord(input: unknown): ValidationResult<PlanRecordInput> {

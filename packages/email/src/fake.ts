@@ -4,7 +4,7 @@ import type { EmailMessage, EmailSender } from './index.js';
  * A stand-in for an email provider, for tests: it keeps what it was asked to send, and
  * can be told to fail the next send, as a provider's outage would.
  */
-export interface FakeEmail extends EmailSender {
+interface FakeEmail extends EmailSender {
   readonly sent: EmailMessage[];
   failNext(message?: string): void;
 }

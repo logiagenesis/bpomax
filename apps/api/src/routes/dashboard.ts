@@ -14,13 +14,13 @@ import type { ServerOptions } from '../context.js';
  * The month is the South African calendar month (D-024, D-030), from the first at
  * 00:00 SAST to the moment of the request.
  */
-export interface MoneyByCurrency {
+interface MoneyByCurrency {
   readonly currency: string;
   readonly amountMinor: string;
   readonly count: number;
 }
 
-export interface Dashboard {
+interface Dashboard {
   readonly period: { readonly start: string; readonly end: string };
   readonly currency: 'ZAR';
   /** Sum of payments in, paid this month, in ZAR: `amount_zar_minor`, or `amount_minor` when the payment is in ZAR. */
@@ -54,7 +54,7 @@ export interface Dashboard {
 const OPEN_STAGES = `('applied', 'replied', 'discovery', 'briefed', 'sourcing', 'won', 'in_delivery', 'delivered')`;
 const WON_STAGES = `('won', 'in_delivery', 'delivered', 'paid')`;
 
-export async function readDashboard(tx: Queryable, now: Date): Promise<Dashboard> {
+async function readDashboard(tx: Queryable, now: Date): Promise<Dashboard> {
   const period = bidPeriod(now);
   const monthStart = new Date(`${period.start}T00:00:00+02:00`).toISOString();
   const end = now.toISOString();

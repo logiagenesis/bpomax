@@ -42,7 +42,7 @@ import { confirmAction, runAction } from './lib/ui.js';
  * @property {(term: string, value: string) => HTMLElement[]} figure
  */
 
-export const PLATFORM_WORDS = /** @type {Record<string, string>} */ ({
+const PLATFORM_WORDS = /** @type {Record<string, string>} */ ({
   freelancer: 'Freelancer.com',
   upwork: 'Upwork',
   fiverr: 'Fiverr',

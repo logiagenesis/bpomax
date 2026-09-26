@@ -20,7 +20,7 @@ export const PRICE_REFRESH_SCHEDULER_ID = 'price-refresh-weekly';
  */
 export const PRICE_REFRESH_PATTERN = '0 1 * * 1';
 
-export type PriceRefreshJobData = Record<string, never>;
+type PriceRefreshJobData = Record<string, never>;
 
 export interface PriceRefreshRun extends PriceRefreshResult {
   readonly ranAt: string;
@@ -34,7 +34,7 @@ export async function schedulePriceRefresh(queue: Queue): Promise<void> {
   );
 }
 
-export interface PriceRefreshDeps {
+interface PriceRefreshDeps {
   /** A service-role connection: the bands are shared, outside any one org (D-017). */
   readonly db: Queryable;
   readonly now?: () => Date;

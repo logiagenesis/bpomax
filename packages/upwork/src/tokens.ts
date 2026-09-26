@@ -13,7 +13,7 @@ import { refreshTokens } from './oauth.js';
  * few minutes keeps the refresh token in use. A refresh Upwork refuses marks the account
  * `expired`; the owner connects again. Both outcomes are events; neither carries a token.
  */
-export const UPWORK_REFRESH_MARGIN_MS = 3_600_000;
+const UPWORK_REFRESH_MARGIN_MS = 3_600_000;
 
 export class UpworkAccountNotConnectedError extends Error {
   constructor(
@@ -25,7 +25,7 @@ export class UpworkAccountNotConnectedError extends Error {
   }
 }
 
-export interface UpworkTokenDeps {
+interface UpworkTokenDeps {
   readonly db: Queryable;
   readonly config: UpworkConfig;
   readonly fetch?: Fetch;

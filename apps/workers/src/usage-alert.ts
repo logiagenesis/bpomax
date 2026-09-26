@@ -25,7 +25,7 @@ export interface UsageAlert {
   readonly requestId?: string | null;
 }
 
-export interface UsageAlertDeps {
+interface UsageAlertDeps {
   readonly db: Queryable;
   /** Sends one Telegram message (the bot's `sendMessage`). Absent without B-09's token. */
   readonly telegram?: ((chatId: string, text: string) => Promise<unknown>) | null;
@@ -35,7 +35,7 @@ export interface UsageAlertDeps {
   readonly emailOffReason?: string;
 }
 
-export interface AlertOutcome {
+interface AlertOutcome {
   readonly telegram: number;
   readonly email: number;
   readonly failures: number;
@@ -97,7 +97,7 @@ export function createUsageAlert(
   };
 }
 
-export interface MeterDeps {
+interface MeterDeps {
   readonly db: Queryable;
   readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
 }

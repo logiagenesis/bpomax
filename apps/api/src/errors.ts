@@ -3,7 +3,7 @@
  * constraints 422, and each named constraint gets a sentence the operator can act on.
  * The raw driver message is read here and never sent to the page as it is.
  */
-export function statusFor(error: unknown): number {
+function statusFor(error: unknown): number {
   const message = rawMessage(error);
   if (/row-level security|refused/i.test(message)) return 403;
   if (/duplicate key|unique constraint/i.test(message)) return 409;
@@ -28,7 +28,7 @@ const CONSTRAINT_WORDS: readonly (readonly [RegExp, string])[] = [
   [/row-level security|refused/i, 'you do not have permission to do that in this org'],
 ];
 
-export function messageFor(error: unknown): string {
+function messageFor(error: unknown): string {
   const message = rawMessage(error);
   for (const [pattern, words] of CONSTRAINT_WORDS) if (pattern.test(message)) return words;
   if (/duplicate key/i.test(message)) return 'that record already exists';

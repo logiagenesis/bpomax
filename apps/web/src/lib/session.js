@@ -6,7 +6,7 @@
  * It lives in sessionStorage: gone when the tab closes, never sent as a cookie (D-027),
  * and never written anywhere a later page load could pick up by accident.
  */
-export const SESSION_KEY = 'arbitron.session';
+const SESSION_KEY = 'arbitron.session';
 
 /**
  * @typedef {object} Session
@@ -49,7 +49,7 @@ export function authConfig() {
 }
 
 /** The page name of the current document, e.g. "feed.html". */
-export function currentPage() {
+function currentPage() {
   const name = location.pathname.split('/').pop() || 'index.html';
   return name.endsWith('.html') ? name : 'index.html';
 }

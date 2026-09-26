@@ -11,16 +11,15 @@ import type { FieldError, ValidationResult } from './scanners.js';
  * on the wire, DD/MM/YYYY only on a page. A locked brief needs what the sourcing and
  * pricing path reads (0003's `locked_brief_is_complete`), named here in words.
  */
-export const BRIEF_SCHEMA_VERSION = '1';
-export const BUDGET_TYPES = ['fixed', 'hourly'] as const;
+const BUDGET_TYPES = ['fixed', 'hourly'] as const;
 export type BudgetType = (typeof BUDGET_TYPES)[number];
-export const DELIVERY_ROUTES = ['in_house', 'ai_build', 'supplier', 'source_new'] as const;
+const DELIVERY_ROUTES = ['in_house', 'ai_build', 'supplier', 'source_new'] as const;
 export type DeliveryRoute = (typeof DELIVERY_ROUTES)[number];
 
-export const MAX_BRIEF_TITLE = 200;
-export const MAX_BRIEF_TEXT = 1000;
-export const MAX_BRIEF_ITEM = 500;
-export const MAX_BRIEF_ITEMS = 50;
+const MAX_BRIEF_TITLE = 200;
+const MAX_BRIEF_TEXT = 1000;
+const MAX_BRIEF_ITEM = 500;
+const MAX_BRIEF_ITEMS = 50;
 
 export interface BriefBudget {
   readonly minMinor: number | null;

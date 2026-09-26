@@ -32,14 +32,14 @@ import { meter, type UsageAlert } from './usage-alert.js';
  * supplies the words. Without an approved template (D-07) there is no draft, and the
  * event says so.
  */
-export interface DraftJobData {
+interface DraftJobData {
   readonly jobId: string;
   /** The passed margin evaluation to price from. Omitted, the job's latest is used. */
   readonly marginEvaluationId?: string;
   readonly requestId?: string;
 }
 
-export interface DraftDeps {
+interface DraftDeps {
   /** A service-role connection: the worker acts for whichever org owns the job. */
   readonly db: Queryable;
   readonly transport: LlmTransport;
@@ -54,7 +54,7 @@ export interface DraftDeps {
   readonly onQueued?: ((proposalId: string) => Promise<unknown>) | null;
 }
 
-export type DraftResult =
+type DraftResult =
   | { readonly status: 'drafted'; readonly proposalId: string }
   | { readonly status: 'already_drafted'; readonly proposalId: string }
   | {

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 const MIGRATIONS_DIR = fileURLToPath(new URL('../migrations/', import.meta.url));
 
-export interface Migration {
+interface Migration {
   /** File name, e.g. `0001_identity.sql`. Ordering is lexical, which is why they are numbered. */
   readonly name: string;
   readonly sql: string;

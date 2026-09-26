@@ -14,7 +14,7 @@ import { invalid, type ServerOptions } from '../context.js';
  * Every change writes an event. That obligation is ARB-014's, and it is met here rather
  * than deferred.
  */
-export interface ScannerRow {
+interface ScannerRow {
   readonly id: string;
   readonly org_id: string;
   readonly name: string;

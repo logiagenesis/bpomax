@@ -3,9 +3,9 @@ import { DEAD_LETTER_QUEUE, type QueueSet } from './queues.js';
 
 const COUNTED_STATES = ['waiting', 'active', 'delayed', 'failed', 'completed'] as const;
 
-export type QueueCounts = Record<(typeof COUNTED_STATES)[number], number>;
+type QueueCounts = Record<(typeof COUNTED_STATES)[number], number>;
 
-export interface WorkerHealth {
+interface WorkerHealth {
   /** `ok` when Redis answers; `down` when it does not. Dead letters do not make it `down`. */
   readonly status: 'ok' | 'down';
   readonly service: 'arbitron-workers';
@@ -20,7 +20,7 @@ export interface WorkerHealth {
  * A health check that waits on a lost Redis never answers: ioredis keeps reconnecting and
  * the queue's client promise stays pending. Past this, Redis counts as unreachable.
  */
-export const HEALTH_TIMEOUT_MS = 2_000;
+const HEALTH_TIMEOUT_MS = 2_000;
 
 function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -71,7 +71,7 @@ async function countQueues(queues: QueueSet): Promise<WorkerHealth> {
 }
 
 /** What `/ready` reports: 200 when `ready` is true, 503 otherwise. */
-export interface Readiness {
+interface Readiness {
   readonly ready: boolean;
 }
 

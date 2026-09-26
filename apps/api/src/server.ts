@@ -163,5 +163,3 @@ function registerRoutes(app: FastifyInstance, options: ServerOptions): void {
 function toList(value: string | readonly string[]): readonly string[] {
   return typeof value === 'string' ? [value] : value;
 }
-
-export type { ServerOptions } from './context.js';

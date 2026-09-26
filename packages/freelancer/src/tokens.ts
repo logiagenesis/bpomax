@@ -15,7 +15,7 @@ import { refreshTokens } from './oauth.js';
  * refresh that Freelancer.com refuses marks the account `expired`, and the owner must
  * connect again. Both outcomes are events. Neither event carries a token.
  */
-export const REFRESH_MARGIN_MS = 24 * 3_600_000;
+const REFRESH_MARGIN_MS = 24 * 3_600_000;
 
 export class AccountNotConnectedError extends Error {
   constructor(
@@ -27,7 +27,7 @@ export class AccountNotConnectedError extends Error {
   }
 }
 
-export interface AccessTokenDeps {
+interface AccessTokenDeps {
   readonly db: Queryable;
   readonly config: FreelancerConfig;
   readonly fetch?: Fetch;

@@ -1,4 +1,4 @@
-import { parsePrivacyNotice, type PrivacyNotice } from './privacy.js';
+import { parsePrivacyNotice } from './privacy.js';
 
 /**
  * The terms of service a new person accepts at sign-up (ARB-400, D-068).
@@ -9,8 +9,6 @@ import { parsePrivacyNotice, type PrivacyNotice } from './privacy.js';
  * or `approved` naming who approved it and when. Public sign-up stays closed while the
  * terms are pending, because nobody can accept terms that do not exist yet.
  */
-export type TermsOfService = PrivacyNotice;
-
 export function parseTermsOfService(input: unknown): ReturnType<typeof parsePrivacyNotice> {
   return parsePrivacyNotice(input);
 }

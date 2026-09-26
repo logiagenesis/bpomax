@@ -18,7 +18,7 @@ import type { Queryable } from './client.js';
  * submissions racing for the last bid cannot both have it. A submission that then fails
  * before the platform accepted it gives the bid back with `releaseBid`.
  */
-export interface BidAccountInput {
+interface BidAccountInput {
   readonly orgId: string;
   readonly platform: Platform;
   /** Defaults to the current time. Tests pass a fixed one. */
@@ -105,7 +105,7 @@ export async function releaseBid(db: Queryable, input: BidAccountInput): Promise
   return rows[0]?.used ?? 0;
 }
 
-export interface ScannerSlotInput {
+interface ScannerSlotInput {
   readonly orgId: string;
   readonly scannerId: string;
   /** The scanner's `daily_cap`. Zero admits nothing. */
@@ -113,7 +113,7 @@ export interface ScannerSlotInput {
   readonly now?: Date;
 }
 
-export type ScannerSlot =
+type ScannerSlot =
   | { readonly ok: true; readonly used: number; readonly cap: number; readonly day: string }
   | {
       readonly ok: false;

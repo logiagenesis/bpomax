@@ -24,10 +24,10 @@ import { enqueueScore } from './score.js';
  * `purgeUpworkJobs` deletes every Upwork job not fetched again within 24 hours, and runs
  * with the ingest's minute-by-minute sync.
  */
-export const UPWORK_SEARCH_CALL = 'graphql marketplaceJobPostingsSearch';
-export const UPWORK_KEEP_HOURS = 24;
+const UPWORK_SEARCH_CALL = 'graphql marketplaceJobPostingsSearch';
+const UPWORK_KEEP_HOURS = 24;
 
-export interface UpworkIngestDeps {
+interface UpworkIngestDeps {
   readonly db: Queryable;
   readonly queue: Queue;
   readonly upwork: UpworkConfig | null;

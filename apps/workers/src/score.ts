@@ -29,12 +29,12 @@ import { meter, type UsageAlert } from './usage-alert.js';
  * own backoff, which would pay for the same bad answer three more times. A transport
  * failure is different: nothing was judged, so the queue retries it as usual.
  */
-export interface ScoreJobData {
+interface ScoreJobData {
   readonly jobId: string;
   readonly requestId?: string;
 }
 
-export interface ScoreDeps {
+interface ScoreDeps {
   /** A service-role connection: the worker acts for whichever org owns the job. */
   readonly db: Queryable;
   readonly transport: LlmTransport;
@@ -48,7 +48,7 @@ export interface ScoreDeps {
   readonly usageAlert?: ((alert: UsageAlert) => Promise<unknown>) | null;
 }
 
-export type ScoreResult =
+type ScoreResult =
   | { readonly status: 'scored'; readonly scoreId: string; readonly score: FinalScore }
   | { readonly status: 'already_scored'; readonly scoreId: string }
   /** ARB-410: the org's plan has no room for another score this month. */

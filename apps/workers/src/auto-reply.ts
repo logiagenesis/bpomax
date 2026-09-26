@@ -23,7 +23,7 @@ import { UnrecoverableError, type Job, type Queue } from 'bullmq';
  * the audit log. Live, it is posted with the documented call, and a platform failure
  * undoes the record so the queue can try again.
  */
-export interface AutoReplyJobData {
+interface AutoReplyJobData {
   readonly messageId: string;
   readonly requestId?: string;
 }
@@ -38,7 +38,7 @@ export interface AutoReplyDeps {
   readonly now?: () => Date;
 }
 
-export type AutoReplySkipReason =
+type AutoReplySkipReason =
   | 'not_inbound'
   | 'thread_closed'
   | 'not_configured'
@@ -48,7 +48,7 @@ export type AutoReplySkipReason =
   | 'no_account'
   | 'no_client';
 
-export type AutoReplyResult =
+type AutoReplyResult =
   | { readonly status: 'sent'; readonly messageId: string; readonly externalMessageId: string }
   | {
       readonly status: 'blocked';

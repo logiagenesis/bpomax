@@ -15,7 +15,7 @@ import { recordEvent } from './events.js';
  */
 export const ERASED_TEXT = '[redacted: erased on request]';
 
-export interface PersonColumn {
+interface PersonColumn {
   readonly table: string;
   readonly column: string;
 }
@@ -34,7 +34,7 @@ export async function personColumns(db: Queryable): Promise<PersonColumn[]> {
   return rows.map((r) => ({ table: r.table_name, column: r.column_name }));
 }
 
-export interface PersonExport {
+interface PersonExport {
   readonly person: Record<string, unknown> | null;
   readonly memberships: readonly Record<string, unknown>[];
   /**
@@ -82,7 +82,7 @@ export async function exportPerson(db: Queryable, userId: string): Promise<Perso
   return { person: person.rows[0] ?? null, memberships: memberships.rows, namedIn };
 }
 
-export interface ClientExport {
+interface ClientExport {
   readonly handle: string;
   readonly threads: readonly Record<string, unknown>[];
   readonly messages: readonly Record<string, unknown>[];
@@ -127,7 +127,7 @@ export async function exportClient(
   };
 }
 
-export interface ClientErasure {
+interface ClientErasure {
   readonly threads: number;
   readonly messages: number;
   readonly discoverySessions: number;

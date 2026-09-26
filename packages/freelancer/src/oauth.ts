@@ -26,7 +26,7 @@ import { FreelancerError, readJson, send, type Fetch } from './http.js';
  * https://developers.freelancer.com/docs/authentication/advanced-scopes. Each is asked
  * for now, so that no later ticket needs the owner to connect again:
  */
-export const ADVANCED_SCOPES = {
+const ADVANCED_SCOPES = {
   /** 1 — post and edit projects: sourcing posts as an employer (ARB-203). */
   projectCreate: 1,
   /** 2 — manage projects, bids and milestones: required by POST /projects/0.1/bids/ (ARB-044). */
@@ -61,7 +61,7 @@ export function authorizeUrl(config: FreelancerConfig): string {
   return `${config.accountsUrl}/oauth/authorize?${query}`;
 }
 
-export interface OAuthDeps {
+interface OAuthDeps {
   readonly fetch?: Fetch;
   readonly now?: () => Date;
 }

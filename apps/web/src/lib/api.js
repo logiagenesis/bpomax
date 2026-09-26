@@ -10,8 +10,6 @@
  */
 import { readSession } from './session.js';
 
-export { SESSION_KEY } from './session.js';
-
 /** @returns {string} */
 export function apiBaseUrl() {
   const configured = /** @type {string | undefined} */ (import.meta.env?.VITE_API_URL);
@@ -19,7 +17,7 @@ export function apiBaseUrl() {
 }
 
 /** @returns {string | null} */
-export function accessToken() {
+function accessToken() {
   return readSession()?.access_token ?? null;
 }
 

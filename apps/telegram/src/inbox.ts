@@ -8,7 +8,7 @@ import type { BotDeps } from './engine.js';
  * buttons: replying is ARB-122's approval flow. The inbox-sync worker calls
  * `inboundAlert(deps)` after it has stored the message, so the card reads from the row.
  */
-export interface InboundCard {
+interface InboundCard {
   readonly clientHandle: string | null;
   readonly jobTitle: string | null;
   readonly body: string;
@@ -17,10 +17,7 @@ export interface InboundCard {
 
 const BODY_PREVIEW = 400;
 
-export async function loadInboundCard(
-  db: Queryable,
-  messageId: string,
-): Promise<InboundCard | null> {
+async function loadInboundCard(db: Queryable, messageId: string): Promise<InboundCard | null> {
   const { rows } = await db.query<{
     body: string;
     sent_at: string | null;

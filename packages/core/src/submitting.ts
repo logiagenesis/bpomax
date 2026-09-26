@@ -17,14 +17,14 @@ export function autoSendMetric(scannerId: string): string {
   return `auto_send:${scannerId}`;
 }
 
-export interface LiveGateInput {
+interface LiveGateInput {
   /** LIVE_MODE from the environment: the deployment-wide switch (docs/01 section H). */
   readonly envLiveMode: boolean;
   /** `settings.live_mode` for the org: the owner's switch, which the database refuses until the margin rules and retention period are set. */
   readonly orgLiveMode: boolean;
 }
 
-export type LiveGate =
+type LiveGate =
   | { readonly live: true }
   | {
       readonly live: false;
@@ -50,23 +50,15 @@ export function liveGate(input: LiveGateInput): LiveGate {
   };
 }
 
-export const PROPOSAL_STATUSES = [
-  'draft',
-  'queued',
-  'approved',
-  'rejected',
-  'submitted',
-  'failed',
-] as const;
-export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+type ProposalStatus = 'draft' | 'queued' | 'approved' | 'rejected' | 'submitted' | 'failed';
 
-export interface SubmittableProposal {
+interface SubmittableProposal {
   readonly status: ProposalStatus;
   readonly approvedBy: string | null;
   readonly approvedVia: 'telegram' | 'web' | 'auto' | 'mcp' | null;
 }
 
-export type ApprovalCheck =
+type ApprovalCheck =
   | { readonly ok: true; readonly via: 'telegram' | 'web' | 'auto' | 'mcp' }
   | {
       readonly ok: false;

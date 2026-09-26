@@ -32,7 +32,7 @@ import {
  *   (`result.bids`), defensively, open under docs/BLOCKERS.md C-02 until the sandbox
  *   shows it.
  */
-export interface BidRequest {
+interface BidRequest {
   readonly projectId: number;
   readonly bidderId: number;
   /** In the project's currency units, as the documented example sends them (60, not 6000). */
@@ -43,7 +43,7 @@ export interface BidRequest {
   readonly description: string;
 }
 
-export interface PlacedBid {
+interface PlacedBid {
   readonly id: string;
   readonly requestId: string | null;
   readonly rateLimit: RateLimit;

@@ -5,10 +5,9 @@
  * Each constant below is the anchor of the section a call follows, so the code can name
  * its source and a reader can check it.
  */
-export const UPWORK_DOCS =
-  'https://www.upwork.com/developer/documentation/graphql/api/docs/index.html';
+const UPWORK_DOCS = 'https://www.upwork.com/developer/documentation/graphql/api/docs/index.html';
 
-export function upworkDoc(anchor: string): string {
+function upworkDoc(anchor: string): string {
   return `${UPWORK_DOCS}#${anchor}`;
 }
 

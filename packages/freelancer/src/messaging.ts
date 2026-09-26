@@ -36,7 +36,7 @@ import {
  * first thing to confirm against the sandbox (C-02). `users`, with `user_details`, is
  * read leniently as a map from user id to `{ username, display_name }`.
  */
-export const MESSAGING_MAX_LIMIT = 100;
+const MESSAGING_MAX_LIMIT = 100;
 
 /**
  * `POST /messages/0.1/threads/{thread_id}/messages/` — "Adds a new message to an existing
@@ -49,7 +49,7 @@ export const MESSAGING_MAX_LIMIT = 100;
  * message, time_created, … } }`. That is what is sent and read here; the sandbox run is
  * where the form is confirmed (C-02).
  */
-export interface SentMessage {
+interface SentMessage {
   readonly id: string;
   readonly threadId: string;
   readonly timeCreated: Date | null;
@@ -57,16 +57,16 @@ export interface SentMessage {
   readonly rateLimit: RateLimit;
 }
 
-export type ThreadContextType = 'project' | 'contest' | 'general';
+type ThreadContextType = 'project' | 'contest' | 'general';
 
-export interface ThreadQuery {
+interface ThreadQuery {
   readonly contextType?: ThreadContextType;
   readonly fromUpdatedTime?: Date;
   readonly limit?: number;
   readonly offset?: number;
 }
 
-export interface MessageQuery {
+interface MessageQuery {
   readonly threads: readonly string[];
   readonly fromUpdatedTime?: Date;
   readonly limit?: number;
@@ -104,14 +104,14 @@ export interface FreelancerUserDetail {
   readonly displayName: string | null;
 }
 
-export interface ThreadPage {
+interface ThreadPage {
   readonly threads: readonly FreelancerThread[];
   readonly users: Readonly<Record<string, FreelancerUserDetail>>;
   readonly requestId: string | null;
   readonly rateLimit: RateLimit;
 }
 
-export interface MessagePage {
+interface MessagePage {
   readonly messages: readonly FreelancerMessage[];
   readonly requestId: string | null;
   readonly rateLimit: RateLimit;

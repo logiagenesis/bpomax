@@ -7,10 +7,10 @@ import type { Queryable } from './client.js';
  * knows nothing about providers. Cost is in whole nano-US-dollars — see migration 0011
  * for why cents would not do.
  */
-export type LlmPurpose = 'score' | 'draft' | 'discovery' | 'brief' | 'estimate' | 'other';
-export type LlmCallOutcome = 'ok' | 'invalid_output' | 'error';
+type LlmPurpose = 'score' | 'draft' | 'discovery' | 'brief' | 'estimate' | 'other';
+type LlmCallOutcome = 'ok' | 'invalid_output' | 'error';
 
-export interface LlmCallInput {
+interface LlmCallInput {
   readonly orgId: string;
   readonly purpose: LlmPurpose;
   readonly model: string;
@@ -26,19 +26,6 @@ export interface LlmCallInput {
   readonly outcome?: LlmCallOutcome;
   /** Validator complaints only. Never the prompt or the reply — those carry client content. */
   readonly problems?: readonly (readonly string[])[];
-}
-
-export interface LlmCallRow {
-  readonly id: string;
-  readonly org_id: string;
-  readonly purpose: string;
-  readonly model: string;
-  readonly input_tokens: number;
-  readonly output_tokens: number;
-  readonly cost_nano_usd: number;
-  readonly attempts: number;
-  readonly outcome: string;
-  readonly created_at: string;
 }
 
 export async function recordLlmCall(db: Queryable, call: LlmCallInput): Promise<string> {
@@ -72,7 +59,7 @@ export async function recordLlmCall(db: Queryable, call: LlmCallInput): Promise<
   return id;
 }
 
-export interface SpendSummary {
+interface SpendSummary {
   readonly purpose: string;
   readonly model: string;
   readonly calls: number;

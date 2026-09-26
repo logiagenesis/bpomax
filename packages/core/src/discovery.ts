@@ -9,7 +9,7 @@ import type { FieldError, ValidationResult } from './scanners.js';
  */
 export const DISCOVERY_QUESTION_SET_VERSION = '1';
 
-export interface DiscoveryQuestion {
+interface DiscoveryQuestion {
   readonly key: string;
   readonly text: string;
 }
@@ -30,10 +30,10 @@ export const DISCOVERY_QUESTIONS: readonly DiscoveryQuestion[] = [
 const KEYS = new Set(DISCOVERY_QUESTIONS.map((q) => q.key));
 
 /** Three at a time: few enough to answer in one reply, and never the whole set. */
-export const DISCOVERY_BATCH_SIZE = 3;
-export const MAX_DISCOVERY_ANSWER_LENGTH = 2000;
+const DISCOVERY_BATCH_SIZE = 3;
+const MAX_DISCOVERY_ANSWER_LENGTH = 2000;
 /** Below this the model's reading of a reply is not written as an answer. */
-export const DISCOVERY_MIN_CONFIDENCE = 0.6;
+const DISCOVERY_MIN_CONFIDENCE = 0.6;
 
 export type DiscoveryAnswerSource = 'client' | 'operator';
 

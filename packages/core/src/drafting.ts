@@ -8,8 +8,7 @@ import type { ScorableJob } from './scoring.js';
  * milestones sum to the price to the cent, and a citation can only be an item the
  * owner recorded (D-10) — the schema offers the model those ids and no others.
  */
-export const PORTFOLIO_KINDS = ['own_work', 'labelled_demo'] as const;
-export type PortfolioKind = (typeof PORTFOLIO_KINDS)[number];
+export type PortfolioKind = 'own_work' | 'labelled_demo';
 
 export interface DraftPortfolioItem {
   readonly id: string;
@@ -34,7 +33,7 @@ export interface ModelDraft {
   readonly operator_notes: string;
 }
 
-export const MAX_MILESTONES = 5;
+const MAX_MILESTONES = 5;
 export const MAX_CITATIONS = 3;
 
 /**
@@ -43,7 +42,7 @@ export const MAX_CITATIONS = 3;
  * logged-in browser session. Fiverr has no verified buyer API. So a job on either is
  * scored and priced like any other, and bid on at the marketplace itself.
  */
-export const BID_PLATFORMS = ['freelancer'] as const;
+const BID_PLATFORMS = ['freelancer'] as const;
 
 /** Why a bid cannot be drafted here for a job on `platform`, or null when it can. */
 export function readOnlyPlatformReason(platform: string): string | null {
@@ -103,7 +102,7 @@ export const DRAFT_SYSTEM_PROMPT =
   'portfolio items offered, by their ids, and put no links in the body. Quote exactly the ' +
   'price and the delivery time given. Reply with JSON only.';
 
-export interface DraftInput {
+interface DraftInput {
   readonly job: ScorableJob;
   readonly template: { readonly name: string; readonly body: string };
   readonly priceMinor: number;
@@ -166,7 +165,7 @@ export function buildDraftPrompt(input: DraftInput): string {
   ].join('\n');
 }
 
-export interface Milestone {
+interface Milestone {
   readonly title: string;
   readonly amount_minor: number;
   readonly share: number;

@@ -51,7 +51,7 @@ export type AllowanceVerdict =
       readonly period: BidPeriod;
     };
 
-export interface AllowanceInput {
+interface AllowanceInput {
   readonly platform: string;
   /** Null when no account is connected for the platform. */
   readonly account: { readonly planName: string | null; readonly allowance: number | null } | null;

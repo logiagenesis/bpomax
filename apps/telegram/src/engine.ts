@@ -31,7 +31,7 @@ export interface BotDeps {
   readonly now?: () => Date;
 }
 
-export interface LinkedUser {
+interface LinkedUser {
   readonly userId: string;
   readonly fullName: string | null;
   readonly orgId: string;

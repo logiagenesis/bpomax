@@ -38,11 +38,11 @@ export interface TelegramApi {
   getMe(): Promise<{ id: number; username: string }>;
 }
 
-export const CALLBACK_DATA_MAX_BYTES = 64;
+const CALLBACK_DATA_MAX_BYTES = 64;
 /** sendMessage: "1-4096 characters after entities parsing". */
-export const MESSAGE_TEXT_MAX = 4096;
+const MESSAGE_TEXT_MAX = 4096;
 /** answerCallbackQuery text: "0-200 characters". */
-export const CALLBACK_ANSWER_MAX = 200;
+const CALLBACK_ANSWER_MAX = 200;
 /** setWebhook secret_token: "1-256 characters. Only characters A-Z, a-z, 0-9, _ and - are allowed." */
 export const WEBHOOK_SECRET_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
 
@@ -55,7 +55,7 @@ type Fetch = (
   json(): Promise<unknown>;
 }>;
 
-export interface TelegramApiOptions {
+interface TelegramApiOptions {
   readonly token: string;
   /** Injected so tests never reach the network. Defaults to the global fetch. */
   readonly fetch?: Fetch;

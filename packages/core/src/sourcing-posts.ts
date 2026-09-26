@@ -17,10 +17,8 @@ export type SourcingPostPlatform = (typeof SOURCING_POST_PLATFORMS)[number];
 /** Platforms whose posts are made by a person, outside the app, and recorded here. */
 export const MANUAL_POST_PLATFORMS: readonly SourcingPostPlatform[] = ['upwork', 'fiverr'];
 
-export const MAX_SOURCING_POST_TITLE = 120;
-export const MAX_SOURCING_POST_BODY = 6000;
-
-export type SourcingPostState = 'draft' | 'approved' | 'posted' | 'closed' | 'failed';
+const MAX_SOURCING_POST_TITLE = 120;
+const MAX_SOURCING_POST_BODY = 6000;
 
 /** What the scrubber looks for besides the generic patterns. */
 export interface ClientIdentifiers {
@@ -31,7 +29,7 @@ export interface ClientIdentifiers {
   readonly jobExternalId: string | null;
 }
 
-export interface SourcingPostDraft {
+interface SourcingPostDraft {
   readonly title: string;
   readonly body: string;
 }
@@ -153,7 +151,7 @@ export function clientIdentifyingProblems(
   return errors;
 }
 
-export interface SourcingPostEdit {
+interface SourcingPostEdit {
   readonly title: string;
   readonly body: string;
   /** Whole minor units, or null when the post names no budget. */

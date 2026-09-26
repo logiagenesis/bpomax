@@ -31,7 +31,7 @@ export class UpworkError extends Error {
 }
 
 /** A network failure, as distinct from a refusal: worth trying again later. */
-export async function send(fetchImpl: Fetch, url: string, init: RequestInit, what: string) {
+async function send(fetchImpl: Fetch, url: string, init: RequestInit, what: string) {
   try {
     return await fetchImpl(url, init);
   } catch (error) {
@@ -55,7 +55,7 @@ async function body(response: Response): Promise<Record<string, unknown> | null>
 
 const PERMISSION = /permissions\/scopes/i;
 
-export interface GraphqlOptions {
+interface GraphqlOptions {
   readonly fetch?: Fetch;
   /** `X-Upwork-API-TenantId`: without it the user's default organisation is used (DOC.tenant). */
   readonly tenantId?: string | null;

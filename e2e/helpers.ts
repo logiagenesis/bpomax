@@ -10,8 +10,8 @@ export const API = 'https://e2e-api.invalid';
 export const SUPABASE = 'https://e2e.supabase.invalid';
 export const ANON_KEY = 'e2e-anon-key';
 
-export const ORG = 'aaaaaaaa-0000-4000-8000-000000000001';
-export const USER = 'aaaaaaaa-0000-4000-8000-000000000002';
+const ORG = 'aaaaaaaa-0000-4000-8000-000000000001';
+const USER = 'aaaaaaaa-0000-4000-8000-000000000002';
 
 export type Role = 'owner' | 'operator' | 'viewer';
 
@@ -56,7 +56,7 @@ export interface Captured {
   auth: string | null;
 }
 
-export type Handler = (request: Captured, route: Route) => Promise<void> | void;
+type Handler = (request: Captured, route: Route) => Promise<void> | void;
 
 /**
  * Serves the API. `handlers` are tried in order on `${METHOD} ${pathname}`; a request

@@ -20,7 +20,7 @@ import type { Queryable } from './client.js';
  *
  * `affectedRows` is node-postgres's `rowCount`, the name PGlite uses.
  */
-export interface PoolOptions {
+interface PoolOptions {
   /** DATABASE_URL. For a hosted Postgres, include the provider's `sslmode` in it. */
   readonly connectionString: string;
   readonly max?: number;
@@ -45,7 +45,7 @@ const parseInt8 = (value: string): number => Number(value);
 const parseDate = (value: string): Date => new Date(`${value}T00:00:00.000Z`);
 
 /** node-postgres's own parsers, except where PGlite answers differently. */
-export const PGLITE_COMPATIBLE_TYPES: pg.CustomTypesConfig = {
+const PGLITE_COMPATIBLE_TYPES: pg.CustomTypesConfig = {
   getTypeParser: ((oid: number, format?: string) => {
     if (format === 'binary') return pg.types.getTypeParser(oid, 'binary');
     if (oid === INT8) return parseInt8;

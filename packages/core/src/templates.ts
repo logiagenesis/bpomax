@@ -158,7 +158,7 @@ export function variantWordsLocked(sends: number): string | null {
   return `This variant has been sent ${String(sends)} time${sends === 1 ? '' : 's'}, and its reply rate measures these words. Add a new variant with the new words, and switch this one off if it should stop.`;
 }
 
-export interface VariantFigures {
+interface VariantFigures {
   readonly sends: number;
   readonly replies: number;
   readonly replyRate: Ratio;

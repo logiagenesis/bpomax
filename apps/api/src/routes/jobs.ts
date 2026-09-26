@@ -10,7 +10,7 @@ import { refuseOverLimit } from '../plan-limits.js';
  * button". Each row is the job with the latest of each stored judgement beside it; the
  * page shows what is stored and nothing it worked out itself (05 section 3.3).
  */
-export interface FeedRow {
+interface FeedRow {
   readonly id: string;
   readonly platform: string;
   readonly external_id: string;
@@ -42,7 +42,7 @@ export interface FeedRow {
 }
 
 const VERDICTS = new Set(['go', 'caution', 'skip', 'unscored']);
-export const FEED_PAGE_LIMIT = 25;
+const FEED_PAGE_LIMIT = 25;
 const FEED_MAX_LIMIT = 100;
 
 const FEED_SQL = `

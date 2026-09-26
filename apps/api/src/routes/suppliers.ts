@@ -18,7 +18,7 @@ import { messageOf, refuse, statusOf } from '../errors.js';
  * every line is right, and the export is the same columns so it imports again. Nothing
  * is seeded: every supplier and rate is the owner's (D-09).
  */
-export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 
 interface SupplierRow {
   readonly id: string;

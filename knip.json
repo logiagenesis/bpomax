@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "includeEntryExports": true,
+  "workspaces": {
+    ".": {
+      "entry": ["e2e/**/*.{ts,mjs}", "tests/**/*.test.ts"],
+      "project": ["e2e/**/*.{ts,mjs}", "tests/**/*.ts"],
+      "playwright": { "config": ["e2e/playwright.config.ts", "e2e/playwright.demo.config.ts"] }
+    },
+    "apps/web": {
+      "entry": ["src/*.js", "src/demo/demo.js"],
+      "project": ["src/**/*.js", "*.js"]
+    },
+    "apps/*": {},
+    "packages/*": {}
+  }
+}

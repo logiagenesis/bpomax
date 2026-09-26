@@ -16,7 +16,7 @@ export const ANALYTICS_DIMENSIONS = ['category', 'template', 'supplier', 'scanne
 export type AnalyticsDimension = (typeof ANALYTICS_DIMENSIONS)[number];
 
 /** What a group with no value is called, per dimension. */
-export const ANALYTICS_UNASSIGNED: Readonly<Record<AnalyticsDimension, string>> = {
+const ANALYTICS_UNASSIGNED: Readonly<Record<AnalyticsDimension, string>> = {
   category: 'Not classified',
   template: 'No template',
   supplier: 'No supplier',
@@ -50,7 +50,7 @@ export interface Ratio {
   readonly percent: string | null;
 }
 
-export interface AnalyticsRow {
+interface AnalyticsRow {
   readonly key: string | null;
   readonly label: string;
   readonly bids: number;

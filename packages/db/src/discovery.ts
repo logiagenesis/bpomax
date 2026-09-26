@@ -73,7 +73,7 @@ export async function captureDiscoveryAnswers(
   return { session: rows[0]!, captured };
 }
 
-export interface DiscoveryDraft {
+interface DiscoveryDraft {
   readonly messageId: string;
   readonly keys: string[];
   readonly body: string;

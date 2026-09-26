@@ -8,7 +8,7 @@ import type { Fetch } from './http.js';
  * Tests drive its state: the listings, a rate limit, a missing permission, a refused
  * token. Nothing here is real data.
  */
-export interface FakeUpworkState {
+interface FakeUpworkState {
   /** Job search nodes, newest first, in `MarketplaceJobPostingSearchResult`'s shape. */
   jobs: Record<string, unknown>[];
   user: { id: string; name: string };

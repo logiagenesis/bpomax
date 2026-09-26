@@ -28,14 +28,14 @@ export interface FxRateSource {
   quote(from: string, to: string): Promise<FxQuote>;
 }
 
-export interface MarginJobData {
+interface MarginJobData {
   readonly jobId: string;
   /** The estimate to judge. Omitted, the job's latest estimate is used. */
   readonly estimateId?: string;
   readonly requestId?: string;
 }
 
-export interface MarginDeps {
+interface MarginDeps {
   /** A service-role connection: the worker acts for whichever org owns the job. */
   readonly db: Queryable;
   /** Absent until B-10 is answered. Only needed for deals not in ZAR. */

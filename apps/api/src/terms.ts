@@ -7,9 +7,9 @@ import type { PublishedTerms } from '@arbitron/db';
  * the owner's (D-16, D-068). The API reads the same file when it starts, so the version
  * `app.create_org` holds a new owner to is the one the page asked them to accept.
  */
-export const TERMS_FILE = new URL('../../web/src/public/terms.json', import.meta.url);
+const TERMS_FILE = new URL('../../web/src/public/terms.json', import.meta.url);
 
-export type TermsOnShow =
+type TermsOnShow =
   | { readonly status: 'approved'; readonly terms: PublishedTerms }
   | { readonly status: 'pending' }
   | { readonly status: 'unreadable'; readonly reason: string };

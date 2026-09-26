@@ -10,12 +10,12 @@ import type { FieldError, ValidationResult } from './scanners.js';
  * when. A draft cannot be shown by accident, because a pending notice with sections in
  * it is refused, and so is an approved one without its approval.
  */
-export interface PrivacyNoticeSection {
+interface PrivacyNoticeSection {
   readonly heading: string;
   readonly paragraphs: readonly string[];
 }
 
-export type PrivacyNotice =
+type PrivacyNotice =
   | { readonly status: 'pending' }
   | {
       readonly status: 'approved';

@@ -20,7 +20,7 @@ import type { Queryable } from './client.js';
  * the last one cannot both have it. Reads work under RLS for a member (the API's checks)
  * and as service_role (the workers, which take the action).
  */
-export interface OrgPlanRow {
+interface OrgPlanRow {
   readonly orgName: string;
   readonly orgPlan: OrgPlan;
 }
@@ -101,7 +101,7 @@ export async function usedThisMonth(
   return rows[0]?.used ?? 0;
 }
 
-export interface PlanUsageInput {
+interface PlanUsageInput {
   readonly orgId: string;
   readonly metric: PlanMetric;
   /** Defaults to the current time. Tests pass a fixed one. */
@@ -124,7 +124,7 @@ export async function planUsage(db: Queryable, input: PlanUsageInput): Promise<U
   });
 }
 
-export interface Reservation {
+interface Reservation {
   readonly verdict: UsageVerdict;
   /** The alert thresholds this action crossed; each fires once a month. */
   readonly crossed: readonly UsageThreshold[];

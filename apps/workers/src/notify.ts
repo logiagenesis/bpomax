@@ -18,7 +18,7 @@ export type NotifyJobData =
   | { readonly kind: 'text'; readonly chatId: string; readonly text: string };
 
 /** Each puts one notice on the queue and answers the queued job. */
-export interface Notifier {
+interface Notifier {
   readonly inbound: (alert: InboundAlert) => Promise<Job<NotifyJobData>>;
   readonly reprice: (alert: RepriceAlert) => Promise<Job<NotifyJobData>>;
   /** A bid drafted for approval: its card, with Approve, Edit and Reject. */

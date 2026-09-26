@@ -15,7 +15,7 @@ function headers(config: ProviderConfig): Record<string, string> {
   };
 }
 
-export interface StripeCheckoutInput {
+interface StripeCheckoutInput {
   /** The plan's recurring Price on Stripe. */
   readonly priceId: string;
   readonly successUrl: string;
@@ -60,9 +60,9 @@ export async function createStripeCheckout(
 }
 
 /** "Our libraries have a default tolerance of 5 minutes" (DOC.stripeSignature). */
-export const STRIPE_TOLERANCE_SECONDS = 300;
+const STRIPE_TOLERANCE_SECONDS = 300;
 
-export type StripeSignatureCheck =
+type StripeSignatureCheck =
   | { readonly ok: true; readonly timestamp: number }
   | { readonly ok: false; readonly reason: 'no_header' | 'no_match' | 'too_old' };
 

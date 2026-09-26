@@ -7,7 +7,7 @@
  * cannot fail first and mask the real result) while `own` supplies fresh primary keys
  * and unique values (so a unique index cannot either).
  */
-export interface FixtureRow {
+interface FixtureRow {
   readonly table: string;
   readonly sql: string;
 }
