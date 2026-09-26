@@ -15,7 +15,21 @@ import {
  * `apps/api/src/routes/affiliates.ts` returns (tested against real Postgres in
  * affiliates.test.ts). The affiliate and its commission are test values (D-071).
  */
-const PARTNER = {
+/** An affiliate as GET /v1/affiliates lists it; a new one has no email, rate or click yet. */
+interface Affiliate {
+  id: string;
+  code: string;
+  ownerEmail: string | null;
+  commissionPct: string | null;
+  active: boolean;
+  createdAt: string;
+  clicks: number;
+  signUps: number;
+  paid: number;
+  lastClickAt: string | null;
+}
+
+const PARTNER: Affiliate = {
   id: 'aaaaaaaa-0000-4000-8000-000000000040',
   code: 'partner-1',
   ownerEmail: 'partner@example.test',
@@ -28,7 +42,7 @@ const PARTNER = {
   lastClickAt: '2026-09-23T10:15:00Z',
 };
 
-async function open(page: Page, affiliates = [PARTNER], refusal?: string) {
+async function open(page: Page, affiliates: Affiliate[] = [PARTNER], refusal?: string) {
   await signedIn(page);
   const list = [...affiliates];
   const captured = await serveApi(page, {

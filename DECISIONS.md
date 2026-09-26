@@ -2682,3 +2682,59 @@ where the API allows; otherwise from owner CSV import")
   `packages/core/src/price-bands.ts`, not market figures. The owner can change either.
 
 Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 E-08; D-14 (no invented band).
+
+## D-084 — ARB-530: CI on Node 24, a secret scan, pinned actions, the e2e typecheck, Vitest 4.1.11 with an audit, flaky tests fail, the guard reads the lockfile
+
+Date: 26/09/2026
+Decided by: Claude Code (ARB-530, session …tJv8), on the owner's audit Q-01 to Q-06 and
+Q-08
+
+- **Q-01, Node.**
+  - CI and the visual-baseline workflow run Node 24 LTS, supported until 30/04/2028.
+    Node 20's support ended on 30/04/2026 and Node 22's ends on 30/04/2027
+    (https://endoflife.date/nodejs, read 26/09/2026).
+  - `engines.node` is `>=22`, the oldest line still supported. This supersedes D-005's
+    Node 20 pin. docs/01 section C's "Node 20 LTS" is the spec's; the owner's audit asked
+    for the move.
+  - Every CI step was run on Node 24.21.0 before pushing, the download checked against
+    nodejs.org's SHASUMS256.
+- **Q-02, secret scan.**
+  - A "Secret scan" job runs gitleaks 8.30.1 over the whole history (`fetch-depth: 0`,
+    `gitleaks git --redact`).
+  - The released binary is downloaded and checked against the release's own SHA-256
+    before it runs, so the scan depends on nothing but that release.
+  - The history is clean today: 211 commits, no finding, and no allowlist needed.
+- **Q-03, actions and permissions.**
+  - Every action is pinned to a full commit SHA, with its release in a comment: checkout
+    v4.4.0, setup-node v4.4.0, pnpm/action-setup v4.3.0, upload-artifact v4.6.2.
+  - These are the commits the floating `v4` tags pointed at on 26/09/2026, so behaviour
+    is unchanged. Moving to a later major is a separate change, made after reading its
+    notes.
+  - Both workflows declare `permissions: contents: read`.
+- **Q-04, e2e types.**
+  - `e2e/tsconfig.json` now has the browser's and Node's types, since the specs run in
+    Node and hand functions to the page.
+  - The nine real errors were fixture types too narrow for the values the specs assign
+    later; they are fixed.
+  - `pnpm typecheck:e2e` runs in CI and reports 0 errors.
+- **Q-05, Vitest and the audit.**
+  - Vitest 4.1.11 is the release that fixes GHSA-82fw-gwwq-j7x9 (affected: 2.1.0 to
+    before 4.1.11; 3.x is not patched). The v4 migration notes were read: nothing in this
+    repository used a removed option, and all tests pass unchanged.
+  - `pnpm audit --audit-level high` now fails CI on a high or critical advisory. It
+    reports none at any level today.
+- **Q-06, retries.**
+  - CI keeps one Playwright retry, so a failure records a trace.
+  - `failOnFlakyTests` makes a test that passes only on its retry fail the run, so a
+    flaky test is fixed, never hidden.
+- **Q-08, the browser guard.**
+  - `scripts/check-no-browser-automation.sh` now reads `pnpm-lock.yaml`'s whole tree. A
+    browser driver may arrive only by three routes: `@playwright/test` → `playwright` →
+    `playwright-core` for the end-to-end tests, and `lighthouse` → `puppeteer-core` for
+    ARB-440's measurement of this app's own pages.
+  - Any other package that pulls a driver in, at any depth, is a finding.
+  - `lighthouse` itself is allowed in the root manifest only.
+- **Q-07 is not in this ticket.** Branch protection is a repository setting and the
+  owner's: docs/BLOCKERS.md D-21.
+
+Why: the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 section 4; docs/05 section 4.2.

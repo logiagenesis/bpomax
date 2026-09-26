@@ -22,7 +22,7 @@ const DASHBOARD = {
   pipeline: [{ currency: 'ZAR', amountMinor: '600000', count: 2 }],
   replies: 1,
   bids: { queued: 3, submitted: 1, won: 1, lost: 1 },
-  winRate: 0.5,
+  winRate: 0.5 as number | null,
   retainers: [{ currency: 'ZAR', amountMinor: '50000', count: 1 }],
 };
 

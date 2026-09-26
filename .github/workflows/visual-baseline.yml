@@ -7,18 +7,21 @@ name: Visual baseline
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   render:
     name: Render the style-guide baseline
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
+          node-version: '24'
           cache: pnpm
 
       - name: Install dependencies
@@ -36,7 +39,7 @@ jobs:
         run: pnpm exec playwright test --config e2e/playwright.config.ts e2e/style-guide.spec.ts --grep "visual snapshot" --update-snapshots --retries 0
 
       - name: Upload the baseline
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: visual-baseline
           path: e2e/**/*-snapshots/**

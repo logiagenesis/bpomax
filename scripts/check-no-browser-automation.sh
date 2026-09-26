@@ -26,6 +26,46 @@ if [ -n "$manifests" ]; then
   fi
 fi
 
+# Lighthouse (ARB-440) measures this app's own built pages and reaches Chrome through its
+# own puppeteer-core, so it too is allowed in the root manifest only.
+if [ -n "$manifests" ]; then
+  lh=$(grep -nHE '^[[:space:]]*"lighthouse"[[:space:]]*:' $manifests | grep -v '^package\.json:' || true)
+  if [ -n "$lh" ]; then
+    echo "Browser automation in a dependency list (only the root may use lighthouse, for e2e/lighthouse.mjs):"
+    echo "$lh"
+    status=1
+  fi
+fi
+
+# The whole dependency tree (the owner's audit Q-08): a driver may arrive only by these
+# three routes, the test runner's own two and Lighthouse's. Any other package that pulls a
+# driver in, however deep, is a finding.
+if [ -f pnpm-lock.yaml ]; then
+  transitive=$(awk -v drivers="^($drivers)$" '
+    /^snapshots:/ { in_snapshots = 1; next }
+    in_snapshots && /^[^ ]/ { in_snapshots = 0 }
+    in_snapshots && /^  [^ ]/ {
+      key = $0; sub(/^  /, "", key); gsub(/\047/, "", key); sub(/:.*$/, "", key)
+      if (substr(key, 1, 1) == "@") { rest = substr(key, 2); parent = "@" substr(rest, 1, index(rest, "@") - 1) }
+      else { parent = substr(key, 1, index(key, "@") - 1) }
+      next
+    }
+    in_snapshots && /^      [^ ]/ {
+      dep = $1; sub(/:$/, "", dep); gsub(/\047/, "", dep)
+      if (dep ~ drivers) {
+        pair = parent ">" dep
+        if (pair != "@playwright/test>playwright" && pair != "playwright>playwright-core" && pair != "lighthouse>puppeteer-core")
+          print "pnpm-lock.yaml: " parent " depends on " dep
+      }
+    }
+  ' pnpm-lock.yaml)
+  if [ -n "$transitive" ]; then
+    echo "Browser automation in a dependency list (a driver pulled in by a package other than the test runner or Lighthouse):"
+    echo "$transitive"
+    status=1
+  fi
+fi
+
 # Source: no import, require or launch of a browser driver outside e2e/.
 dirs=$(for d in apps packages scripts tests; do if [ -d "$d" ]; then echo "$d"; fi; done)
 if [ -n "$dirs" ]; then
