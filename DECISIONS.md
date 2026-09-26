@@ -2216,3 +2216,36 @@ Decision:
 
 Why: ARB-440's acceptance ("Copy audit passes; Lighthouse ≥ 90 on all categories"),
 docs/01 section H ("no fake reviews, no fake scarcity"), and docs/05 section 2.
+
+## D-073 — The owner's audit of 25/09/2026 is Phase 5; claims travel in the ticket's PR
+
+Date: 26/09/2026
+Decided by: Claude Code (session …tJv8), on the owner's audit LI-AUDIT-BPOMAX-TASKS-20260925
+
+Decision:
+
+- The handoff of 24/09/2026 said nothing buildable remained. The owner's audit showed
+  otherwise, and its main claims were checked on `79d3080` before acting: the API,
+  workers and bot have only a `typecheck` script and nothing calls `listen`; nothing
+  constructs `AnthropicTransport`; `BidPlacer` has no implementation; `vercel.json` sets
+  no headers; migration 0016 lets any operator write a Telegram link code for another
+  member; and deleting an org fails on Postgres 16, because `events` has a
+  `do instead nothing` delete rule while its `org_id` cascades (reproduced: "referential
+  integrity query … gave unexpected result").
+- The audit's engineering items become Phase 5 on the board, ARB-500 to ARB-540, each
+  row naming the audit items it closes. Four rows whose remaining gap is engineering, not
+  a credential, are reopened as TODO with the ticket that closes them: ARB-015, ARB-044,
+  ARB-050 and ARB-070. D-036's BUILT-PENDING-CREDENTIALS applies only when every open
+  clause needs something only the owner can supply.
+- The audit's findings that are the owner's to settle are rows in docs/BLOCKERS.md:
+  D-17 (what deleting an org or person does to the audit log) and D-18 (Freelancer.com's
+  API terms for other organisations' accounts). S-01 and P-01 are recorded there as
+  DEFECT rows until their tickets merge.
+- The audit's Drive housekeeping (its section 9) and brand assets (section 8) are the
+  owner's and are not touched from the build.
+- No other session writes to `main` (the "hourly routine session" in the old handoff was
+  not found). The board claim is now the first commit of the ticket's own pull request,
+  not a separate push to `main`.
+
+Why: docs/01 rule 6 (no claim the build cannot prove), the owner's instruction to build
+every buildable ticket, and the audit's evidence.

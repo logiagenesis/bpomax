@@ -1,23 +1,21 @@
-# HANDOFF — 24/09/2026, 08:40 UTC (10:40 SAST)
+# HANDOFF — 26/09/2026 (SAST)
 
-Written by session …tJv8 (Claude Code) while working the board on the owner's instruction
-of 23/09/2026: one pull request per ticket, merged into `main` as soon as CI is green;
-claims pushed straight to `main`; the web app kept live on Vercel from `main` (D-042,
-D-043). `main` is the only branch that matters. Everything below is pushed.
+Written by session …tJv8 (Claude Code), working the board on the owner's instruction of
+23/09/2026: one pull request per ticket from the one branch `claude/beautiful-tesla-b6goej`,
+merged into `main` as soon as CI is green. `main` is the only branch that matters.
 
 **TL;DR**
 
-- **Board:** 55 tickets. 38 are DONE; 13 are BUILT-PENDING-CREDENTIALS (010, 013, 015,
-  020, 022, 070, 120, 203, 300, 400, 410, 420, 430); 4 are BLOCKED, the phase audits (099,
-  299, 399, 499), each waiting on its phase's credential tickets. None is TODO: nothing
-  buildable remains until the owner supplies what section 5 lists.
-- **CI:** green on `main`. Every PR in this run came from the one branch
-  `claude/beautiful-tesla-b6goej` and was merged when its six checks were green (#28 to
-  #34); claims were one-file commits pushed to `main` by git plumbing.
+- **Correction:** the handoff of 24/09/2026 said nothing buildable remained. That was
+  wrong. The owner's audit LI-AUDIT-BPOMAX-TASKS-20260925 found engineering work that
+  needs no credentials: no production entry point for the API, workers or bot; no
+  composition of queues and processors; the Anthropic transport never built; the bid
+  call an interface only; a Telegram link-code takeover; retention that can never redact.
+  Those are Phase 5 on the board, ARB-500 to ARB-540 (D-073).
+- **Board:** 69 tickets; see section 2.
 - **Live:** https://bpomax.vercel.app, production from `main`, in demo mode until the
   Supabase and API values are set on the Vercel project (D-043).
-- **Next:** nothing to build. Section 5 is the owner's list, each item with the ticket it
-  unblocks; section 6 says what to do when one arrives.
+- **Next:** Phase 5 in the order of section 6.
 
 ## 1. State of `main`
 
@@ -25,22 +23,21 @@ D-043). `main` is the only branch that matters. Everything below is pushed.
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Repository             | https://github.com/logiagenesis/bpomax (branch `main`)                                  |
 | Live web app           | https://bpomax.vercel.app (Vercel project `bpomax`, team logi-ink; demo mode, D-043)    |
-| Last merge             | `07c4462` = PR #33, ARB-430 affiliates (D-071); PR #34 (ARB-440 and this handoff) merges next |
-| Open PR                | #34: ARB-440, the phase audits marked BLOCKED, and this handoff; none after it           |
-| Local checks at ARB-440 | lint, format, typecheck, the browser check green; 1410 unit tests (112 files); 288 + 38 Playwright tests; Lighthouse 99–100 |
-| Other writer on `main` | The hourly routine session. Fetch before starting any ticket; claim on the board first. |
+| Last merge             | `79d3080` = PR #34, ARB-440 and the phase audits marked BLOCKED                          |
+| Other writer on `main` | None found. Claims now travel in the ticket's own PR (D-073).                            |
 
 ## 2. Board status (docs/04-PROJECT-BOARD.md)
 
+The owner's audit reopened four rows whose gaps are engineering, not credentials: ARB-015
+(P-01, P-02), ARB-044 (E-04, E-05), ARB-050 (E-06, S-01) and ARB-070 (E-01, E-02). Each
+names the Phase 5 ticket that closes it and returns to its earlier status when that merges.
+
 | Status                    | Count | Tickets                                                     |
 | ------------------------- | ----- | ----------------------------------------------------------- |
-| DONE                      | 38    | 001–005, 011, 012, 014, 021, 030–032, 040–044, 050, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330, 340, 440 |
-| BUILT-PENDING-CREDENTIALS | 13    | 010 (B-06), 013 (D-14), 015 (T-06), 020, 022, 120 and 203 (C-02), 070 (B-12), 300 (C-04), 400 (D-16, B-06), 410 (D-12, B-13), 420 (C-05), 430 (C-05) |
+| DONE                      | 36    | 001–005, 011, 012, 014, 021, 030–032, 040–043, 060–062, 121, 122, 130, 131, 140, 200–202, 204, 210, 310–312, 320, 330, 340, 440 |
+| BUILT-PENDING-CREDENTIALS | 11    | 010 (B-06), 013 (D-14), 020, 022, 120 and 203 (C-02), 300 (C-04), 400 (D-16, B-06), 410 (D-12, B-13), 420 (C-05), 430 (C-05) |
+| TODO                      | 18    | 015, 044, 050, 070 (reopened); 500–502, 510–514, 520–522, 530, 531, 540 (Phase 5) |
 | BLOCKED                   | 4     | 099, 299, 399, 499: each needs every ticket of its phase DONE, and the deployed API (B-12) for its links |
-
-A phase audit tags the phase and prints four links; tagging a phase whose tickets still
-wait on credentials would say it is complete when it is not, so the four are BLOCKED with
-what each waits on (board rows).
 
 ## 3. This session's tickets (all on `main`)
 
@@ -82,10 +79,10 @@ what each waits on (board rows).
 ## 4. How to work here (what cost time this session)
 
 - **One branch only (owner, 24/09/2026):** work on `claude/beautiful-tesla-b6goej`; never
-  create another branch. Per ticket: fast-forward it to `origin/main`, claim with a
-  one-file commit built on `origin/main` by plumbing (`git read-tree`, `git update-index
-  --cacheinfo`, `git commit-tree`, `git push origin <sha>:main`), build and commit on the
-  branch, push it, open the PR, merge when green, then `git merge --ff-only origin/main`.
+  create another branch. Per ticket: fast-forward it to `origin/main`, set the board row to
+  IN PROGRESS in the ticket's own first commit (no other writer exists, so claims no longer
+  go straight to `main`, D-073), build and commit on the branch, push it, open the PR,
+  merge when green, then `git merge --ff-only origin/main`.
 
 - **PR:** commit with the docs/05 checklist in the body, `git push -u origin
   claude/beautiful-tesla-b6goej`, open the PR (draft), mark it ready and merge with the
@@ -152,12 +149,18 @@ Full rows in docs/BLOCKERS.md (C-, V-, D-14 to D-16) and docs/02-BLOCKERS.md. Ke
 
 ## 6. The exact next ticket
 
-None is buildable. When the owner supplies an item from section 5:
+Phase 5, most severe first: ARB-500 (security fixes), ARB-510 (entry points and runtime),
+ARB-520 (retention that redacts), ARB-511 and ARB-512 (bid placement, approvals),
+ARB-501 and ARB-502 (headers, rate limits, grants), ARB-521 and ARB-522 (data subject
+access, terms), ARB-513 and ARB-514 (VAT display, price refresh), ARB-530 and ARB-531
+(CI), then ARB-540 (docs).
+
+When the owner supplies an item from section 5:
 
 1. Put any key in `.env` (and the Vercel or host environment), never in a file in git.
-2. Pick the ticket it unblocks from the board, claim it (section 4), and run its own
-   clause for real: the BLOCKERS row for it (C-01 to C-05, V-03, V-04, D-14 to D-16) says
-   exactly what to run and what to record.
+2. Pick the ticket it unblocks from the board and run its own clause for real: the
+   BLOCKERS row for it (C-01 to C-05, V-03, V-04, D-14 to D-18) says exactly what to run
+   and what to record.
 3. Move the row to DONE with the evidence, and clear the BLOCKERS row.
 4. When every ticket of a phase is DONE and the API is deployed (B-12), run that phase's
    audit: the docs/05 checklist across the phase, tag `phase-N`, and the report with the
@@ -176,9 +179,8 @@ None is buildable. When the owner supplies an item from section 5:
   token or a device sign-in) is not built and needs the owner's say (D-062).
 - A recorded payment cannot be corrected from the page (D-059): no refund or reversal
   kind exists in any ticket yet.
-- The workers have no production entry point yet (B-12): each processor, the reprice one
-  included (`createRepriceProcessor`, with `repriceAlert` from apps/telegram as its
-  `alert`), is wired and tested, and the host's start script binds them.
+- The API, workers and bot have no production entry point yet: no start script binds them
+  (the owner's audit, E-01 and E-02). ARB-510 builds them.
 
 - The stand-in of Freelancer.com covers OAuth, `users/0.1/self` and the project search.
   Each later ticket adds the endpoints it calls, in the documented shapes.
