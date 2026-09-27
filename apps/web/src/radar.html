@@ -51,6 +51,11 @@
       <div class="card radar-bar">
         <button type="button" class="btn btn--secondary" id="refresh">Refresh now</button>
         <p class="radar-bar__note" id="updated">Not updated yet</p>
+        <div class="radar-bar__end">
+          <button type="button" class="btn btn--ghost" id="export">Export</button>
+          <button type="button" class="btn btn--ghost" id="import">Import</button>
+          <input type="file" id="import-file" accept="application/json,.json" hidden />
+        </div>
       </div>
       <div role="status" aria-live="polite" id="status"></div>
       <p class="alert alert--warning" id="storage-warning" hidden>
@@ -67,6 +72,17 @@
           aria-selected="true"
         >
           Feed
+        </button>
+        <button
+          type="button"
+          class="radar-tab"
+          role="tab"
+          id="tab-bids"
+          aria-controls="panel-bids"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Bids
         </button>
         <button
           type="button"
@@ -167,6 +183,27 @@
         <p class="field__hint" id="feed-count"></p>
         <ol class="radar-list" id="feed-list"></ol>
         <div class="empty" id="feed-empty" hidden></div>
+      </section>
+
+      <section class="stack" id="panel-bids" role="tabpanel" aria-labelledby="tab-bids" hidden>
+        <div class="grid" id="totals"></div>
+        <details class="card" id="splits-month" open>
+          <summary class="radar-summary">
+            Reply and win rates this month, by template and rank
+          </summary>
+          <div class="stack" id="splits-month-body"></div>
+        </details>
+        <details class="card" id="splits-all">
+          <summary class="radar-summary">
+            Reply and win rates of all time, by template and rank
+          </summary>
+          <div class="stack" id="splits-all-body"></div>
+        </details>
+        <h2>Logged bids</h2>
+        <div class="empty" id="bids-empty" hidden>
+          <p>No bids logged yet. After you bid on Freelancer.com, press I placed the bid.</p>
+        </div>
+        <ul class="radar-list" id="bid-list"></ul>
       </section>
 
       <section
@@ -322,6 +359,40 @@
                   aria-describedby="s-monthlyLimit-hint"
                 />
                 <p class="field__hint" id="s-monthlyLimit-hint">Leave blank to show no limit.</p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
+            <legend>Money</legend>
+            <div class="radar-form">
+              <div class="field">
+                <label class="field__label" for="s-usdToZar">Rand for one US dollar</label>
+                <input
+                  class="input"
+                  id="s-usdToZar"
+                  name="usdToZar"
+                  inputmode="decimal"
+                  aria-describedby="s-usdToZar-hint"
+                />
+                <p class="field__hint" id="s-usdToZar-hint">
+                  Leave blank to show no rand figures. Nothing here looks the rate up.
+                </p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-feePct"
+                  >Freelancer.com’s fee on an award, %</label
+                >
+                <input
+                  class="input"
+                  id="s-feePct"
+                  name="feePct"
+                  inputmode="decimal"
+                  aria-describedby="s-feePct-hint"
+                />
+                <p class="field__hint" id="s-feePct-hint">
+                  Leave blank until you know it; the margin then says the fee is not set.
+                </p>
               </div>
             </div>
           </fieldset>

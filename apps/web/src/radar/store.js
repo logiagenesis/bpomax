@@ -125,3 +125,84 @@ export function loadSettings() {
 export function saveSettings(settings) {
   return writeJson('settings', settings);
 }
+
+/**
+ * Everything the radar keeps, for Export. Import takes the same shape back.
+ * @typedef {object} Backup
+ * @property {'radar-backup'} format
+ * @property {1} version
+ * @property {string} exportedAt ISO time
+ * @property {Settings} settings
+ * @property {unknown[]} templates
+ * @property {unknown[]} log
+ * @property {number[]} dismissed
+ * @property {unknown[]} shortlist
+ */
+
+/** The keys a backup carries, as stored under `radar.*`. */
+const BACKED_UP = /** @type {const} */ (['settings', 'templates', 'log', 'dismissed', 'shortlist']);
+
+/**
+ * @param {{ settings: Settings, templates: unknown[], log: unknown[], dismissed: number[], shortlist: unknown[] }} state
+ * @param {number} now
+ * @returns {Backup}
+ */
+export function backupOf(state, now) {
+  return {
+    format: 'radar-backup',
+    version: 1,
+    exportedAt: new Date(now).toISOString(),
+    settings: state.settings,
+    templates: state.templates,
+    log: state.log,
+    dismissed: state.dismissed,
+    shortlist: state.shortlist,
+  };
+}
+
+/**
+ * Reads a backup file's text. Throws, saying what is wrong, for anything that is not one.
+ * @param {string} text
+ * @returns {Backup}
+ */
+export function parseBackup(text) {
+  /** @type {any} */
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('That file is not a radar backup: it is not JSON.');
+  }
+  if (!isObject(data) || data.format !== 'radar-backup') {
+    throw new Error('That file is not a radar backup.');
+  }
+  if (data.version !== 1) {
+    throw new Error(`That backup is version ${String(data.version)}; this page reads version 1.`);
+  }
+  for (const key of ['templates', 'log', 'dismissed', 'shortlist']) {
+    if (!Array.isArray(data[key])) throw new Error(`That backup has no ${key} list.`);
+  }
+  if (!data.dismissed.every((/** @type {unknown} */ id) => typeof id === 'number')) {
+    throw new Error('That backup’s dismissed list is not project numbers.');
+  }
+  return { ...data, settings: mergeSettings(data.settings) };
+}
+
+/**
+ * Replaces what this browser keeps with a backup's contents.
+ * @param {Backup} backup
+ * @returns {boolean} false when the browser would not keep it
+ */
+export function restore(backup) {
+  return BACKED_UP.every((key) => writeJson(key, backup[key]));
+}
+
+/**
+ * `radar-backup-27-09-2026.json`, dated in SAST.
+ * @param {number} now
+ */
+export function backupFilename(now) {
+  const d = new Date(now + 2 * 60 * 60 * 1000);
+  const pad = (/** @type {number} */ n) => String(n).padStart(2, '0');
+  return `radar-backup-${pad(d.getUTCDate())}-${pad(d.getUTCMonth() + 1)}-${String(d.getUTCFullYear())}.json`;
+}

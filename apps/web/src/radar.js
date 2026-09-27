@@ -1,12 +1,22 @@
 // @ts-check
-import { formatDateTime, formatTime } from './lib/format.js';
+import { downloadBlob } from './lib/download.js';
+import { formatDateTime, formatMoney, formatPercent, formatTime } from './lib/format.js';
 import { confirmAction } from './lib/ui.js';
 import { applyFilters } from './radar/filter.js';
 import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
-import { loadSettings, readJson, saveSettings, writeJson } from './radar/store.js';
-import { bidsThisMonth, logEntry } from './radar/tracker.js';
+import {
+  backupFilename,
+  backupOf,
+  loadSettings,
+  parseBackup,
+  readJson,
+  restore,
+  saveSettings,
+  writeJson,
+} from './radar/store.js';
+import { bidsThisMonth, computeTotals, logEntry, withStatus } from './radar/tracker.js';
 import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from './radar/text.js';
 
 /**
@@ -23,6 +33,9 @@ import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from '.
  * @typedef {import('./radar/score.js').Score} Score
  * @typedef {import('./radar/proposal.js').Template} Template
  * @typedef {import('./radar/tracker.js').LogEntry} LogEntry
+ * @typedef {import('./radar/tracker.js').BidStatus} BidStatus
+ * @typedef {import('./radar/tracker.js').Totals} Totals
+ * @typedef {import('./radar/tracker.js').Rate} Rate
  */
 
 /** @param {string} id */
@@ -96,6 +109,7 @@ const tabs = /** @type {HTMLButtonElement[]} */ ([...document.querySelectorAll('
 
 /** @param {HTMLButtonElement} tab */
 function selectTab(tab) {
+  if (tab.id === 'tab-bids') drawBids();
   for (const other of tabs) {
     const selected = other === tab;
     other.setAttribute('aria-selected', String(selected));
@@ -555,6 +569,7 @@ byId('bid-placed-button').addEventListener('click', () => {
   );
   log = [entry, ...log];
   keep('log', log);
+  drawBids();
   pending = null;
   detail.close();
   render();
@@ -939,6 +954,377 @@ skillPicker('skills', 'watch', () => {
   reread = setTimeout(() => void refresh(), 1500);
 });
 
+// ------------------------------------------------------------------ bids
+
+/** @param {number} usd */
+const usdText = (usd) => formatMoney(Math.round(usd * 100), 'USD');
+/** @param {number} zar */
+const zarText = (zar) => formatMoney(Math.round(zar * 100), 'ZAR');
+
+/** @param {Rate} r */
+function rateText(r) {
+  const of = `(${String(r.numerator)} of ${String(r.denominator)})`;
+  return r.ratio === null ? `No data ${of}` : `${formatPercent(r.ratio)} ${of}`;
+}
+
+/**
+ * @param {Totals} t
+ * @param {string} title
+ */
+function totalsCard(t, title) {
+  const card = document.createElement('section');
+  card.className = 'card stack';
+  const h = document.createElement('h2');
+  h.textContent = title;
+  const dl = document.createElement('dl');
+  dl.className = 'radar-totals';
+  const withZar = (/** @type {string} */ usd, /** @type {number | undefined} */ zar) =>
+    zar === undefined ? usd : `${usd} · ${zarText(zar)}`;
+  const margin =
+    withZar(usdText(t.marginUsd), t.zar?.margin) +
+    (t.feeUsd === null ? ' (fee not set)' : ` after fees of ${usdText(t.feeUsd)}`);
+  for (const [name, value] of /** @type {[string, string][]} */ ([
+    ['Bids', String(t.bids)],
+    ['Replies', String(t.replies)],
+    ['Reply rate', rateText(t.replyRate)],
+    ['Awards', String(t.awards)],
+    ['Win rate (awards ÷ replies)', rateText(t.winRate)],
+    ['Awarded value', withZar(usdText(t.awardedUsd), t.zar?.awarded)],
+    ['Delivery cost', withZar(usdText(t.deliveryUsd), t.zar?.delivery)],
+    ['Margin', margin],
+  ])) {
+    const dt = document.createElement('dt');
+    dt.textContent = name;
+    const dd = document.createElement('dd');
+    dd.textContent = value;
+    dl.append(dt, dd);
+  }
+  card.append(h, dl);
+  return card;
+}
+
+/**
+ * @param {import('./radar/tracker.js').Split[]} rows
+ * @param {string} caption
+ * @param {string} first
+ */
+function splitTable(rows, caption, first) {
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.className = 'table';
+  const cap = document.createElement('caption');
+  cap.textContent = caption;
+  const head = document.createElement('tr');
+  for (const [text, num] of /** @type {[string, boolean][]} */ ([
+    [first, false],
+    ['Bids', true],
+    ['Replies', true],
+    ['Reply rate', true],
+    ['Awards', true],
+    ['Win rate', true],
+  ])) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = text;
+    if (num) th.className = 'num';
+    head.append(th);
+  }
+  const thead = document.createElement('thead');
+  thead.append(head);
+  const tbody = document.createElement('tbody');
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.scope = 'row';
+    th.textContent = r.name;
+    tr.append(th);
+    for (const value of [
+      String(r.bids),
+      String(r.replies),
+      rateText(r.replyRate),
+      String(r.awards),
+      rateText(r.winRate),
+    ]) {
+      const td = document.createElement('td');
+      td.className = 'num';
+      td.textContent = value;
+      tr.append(td);
+    }
+    tbody.append(tr);
+  }
+  table.append(cap, thead, tbody);
+  wrap.append(table);
+  return wrap;
+}
+
+function drawTotals() {
+  const { month, all } = computeTotals(log, settings, Date.now());
+  byId('totals').replaceChildren(totalsCard(month, 'This month'), totalsCard(all, 'All time'));
+  for (const [id, t] of /** @type {[string, Totals][]} */ ([
+    ['splits-month-body', month],
+    ['splits-all-body', all],
+  ])) {
+    byId(id).replaceChildren(
+      splitTable(t.byTemplate, 'By template', 'Template'),
+      splitTable(t.byBand, 'By rank score', 'Rank score'),
+    );
+  }
+}
+
+const STATUS_WORDS = /** @type {Record<BidStatus, string>} */ ({
+  sent: 'Sent',
+  replied: 'Replied',
+  awarded: 'Awarded',
+  lost: 'Lost',
+  'no-reply': 'No reply',
+});
+const STATUS_KIND = /** @type {Record<BidStatus, string>} */ ({
+  sent: 'neutral',
+  replied: 'live',
+  awarded: 'go',
+  lost: 'skip',
+  'no-reply': 'caution',
+});
+
+/**
+ * Replaces one logged bid, saves the log and redraws the figures.
+ * @param {string} id
+ * @param {(entry: LogEntry) => LogEntry} change
+ */
+function updateBid(id, change) {
+  log = log.map((entry) => (entry.id === id ? change(entry) : entry));
+  keep('log', log);
+  drawTotals();
+  return log.find((entry) => entry.id === id) ?? null;
+}
+
+/** @param {LogEntry} entry */
+function marginText(entry) {
+  if (!entry.award) return '';
+  const value = entry.award.agreedPrice * entry.usdRate;
+  const fee = settings.feePct === null ? null : (value * settings.feePct) / 100;
+  const margin = value - entry.award.deliveryCostUsd - (fee ?? 0);
+  const zar = settings.usdToZar === null ? '' : ` · ${zarText(margin * settings.usdToZar)}`;
+  return `Awarded ${usdText(value)}. Margin ${usdText(margin)}${zar}${fee === null ? ' (fee not set)' : ` after a ${String(settings.feePct).replace('.', ',')} % fee of ${usdText(fee)}`}.`;
+}
+
+/**
+ * The award's figures, saved as they are typed.
+ * @param {LogEntry} entry
+ */
+function awardForm(entry) {
+  const award = entry.award ?? {
+    agreedPrice: entry.price,
+    deliveryCostUsd: 0,
+    developer: null,
+    note: '',
+  };
+  const box = document.createElement('div');
+  box.className = 'stack';
+  const grid = document.createElement('div');
+  grid.className = 'radar-award';
+  const line = document.createElement('p');
+  line.className = 'field__hint';
+  line.textContent = marginText(entry);
+  const error = document.createElement('p');
+  error.className = 'field__error';
+  error.hidden = true;
+
+  /**
+   * @param {string} key
+   * @param {string} label
+   * @param {HTMLInputElement | HTMLTextAreaElement} input
+   * @param {string} [hint]
+   */
+  const labelled = (key, label, input, hint) => {
+    const field = document.createElement('div');
+    field.className = 'field';
+    const l = document.createElement('label');
+    l.className = 'field__label';
+    l.htmlFor = `${key}-${entry.id}`;
+    l.textContent = label;
+    input.id = `${key}-${entry.id}`;
+    field.append(l, input);
+    if (hint) {
+      const h = document.createElement('p');
+      h.className = 'field__hint';
+      h.textContent = hint;
+      field.append(h);
+    }
+    return field;
+  };
+
+  const agreed = document.createElement('input');
+  agreed.className = 'input';
+  agreed.inputMode = 'decimal';
+  agreed.value = String(award.agreedPrice).replace('.', ',');
+  const cost = document.createElement('input');
+  cost.className = 'input';
+  cost.inputMode = 'decimal';
+  cost.value = String(award.deliveryCostUsd).replace('.', ',');
+  const note = document.createElement('textarea');
+  note.className = 'textarea';
+  note.rows = 2;
+  note.value = award.note;
+
+  const save = () => {
+    const a = parseNumber(agreed.value);
+    const c = parseNumber(cost.value);
+    const okA = a !== null && !Number.isNaN(a);
+    const okC = c !== null && !Number.isNaN(c);
+    agreed.setAttribute('aria-invalid', String(!okA));
+    cost.setAttribute('aria-invalid', String(!okC));
+    error.hidden = okA && okC;
+    error.textContent =
+      okA && okC ? '' : 'Enter the agreed value and the delivery cost as numbers (0 for in-house).';
+    const saved = updateBid(entry.id, (e) => ({
+      ...e,
+      award: {
+        agreedPrice: okA ? a : (e.award?.agreedPrice ?? e.price),
+        deliveryCostUsd: okC ? c : (e.award?.deliveryCostUsd ?? 0),
+        developer: e.award?.developer ?? null,
+        note: note.value,
+      },
+    }));
+    if (saved) line.textContent = marginText(saved);
+  };
+  for (const input of [agreed, cost, note]) input.addEventListener('input', save);
+
+  grid.append(
+    labelled(
+      'agreed',
+      `Agreed value (${entry.currency})`,
+      agreed,
+      entry.type === 'hourly'
+        ? 'For an hourly project, what you expect to bill in all.'
+        : undefined,
+    ),
+    labelled('cost', 'Delivery cost (USD)', cost, '0 when Logi-Ink delivers it in-house.'),
+  );
+  box.append(grid, labelled('note', 'Note', note), error, line);
+  return box;
+}
+
+/** @param {LogEntry} entry */
+function bidItem(entry) {
+  const item = document.createElement('li');
+  item.className = 'card stack';
+  item.dataset['bid'] = entry.id;
+  const head = document.createElement('div');
+  head.className = 'radar-detail__head';
+  const title = document.createElement('h3');
+  title.className = 'radar-row__title';
+  const link = document.createElement('a');
+  link.href = entry.url;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = entry.title;
+  title.append(link);
+  head.append(title, badge(STATUS_WORDS[entry.status], STATUS_KIND[entry.status]));
+
+  const meta = document.createElement('p');
+  meta.className = 'radar-row__meta';
+  meta.textContent = [
+    `Placed ${formatDateTime(entry.placedAt)} SAST`,
+    `${formatPrice(entry.price, entry.currency)}${entry.type === 'hourly' ? ' per hour' : ''}`,
+    `${String(entry.days)} days`,
+    entry.templateName ? `template ${entry.templateName}` : 'no template',
+    `score ${String(entry.score)}`,
+    entry.replied ? 'the client replied' : 'no reply yet',
+  ].join(' · ');
+
+  const actions = document.createElement('div');
+  actions.className = 'row-actions';
+  actions.setAttribute('role', 'group');
+  actions.setAttribute('aria-label', `Status of ${entry.title}`);
+  for (const status of /** @type {BidStatus[]} */ ([
+    'replied',
+    'awarded',
+    'lost',
+    'no-reply',
+    'sent',
+  ])) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn btn--secondary';
+    b.textContent = status === 'sent' ? 'Back to sent' : STATUS_WORDS[status];
+    b.setAttribute('aria-pressed', String(entry.status === status));
+    b.addEventListener('click', () => {
+      const saved = updateBid(entry.id, (e) => withStatus(e, status));
+      if (saved) item.replaceWith(bidItem(saved));
+      say('success', `“${entry.title}” is marked ${STATUS_WORDS[status].toLowerCase()}.`);
+    });
+    actions.append(b);
+  }
+  item.append(head, meta, actions);
+  if (entry.status === 'awarded') item.append(awardForm(entry));
+  return item;
+}
+
+function drawBids() {
+  drawTotals();
+  byId('bids-empty').hidden = log.length > 0;
+  byId('bid-list').replaceChildren(...log.map(bidItem));
+}
+
+// ------------------------------------------------------------------ export and import
+
+const IMPORTED = 'radar.imported';
+
+byId('export').addEventListener('click', () => {
+  const now = Date.now();
+  const backup = backupOf(
+    {
+      settings,
+      templates,
+      log,
+      dismissed: [...dismissed],
+      shortlist: readJson('shortlist', /** @type {unknown[]} */ ([])),
+    },
+    now,
+  );
+  const name = backupFilename(now);
+  downloadBlob(name, new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+  say('success', `Exported everything to ${name}. Keep it somewhere safe.`);
+});
+
+const importFile = /** @type {HTMLInputElement} */ (byId('import-file'));
+byId('import').addEventListener('click', () => importFile.click());
+importFile.addEventListener('change', async () => {
+  const file = importFile.files?.[0];
+  importFile.value = '';
+  if (!file) return;
+  let backup;
+  try {
+    backup = parseBackup(await file.text());
+  } catch (error) {
+    say('error', error instanceof Error ? error.message : String(error));
+    return;
+  }
+  const when = `${formatDateTime(backup.exportedAt)} SAST`;
+  const ok = await confirmAction({
+    title: 'Replace everything here with this backup?',
+    body: `Your settings, templates, ${String(log.length)} logged bids, dismissed projects and shortlist in this browser are replaced by the ones in ${file.name}, exported ${when}, with ${String(backup.log.length)} logged bids. Export first to keep what is here.`,
+    confirmLabel: 'Replace',
+    danger: true,
+  });
+  if (!ok) {
+    say('info', 'Nothing was imported.');
+    return;
+  }
+  if (!restore(backup)) {
+    say('error', 'This browser would not keep the backup (private window or blocked site data).');
+    return;
+  }
+  try {
+    sessionStorage.setItem(IMPORTED, `Imported ${file.name}, exported ${when}.`);
+  } catch {
+    // The message after the reload is a courtesy; the import itself is done.
+  }
+  location.reload();
+});
+
 // ------------------------------------------------------------------ settings
 
 const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition']);
@@ -946,12 +1332,14 @@ const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition'
 /**
  * The number boxes in settings: the setting, its lowest and highest value, whether it may
  * be left blank, and whether it must be whole.
- * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit', number, number, boolean, boolean])[]}
+ * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit' | 'usdToZar' | 'feePct', number, number, boolean, boolean])[]}
  */
 const NUMBER_SETTINGS = [
   ['pricePct', 1, 100, false, true],
   ['defaultDays', 1, 365, false, true],
   ['monthlyLimit', 1, 100_000, true, true],
+  ['usdToZar', 0.01, 1000, true, false],
+  ['feePct', 0, 100, true, false],
 ];
 
 function fillSettings() {
@@ -1010,6 +1398,7 @@ settingsForm.addEventListener('input', (event) => {
   settings = next;
   keepSettings();
   render();
+  if (target.name === 'usdToZar' || target.name === 'feePct') drawBids();
 });
 
 settingsForm.addEventListener('change', (event) => {
@@ -1039,4 +1428,16 @@ fillSettings();
 drawTemplates();
 storageWarning.hidden = writeJson('probe', Date.now());
 render();
-void refresh();
+drawBids();
+/** @type {string | null} */
+let importedNote = null;
+try {
+  importedNote = sessionStorage.getItem(IMPORTED);
+  sessionStorage.removeItem(IMPORTED);
+} catch {
+  // No session storage: nothing to say.
+}
+// The import's message is shown once the first read has said its own.
+void refresh().then(() => {
+  if (importedNote) say('success', importedNote);
+});
