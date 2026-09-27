@@ -2,6 +2,7 @@
 import { downloadBlob } from './lib/download.js';
 import { formatDateTime, formatMoney, formatPercent, formatTime } from './lib/format.js';
 import { confirmAction } from './lib/ui.js';
+import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
 import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
@@ -75,6 +76,10 @@ let templates = readJson('templates', /** @type {Template[]} */ ([]));
 let log = readJson('log', /** @type {LogEntry[]} */ ([]));
 /** @type {Shortlisted[]} */
 let shortlist = readJson('shortlist', /** @type {Shortlisted[]} */ ([]));
+/** @type {number[]} */
+let notified = readJson('notified', /** @type {number[]} */ ([]));
+/** @type {{ project: Project, score: Score }[]} */
+let ranked = [];
 let failures = 0;
 let loading = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -159,6 +164,7 @@ async function refresh() {
     updated.textContent = `Last updated ${formatTime(Date.now())} SAST`;
     say('success', `Read ${String(projects.length)} projects from Freelancer.com.`);
     render();
+    notifyNew();
   } catch (error) {
     failures += 1;
     const message = error instanceof Error ? error.message : String(error);
@@ -305,6 +311,7 @@ function render() {
       score: scoreProject(project, settings, now),
     })),
   );
+  ranked = shown;
   feedList.replaceChildren(...shown.map(({ project, score }) => row(project, score)));
   feedCount.textContent = projects.length
     ? `Showing ${String(shown.length)} of the ${String(projects.length)} projects read.`
@@ -1560,6 +1567,62 @@ importFile.addEventListener('change', async () => {
   location.reload();
 });
 
+// ------------------------------------------------------------------ alerts
+
+/** Whether this browser can show notifications at all. */
+const canNotify = () => typeof Notification === 'function';
+
+function drawAlertState() {
+  const state = byId('alerts-state');
+  if (!canNotify()) {
+    state.textContent = 'This browser cannot show notifications.';
+  } else if (Notification.permission === 'denied') {
+    state.textContent =
+      'Notifications are blocked for this site in your browser’s settings, so alerts stay off.';
+  } else if (settings.alertsOn && Notification.permission === 'granted') {
+    state.textContent = `Alerts are on for projects scoring ${String(settings.alertThreshold)} or more.`;
+  } else {
+    state.textContent = 'Alerts are off.';
+  }
+}
+
+/** One notification per fresh project at or above the threshold, while the tab is open. */
+function notifyNew() {
+  if (!settings.alertsOn || !canNotify() || Notification.permission !== 'granted') return;
+  const picked = pickAlerts(ranked, {
+    threshold: settings.alertThreshold,
+    notified: new Set(notified),
+    now: Date.now(),
+  });
+  if (!picked.length) return;
+  let failed = false;
+  for (const { project, score } of picked) {
+    try {
+      const note = new Notification(`Radar ${String(score.total)}: ${project.title}`, {
+        body: budgetText(project),
+        tag: `radar-${String(project.id)}`,
+      });
+      note.addEventListener('click', () => {
+        window.focus();
+        openDetail(project);
+        note.close();
+      });
+    } catch {
+      // Some phone browsers show notifications only from an installed app.
+      failed = true;
+    }
+    notified.push(project.id);
+  }
+  notified = notified.slice(-NOTIFIED_KEPT);
+  keep('notified', notified);
+  if (failed) {
+    say(
+      'warning',
+      'This browser shows notifications only from installed apps, so alerts cannot show here.',
+    );
+  }
+}
+
 // ------------------------------------------------------------------ settings
 
 const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition']);
@@ -1567,7 +1630,7 @@ const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition'
 /**
  * The number boxes in settings: the setting, its lowest and highest value, whether it may
  * be left blank, and whether it must be whole.
- * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit' | 'usdToZar' | 'feePct' | 'devMinCompletion' | 'devMinReviews', number, number, boolean, boolean])[]}
+ * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit' | 'usdToZar' | 'feePct' | 'devMinCompletion' | 'devMinReviews' | 'alertThreshold', number, number, boolean, boolean])[]}
  */
 const NUMBER_SETTINGS = [
   ['pricePct', 1, 100, false, true],
@@ -1577,10 +1640,13 @@ const NUMBER_SETTINGS = [
   ['feePct', 0, 100, true, false],
   ['devMinCompletion', 0, 100, false, false],
   ['devMinReviews', 0, 100_000, false, true],
+  ['alertThreshold', 0, 100, false, true],
 ];
 
 function fillSettings() {
   field(settingsForm, 'refreshMinutes').value = String(settings.refreshMinutes);
+  /** @type {HTMLInputElement} */ (field(settingsForm, 'alertsOn')).checked =
+    settings.alertsOn && canNotify() && Notification.permission === 'granted';
   for (const key of WEIGHTS) {
     field(settingsForm, `w-${key}`).value = String(settings.weights[key]);
   }
@@ -1637,10 +1703,25 @@ settingsForm.addEventListener('input', (event) => {
   render();
   if (target.name === 'usdToZar' || target.name === 'feePct') drawBids();
   if (target.name.startsWith('devMin')) drawDevelopers();
+  if (target.name === 'alertThreshold') drawAlertState();
 });
 
-settingsForm.addEventListener('change', (event) => {
+settingsForm.addEventListener('change', async (event) => {
   const target = /** @type {HTMLElement} */ (event.target);
+  if (target instanceof HTMLInputElement && target.name === 'alertsOn') {
+    let on = target.checked;
+    if (on && canNotify() && Notification.permission !== 'granted') {
+      on = (await Notification.requestPermission()) === 'granted';
+    }
+    on = on && canNotify();
+    target.checked = on;
+    settings = { ...settings, alertsOn: on };
+    keepSettings();
+    drawAlertState();
+    say(on ? 'success' : 'info', on ? 'Alerts are on.' : 'Alerts are off.');
+    if (on) notifyNew();
+    return;
+  }
   if (!(target instanceof HTMLSelectElement) || target.name !== 'refreshMinutes') return;
   const minutes = Number(target.value);
   settings = {
@@ -1668,6 +1749,7 @@ storageWarning.hidden = writeJson('probe', Date.now());
 render();
 drawBids();
 drawDevelopers();
+drawAlertState();
 /** @type {string | null} */
 let importedNote = null;
 try {
