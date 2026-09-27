@@ -150,11 +150,33 @@ describe('reading the feed', () => {
     expect(list).toHaveLength(MAX_PROJECTS - 1);
   });
 
-  it('stops at a short page', async () => {
+  it('reads on past a short page while the search says there are more', async () => {
+    // The saved page has 40 projects and a total_count of thousands, as Freelancer.com
+    // answers 98 or 99 to a limit of 100 with more to come.
     const fake = vi.fn(async () => answer(PROJECTS));
     const list = await fetchProjects([], fake as unknown as typeof fetch);
-    expect(fake).toHaveBeenCalledTimes(1);
+    expect(PROJECTS.result.total_count).toBeGreaterThan(300);
+    expect(fake).toHaveBeenCalledTimes(3);
     expect(list).toHaveLength(40);
+  });
+
+  it('stops at an empty page, or once the total is read', async () => {
+    const empty = vi.fn(async (url: string) =>
+      answer({
+        status: 'success',
+        result: { projects: url.includes('offset=0') ? PROJECTS.result.projects : [] },
+      }),
+    );
+    await fetchProjects([], empty as unknown as typeof fetch);
+    expect(empty).toHaveBeenCalledTimes(2);
+    const few = vi.fn(async () =>
+      answer({
+        status: 'success',
+        result: { projects: PROJECTS.result.projects, total_count: 40 },
+      }),
+    );
+    await fetchProjects([], few as unknown as typeof fetch);
+    expect(few).toHaveBeenCalledTimes(1);
   });
 
   it('says what Freelancer.com answered on an error, with its status', async () => {

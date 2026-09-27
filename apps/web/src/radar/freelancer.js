@@ -7,7 +7,7 @@
  */
 import { FREELANCER } from './links.js';
 
-const API = `${FREELANCER}/api`;
+export const API = `${FREELANCER}/api`;
 const PAGE = 100;
 /** The most projects one refresh reads: three pages. */
 export const MAX_PROJECTS = 300;
@@ -103,7 +103,7 @@ export function normaliseProject(raw) {
  * @param {string} url
  * @param {typeof fetch} fetchImpl
  */
-async function getResult(url, fetchImpl = fetch) {
+export async function getResult(url, fetchImpl = fetch) {
   let response;
   try {
     response = await fetchImpl(url, { headers: { accept: 'application/json' } });
@@ -131,8 +131,10 @@ async function getResult(url, fetchImpl = fetch) {
 }
 
 /**
- * Up to 300 active projects, newest first, in pages of 100. A project that moves across
- * a page boundary while the pages are read appears once.
+ * Up to 300 active projects, newest first, in pages of 100. A page can come back a few
+ * short of 100 with more to follow (98 and 99 on 27/09/2026), so reading stops only at an
+ * empty page or the search's `total_count`. A project that moves across a page boundary
+ * while the pages are read appears once.
  * @param {number[]} skillIds
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<Project[]>}
@@ -147,7 +149,8 @@ export async function fetchProjects(skillIds, fetchImpl = fetch) {
       const project = normaliseProject(raw);
       if (!seen.has(project.id)) seen.set(project.id, project);
     }
-    if (page.length < PAGE) break;
+    const total = typeof result?.total_count === 'number' ? result.total_count : null;
+    if (page.length === 0 || (total !== null && offset + PAGE >= total)) break;
   }
   return [...seen.values()];
 }

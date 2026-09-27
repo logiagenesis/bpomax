@@ -16,7 +16,18 @@ export const PROJECTS = fixture('projects.json') as {
   result: { projects: RawProject[] };
 };
 const JOBS = fixture('jobs.json');
-const DIRECTORY = fixture('directory.json');
+export const DIRECTORY = fixture('directory.json') as {
+  result: { users: RawUser[] };
+};
+
+interface RawUser {
+  username: string;
+  hourly_rate: number;
+  location: { country: { name: string } };
+  reputation: {
+    entire_history: { all: number; reviews: number; overall: number; completion_rate: number };
+  };
+}
 
 interface RawProject {
   id: number;
@@ -47,7 +58,7 @@ interface FreelancerCalls {
  */
 export async function serveFreelancer(
   page: Page,
-  options: { projects?: RawProject[] | number } = {},
+  options: { projects?: RawProject[] | number; directory?: number } = {},
 ): Promise<FreelancerCalls> {
   const calls: FreelancerCalls = { projects: [], skills: 0, directory: [] };
   // Pages the radar opens in a new tab (a project, a freelancer's profile) land here.
@@ -72,7 +83,10 @@ export async function serveFreelancer(
       }
       const offset = Number(url.searchParams.get('offset') ?? '0');
       await route.fulfill({
-        json: { status: 'success', result: { projects: offset ? [] : answer, users: {} } },
+        json: {
+          status: 'success',
+          result: { projects: offset ? [] : answer, users: {}, total_count: answer.length },
+        },
         headers: { 'access-control-allow-origin': '*' },
       });
       return;
@@ -84,6 +98,14 @@ export async function serveFreelancer(
     }
     if (url.pathname === '/api/users/0.1/users/directory/') {
       calls.directory.push(url);
+      if (options.directory) {
+        await route.fulfill({
+          status: options.directory,
+          json: { status: 'error', message: 'Service unavailable' },
+          headers: { 'access-control-allow-origin': '*' },
+        });
+        return;
+      }
       await route.fulfill({ json: DIRECTORY, headers: { 'access-control-allow-origin': '*' } });
       return;
     }

@@ -2,6 +2,7 @@
 import { downloadBlob } from './lib/download.js';
 import { formatDateTime, formatMoney, formatPercent, formatTime } from './lib/format.js';
 import { confirmAction } from './lib/ui.js';
+import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
 import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
@@ -36,6 +37,8 @@ import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from '.
  * @typedef {import('./radar/tracker.js').BidStatus} BidStatus
  * @typedef {import('./radar/tracker.js').Totals} Totals
  * @typedef {import('./radar/tracker.js').Rate} Rate
+ * @typedef {import('./radar/developers.js').Developer} Developer
+ * @typedef {import('./radar/developers.js').Shortlisted} Shortlisted
  */
 
 /** @param {string} id */
@@ -70,6 +73,8 @@ const dismissed = new Set(readJson('dismissed', /** @type {number[]} */ ([])));
 let templates = readJson('templates', /** @type {Template[]} */ ([]));
 /** @type {LogEntry[]} */
 let log = readJson('log', /** @type {LogEntry[]} */ ([]));
+/** @type {Shortlisted[]} */
+let shortlist = readJson('shortlist', /** @type {Shortlisted[]} */ ([]));
 let failures = 0;
 let loading = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -1191,7 +1196,46 @@ function awardForm(entry) {
   };
   for (const input of [agreed, cost, note]) input.addEventListener('input', save);
 
+  const who = document.createElement('select');
+  who.className = 'select';
+  const inHouse = document.createElement('option');
+  inHouse.value = '';
+  inHouse.textContent = 'In-house';
+  who.append(inHouse);
+  const names = new Set(shortlist.map((d) => d.username));
+  if (award.developer && !names.has(award.developer)) names.add(award.developer);
+  for (const name of names) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    who.append(option);
+  }
+  who.value = award.developer ?? '';
+  who.addEventListener('change', () => {
+    const developer = who.value || null;
+    const picked = shortlist.find((d) => d.username === developer);
+    // The delivery cost starts from the shortlisted developer's rate, or 0 in-house.
+    if (!developer) cost.value = '0';
+    else if (picked?.rateUsd !== null && picked?.rateUsd !== undefined) {
+      cost.value = String(picked.rateUsd).replace('.', ',');
+    }
+    updateBid(entry.id, (e) => ({
+      ...e,
+      award: { ...(e.award ?? award), developer },
+    }));
+    save();
+  });
+
+  const whoField = document.createElement('div');
+  whoField.className = 'field';
+  const whoLabel = document.createElement('label');
+  whoLabel.className = 'field__label';
+  whoLabel.htmlFor = `who-${entry.id}`;
+  whoLabel.textContent = 'Delivered by';
+  who.id = `who-${entry.id}`;
+  whoField.append(whoLabel, who);
   grid.append(
+    whoField,
     labelled(
       'agreed',
       `Agreed value (${entry.currency})`,
@@ -1268,6 +1312,197 @@ function drawBids() {
   byId('bid-list').replaceChildren(...log.map(bidItem));
 }
 
+// ------------------------------------------------------------------ developers
+
+const devQuery = /** @type {HTMLInputElement} */ (byId('dev-query'));
+const devGo = /** @type {HTMLButtonElement} */ (byId('dev-go'));
+/** @type {Developer[]} */
+let found = [];
+let searched = '';
+
+function keepShortlist() {
+  keep('shortlist', shortlist);
+}
+
+/**
+ * @param {number | null} ratio
+ */
+const completionText = (ratio) =>
+  ratio === null ? 'completion not given' : `${formatPercent(ratio)} completed`;
+
+/** @param {number | null} rating */
+const ratingText = (rating) =>
+  rating === null ? 'no rating' : `rated ${rating.toFixed(2).replace('.', ',')} of 5`;
+
+/** @param {Developer} d */
+function developerItem(d) {
+  const item = document.createElement('li');
+  item.className = 'card stack';
+  const head = document.createElement('div');
+  head.className = 'radar-detail__head';
+  const name = document.createElement('h3');
+  name.className = 'radar-row__title';
+  const link = document.createElement('a');
+  link.href = d.profile;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = d.username;
+  name.append(link);
+  head.append(name);
+  const meta = document.createElement('p');
+  meta.className = 'radar-row__meta';
+  meta.textContent = [
+    d.country ?? 'country not given',
+    d.hourlyRateUsd === null ? 'no hourly rate' : `${formatPrice(d.hourlyRateUsd, 'USD')} an hour`,
+    `${String(d.jobs)} jobs`,
+    `${String(d.reviews)} reviews`,
+    ratingText(d.rating),
+    completionText(d.completionRate),
+  ].join(' · ');
+  const actions = document.createElement('div');
+  actions.className = 'row-actions';
+  const listed = shortlist.some((s) => s.username === d.username);
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'btn btn--secondary';
+  add.textContent = listed ? 'Shortlisted' : 'Shortlist';
+  add.disabled = listed;
+  add.setAttribute(
+    'aria-label',
+    listed ? `${d.username} is shortlisted` : `Shortlist ${d.username}`,
+  );
+  add.addEventListener('click', () => {
+    shortlist = [...shortlist, toShortlist(d)];
+    keepShortlist();
+    drawDevelopers();
+    say('success', `Shortlisted ${d.username}.`);
+  });
+  actions.append(add);
+  item.append(head, meta, actions);
+  return item;
+}
+
+/** @param {Shortlisted} d */
+function shortlistItem(d) {
+  const item = document.createElement('li');
+  item.className = 'card stack';
+  const head = document.createElement('div');
+  head.className = 'radar-detail__head';
+  const name = document.createElement('h3');
+  name.className = 'radar-row__title';
+  const link = document.createElement('a');
+  link.href = d.profile;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = d.username;
+  name.append(link);
+  head.append(name);
+  const meta = document.createElement('p');
+  meta.className = 'radar-row__meta';
+  meta.textContent = [
+    d.country ?? 'country not given',
+    d.hourlyRateUsd === null
+      ? 'no hourly rate'
+      : `${formatPrice(d.hourlyRateUsd, 'USD')} an hour on their profile`,
+    `${String(d.reviews)} reviews`,
+    ratingText(d.rating),
+  ].join(' · ');
+
+  const grid = document.createElement('div');
+  grid.className = 'radar-award';
+  const rateField = document.createElement('div');
+  rateField.className = 'field';
+  const rateLabel = document.createElement('label');
+  rateLabel.className = 'field__label';
+  rateLabel.htmlFor = `rate-${d.username}`;
+  rateLabel.textContent = 'Your price or rate for them (USD)';
+  const rate = document.createElement('input');
+  rate.className = 'input';
+  rate.id = `rate-${d.username}`;
+  rate.inputMode = 'decimal';
+  rate.value = d.rateUsd === null ? '' : String(d.rateUsd).replace('.', ',');
+  rateField.append(rateLabel, rate);
+  const noteField = document.createElement('div');
+  noteField.className = 'field';
+  const noteLabel = document.createElement('label');
+  noteLabel.className = 'field__label';
+  noteLabel.htmlFor = `dnote-${d.username}`;
+  noteLabel.textContent = 'Note';
+  const note = document.createElement('input');
+  note.className = 'input';
+  note.id = `dnote-${d.username}`;
+  note.value = d.note;
+  noteField.append(noteLabel, note);
+  grid.append(rateField, noteField);
+
+  const save = () => {
+    const value = parseNumber(rate.value);
+    const ok = !Number.isNaN(value);
+    rate.setAttribute('aria-invalid', String(!ok));
+    shortlist = shortlist.map((s) =>
+      s.username === d.username ? { ...s, rateUsd: ok ? value : s.rateUsd, note: note.value } : s,
+    );
+    keepShortlist();
+  };
+  rate.addEventListener('input', save);
+  note.addEventListener('input', save);
+
+  const actions = document.createElement('div');
+  actions.className = 'row-actions';
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'btn btn--ghost';
+  remove.textContent = 'Remove';
+  remove.setAttribute('aria-label', `Remove ${d.username} from the shortlist`);
+  remove.addEventListener('click', () => {
+    shortlist = shortlist.filter((s) => s.username !== d.username);
+    keepShortlist();
+    drawDevelopers();
+    say('success', `Removed ${d.username} from the shortlist.`);
+  });
+  actions.append(remove);
+  item.append(head, meta, grid, actions);
+  return item;
+}
+
+function drawDevelopers() {
+  byId('dev-filters').textContent =
+    `Shows freelancers with at least ${String(settings.devMinCompletion).replace('.', ',')} % of jobs completed and at least ${String(settings.devMinReviews)} reviews, best rated first. Change this in Settings.`;
+  const kept = pickDevelopers(found, settings);
+  byId('dev-results').replaceChildren(...kept.map(developerItem));
+  byId('shortlist-empty').hidden = shortlist.length > 0;
+  byId('shortlist').replaceChildren(...shortlist.map(shortlistItem));
+  return kept.length;
+}
+
+byId('dev-search').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const query = devQuery.value.trim();
+  if (!query) {
+    devQuery.setAttribute('aria-invalid', 'true');
+    say('error', 'Type what to search for, for example wordpress.');
+    return;
+  }
+  devQuery.removeAttribute('aria-invalid');
+  devGo.disabled = true;
+  devGo.setAttribute('aria-busy', 'true');
+  say('info', 'Searching Freelancer.com…');
+  try {
+    found = await fetchDevelopers(query);
+    searched = query;
+    const kept = drawDevelopers();
+    say(
+      'success',
+      `Found ${String(found.length)} freelancers for “${searched}”; ${String(kept)} meet your filters.`,
+    );
+  } catch (error) {
+    say('error', error instanceof Error ? error.message : String(error));
+  } finally {
+    devGo.disabled = false;
+    devGo.removeAttribute('aria-busy');
+  }
+});
+
 // ------------------------------------------------------------------ export and import
 
 const IMPORTED = 'radar.imported';
@@ -1280,7 +1515,7 @@ byId('export').addEventListener('click', () => {
       templates,
       log,
       dismissed: [...dismissed],
-      shortlist: readJson('shortlist', /** @type {unknown[]} */ ([])),
+      shortlist,
     },
     now,
   );
@@ -1332,7 +1567,7 @@ const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition'
 /**
  * The number boxes in settings: the setting, its lowest and highest value, whether it may
  * be left blank, and whether it must be whole.
- * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit' | 'usdToZar' | 'feePct', number, number, boolean, boolean])[]}
+ * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit' | 'usdToZar' | 'feePct' | 'devMinCompletion' | 'devMinReviews', number, number, boolean, boolean])[]}
  */
 const NUMBER_SETTINGS = [
   ['pricePct', 1, 100, false, true],
@@ -1340,6 +1575,8 @@ const NUMBER_SETTINGS = [
   ['monthlyLimit', 1, 100_000, true, true],
   ['usdToZar', 0.01, 1000, true, false],
   ['feePct', 0, 100, true, false],
+  ['devMinCompletion', 0, 100, false, false],
+  ['devMinReviews', 0, 100_000, false, true],
 ];
 
 function fillSettings() {
@@ -1399,6 +1636,7 @@ settingsForm.addEventListener('input', (event) => {
   keepSettings();
   render();
   if (target.name === 'usdToZar' || target.name === 'feePct') drawBids();
+  if (target.name.startsWith('devMin')) drawDevelopers();
 });
 
 settingsForm.addEventListener('change', (event) => {
@@ -1429,6 +1667,7 @@ drawTemplates();
 storageWarning.hidden = writeJson('probe', Date.now());
 render();
 drawBids();
+drawDevelopers();
 /** @type {string | null} */
 let importedNote = null;
 try {

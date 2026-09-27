@@ -88,6 +88,17 @@
           type="button"
           class="radar-tab"
           role="tab"
+          id="tab-developers"
+          aria-controls="panel-developers"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Developers
+        </button>
+        <button
+          type="button"
+          class="radar-tab"
+          role="tab"
           id="tab-templates"
           aria-controls="panel-templates"
           aria-selected="false"
@@ -204,6 +215,40 @@
           <p>No bids logged yet. After you bid on Freelancer.com, press I placed the bid.</p>
         </div>
         <ul class="radar-list" id="bid-list"></ul>
+      </section>
+
+      <section
+        class="stack"
+        id="panel-developers"
+        role="tabpanel"
+        aria-labelledby="tab-developers"
+        hidden
+      >
+        <form id="dev-search" class="card stack" role="search" novalidate>
+          <div class="field">
+            <label class="field__label" for="dev-query">Search Freelancer.com’s freelancers</label>
+            <input
+              class="input"
+              id="dev-query"
+              type="search"
+              autocomplete="off"
+              aria-describedby="dev-filters"
+            />
+            <p class="field__hint" id="dev-filters"></p>
+          </div>
+          <div class="row-actions">
+            <button type="submit" class="btn btn--primary" id="dev-go">Search</button>
+          </div>
+        </form>
+        <ul class="radar-list" id="dev-results"></ul>
+        <h2>Shortlist</h2>
+        <div class="empty" id="shortlist-empty" hidden>
+          <p>
+            No developer shortlisted yet. Shortlist one from a search to pick them as the delivery
+            cost of an awarded bid.
+          </p>
+        </div>
+        <ul class="radar-list" id="shortlist"></ul>
       </section>
 
       <section
@@ -393,6 +438,32 @@
                 <p class="field__hint" id="s-feePct-hint">
                   Leave blank until you know it; the margin then says the fee is not set.
                 </p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
+            <legend>Developer finder</legend>
+            <div class="radar-form">
+              <div class="field">
+                <label class="field__label" for="s-devMinCompletion"
+                  >Lowest completion rate, %</label
+                >
+                <input
+                  class="input"
+                  id="s-devMinCompletion"
+                  name="devMinCompletion"
+                  inputmode="decimal"
+                />
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-devMinReviews">Fewest reviews</label>
+                <input
+                  class="input"
+                  id="s-devMinReviews"
+                  name="devMinReviews"
+                  inputmode="numeric"
+                />
               </div>
             </div>
           </fieldset>
