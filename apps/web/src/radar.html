@@ -469,6 +469,28 @@
           </fieldset>
 
           <fieldset class="card stack radar-fieldset">
+            <legend>Alerts</legend>
+            <label class="check">
+              <input type="checkbox" id="s-alertsOn" name="alertsOn" />
+              Notify me when a new top project appears
+            </label>
+            <div class="field">
+              <label class="field__label" for="s-alertThreshold">Lowest rank score to notify</label>
+              <input
+                class="input"
+                id="s-alertThreshold"
+                name="alertThreshold"
+                inputmode="numeric"
+              />
+            </div>
+            <p class="field__hint">
+              Alerts work only while this page is open in a browser tab: one per project, when it is
+              under 15 minutes old.
+            </p>
+            <p class="field__hint" id="alerts-state"></p>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
             <legend>Refresh</legend>
             <div class="field">
               <label class="field__label" for="s-refreshMinutes">Read the feed again</label>
