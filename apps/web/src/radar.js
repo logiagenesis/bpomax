@@ -1,10 +1,13 @@
 // @ts-check
-import { formatTime } from './lib/format.js';
+import { formatDateTime, formatTime } from './lib/format.js';
+import { confirmAction } from './lib/ui.js';
 import { applyFilters } from './radar/filter.js';
 import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
 import { loadSettings, readJson, saveSettings, writeJson } from './radar/store.js';
-import { budgetText, formatAge, formatAmount } from './radar/text.js';
+import { bidsThisMonth, logEntry } from './radar/tracker.js';
+import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from './radar/text.js';
 
 /**
  * The radar (LI-PROMPT-BPOMAX-RADAR-20260927): live Freelancer.com projects, read by this
@@ -18,6 +21,8 @@ import { budgetText, formatAge, formatAmount } from './radar/text.js';
  * @typedef {import('./radar/store.js').Skill} Skill
  * @typedef {import('./radar/store.js').Settings} Settings
  * @typedef {import('./radar/score.js').Score} Score
+ * @typedef {import('./radar/proposal.js').Template} Template
+ * @typedef {import('./radar/tracker.js').LogEntry} LogEntry
  */
 
 /** @param {string} id */
@@ -48,6 +53,10 @@ let settings = loadSettings();
 let projects = [];
 /** @type {Set<number>} */
 const dismissed = new Set(readJson('dismissed', /** @type {number[]} */ ([])));
+/** @type {Template[]} */
+let templates = readJson('templates', /** @type {Template[]} */ ([]));
+/** @type {LogEntry[]} */
+let log = readJson('log', /** @type {LogEntry[]} */ ([]));
 let failures = 0;
 let loading = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -181,6 +190,7 @@ function flags(project) {
   if (project.upgrades.sealed) list.push(badge('Sealed', 'neutral'));
   if (project.upgrades.urgent) list.push(badge('Urgent', 'caution'));
   if (project.upgrades.featured) list.push(badge('Featured', 'neutral'));
+  if (log.some((entry) => entry.projectId === project.id)) list.push(badge('Bid placed', 'go'));
   if (dismissed.has(project.id)) list.push(badge('Dismissed', 'skip'));
   return list;
 }
@@ -252,10 +262,26 @@ function row(project, score) {
   return item;
 }
 
+/** Projects bid on or dismissed. */
+function acted() {
+  const ids = new Set(dismissed);
+  for (const entry of log) ids.add(entry.projectId);
+  return ids;
+}
+
+function drawCounter() {
+  const count = String(bidsThisMonth(log, Date.now()));
+  byId('bid-counter').textContent =
+    settings.monthlyLimit === null
+      ? `Bids this month: ${count}`
+      : `Bids this month: ${count} / ${String(settings.monthlyLimit)}`;
+}
+
 function render() {
+  drawCounter();
   const now = Date.now();
   const shown = byRank(
-    applyFilters(projects, settings.filters, { acted: dismissed, now }).map((project) => ({
+    applyFilters(projects, settings.filters, { acted: acted(), now }).map((project) => ({
       project,
       score: scoreProject(project, settings, now),
     })),
@@ -308,8 +334,232 @@ function openDetail(project) {
   /** @type {HTMLAnchorElement} */ (byId('detail-open')).href = project.url;
   drawBreakdown(scoreProject(project, settings, Date.now()));
   byId('detail-description').textContent = project.description;
+  shown = project;
+  drawBid(project);
   if (!detail.open) detail.showModal();
 }
+
+// ------------------------------------------------------------------ the bid
+
+const pForm = byId('p-form');
+const pEmpty = byId('p-empty');
+const pTemplate = /** @type {HTMLSelectElement} */ (byId('p-template'));
+const pPrice = /** @type {HTMLInputElement} */ (byId('p-price'));
+const pDays = /** @type {HTMLInputElement} */ (byId('p-days'));
+const pText = /** @type {HTMLTextAreaElement} */ (byId('p-text'));
+const pError = byId('p-error');
+const bidPanel = byId('bid-panel');
+const detailStatus = byId('detail-status');
+
+/** @type {Project | null} */
+let shown = null;
+/** @type {{ project: Project, price: number, days: number, text: string, template: Template | null } | null} */
+let pending = null;
+
+/**
+ * @param {'info' | 'success' | 'warning' | 'error'} kind
+ * @param {string} text
+ */
+function sayInDetail(kind, text) {
+  detailStatus.className = text ? `alert alert--${kind}` : '';
+  detailStatus.textContent = text;
+}
+
+function chosenTemplate() {
+  return templates.find((t) => t.id === pTemplate.value) ?? null;
+}
+
+function defaultTemplate() {
+  return templates.find((t) => t.isDefault) ?? templates[0] ?? null;
+}
+
+/** The days box as a whole number from 1 to 365, or null. */
+function readDays() {
+  const days = parseNumber(pDays.value);
+  return days !== null && Number.isInteger(days) && days >= 1 && days <= 365 ? days : null;
+}
+
+/** The price box as a number above 0, or null. */
+function readPrice() {
+  const price = parseNumber(pPrice.value);
+  return price !== null && price > 0 ? price : null;
+}
+
+/** @param {Project} project */
+function drawPriceHint(project) {
+  const budget = formatRange(project.budgetMin, project.budgetMax, project.currency);
+  const price = readPrice();
+  const parts = [budget ? `The client’s budget: ${budget}.` : 'The client gave no budget.'];
+  if (price !== null && project.currency !== 'USD') {
+    parts.push(`Your price is about ${formatAmount(price * project.usdRate, 'USD')}.`);
+  }
+  byId('p-price-hint').textContent = parts.join(' ');
+}
+
+function countText() {
+  byId('p-count').textContent = `${String(pText.value.length)} characters`;
+}
+
+/** Writes the proposal again from the chosen template, price and days. */
+function writeProposal() {
+  const template = chosenTemplate();
+  if (!shown || !template) return;
+  pText.value = buildProposal(
+    { ...shown, price: readPrice(), days: readDays() ?? settings.defaultDays },
+    template,
+    settings,
+  );
+  countText();
+}
+
+/** @param {Project} project */
+function drawBid(project) {
+  const placed = log.filter((entry) => entry.projectId === project.id);
+  const note = byId('bid-placed');
+  note.hidden = placed.length === 0;
+  note.textContent = placed.length
+    ? `You logged a bid on this project on ${formatDateTime(placed[0]?.placedAt ?? Date.now())} SAST.`
+    : '';
+  pending = null;
+  bidPanel.hidden = true;
+  pError.hidden = true;
+  sayInDetail('info', '');
+  pEmpty.hidden = templates.length > 0;
+  pForm.hidden = templates.length === 0;
+  if (!templates.length) return;
+
+  const current = defaultTemplate();
+  pTemplate.replaceChildren(
+    ...templates.map((template) => {
+      const option = document.createElement('option');
+      option.value = template.id;
+      option.textContent = template.isDefault ? `${template.name} (default)` : template.name;
+      option.selected = template.id === current?.id;
+      return option;
+    }),
+  );
+  byId('p-price-label').textContent =
+    project.type === 'hourly'
+      ? `Price per hour (${project.currency})`
+      : `Price (${project.currency})`;
+  const price = openingPrice(project, settings.pricePct);
+  pPrice.value = price === null ? '' : String(price).replace('.', ',');
+  pPrice.removeAttribute('aria-invalid');
+  pDays.value = String(settings.defaultDays);
+  pDays.removeAttribute('aria-invalid');
+  drawPriceHint(project);
+  writeProposal();
+}
+
+pTemplate.addEventListener('change', writeProposal);
+pPrice.addEventListener('input', () => {
+  pPrice.setAttribute('aria-invalid', String(readPrice() === null));
+  if (shown) drawPriceHint(shown);
+  writeProposal();
+});
+pDays.addEventListener('input', () => {
+  pDays.setAttribute('aria-invalid', String(readDays() === null));
+  writeProposal();
+});
+pText.addEventListener('input', countText);
+
+byId('p-go-templates').addEventListener('click', () => {
+  detail.close();
+  selectTab(/** @type {HTMLButtonElement} */ (byId('tab-templates')));
+  byId('t-name').focus();
+});
+
+/**
+ * Puts text on the clipboard; false when the browser refuses.
+ * @param {string} text
+ */
+async function copy(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Opens a Freelancer.com page in a new tab, cut off from this one.
+ * @param {string} url
+ */
+function openTab(url) {
+  const tab = window.open(url, '_blank');
+  try {
+    if (tab) tab.opener = null;
+  } catch {
+    // A cross-origin tab may refuse; it has no way back here either way.
+  }
+}
+
+byId('p-bid').addEventListener('click', async () => {
+  const project = shown;
+  if (!project) return;
+  const price = readPrice();
+  const days = readDays();
+  const problems = [];
+  if (price === null) problems.push('Enter your price, a number above 0.');
+  if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
+  if (!pText.value.trim()) problems.push('The proposal is empty.');
+  pError.hidden = problems.length === 0;
+  pError.textContent = problems.join(' ');
+  if (price === null || days === null || problems.length) return;
+
+  // 1. The proposal to the clipboard, 2. the project in a new tab, 3. the price to enter.
+  if (await copy(pText.value)) {
+    sayInDetail('success', 'Proposal copied. Paste it into your bid on Freelancer.com.');
+  } else {
+    pText.focus();
+    pText.select();
+    sayInDetail('warning', 'Copy failed — press Ctrl+C');
+  }
+  openTab(project.url);
+  pending = { project, price, days, text: pText.value, template: chosenTemplate() };
+  byId('bid-price-line').textContent =
+    `Price to enter: ${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''} · Days: ${String(days)}`;
+  /** @type {HTMLAnchorElement} */ (byId('bid-open-again')).href = project.url;
+  bidPanel.hidden = false;
+});
+
+byId('bid-copy-price').addEventListener('click', async () => {
+  if (!pending) return;
+  const text = String(pending.price);
+  if (await copy(text)) sayInDetail('success', `Price ${text} copied.`);
+  else sayInDetail('warning', `Copy failed — the price is ${text}.`);
+});
+
+byId('bid-cancel').addEventListener('click', () => {
+  pending = null;
+  bidPanel.hidden = true;
+  sayInDetail('info', 'Nothing was logged.');
+});
+
+byId('bid-placed-button').addEventListener('click', () => {
+  if (!pending) return;
+  const { project, price, days, text, template } = pending;
+  const now = Date.now();
+  const entry = logEntry(
+    project,
+    scoreProject(project, settings, now),
+    {
+      id: crypto.randomUUID(),
+      price,
+      days,
+      proposal: text,
+      template: template ? { id: template.id, name: template.name } : null,
+    },
+    now,
+  );
+  log = [entry, ...log];
+  keep('log', log);
+  pending = null;
+  detail.close();
+  render();
+  say('success', `Logged your bid on “${project.title}”.`);
+});
 
 const PART_NAMES = /** @type {const} */ ([
   ['skill', 'Skill fit'],
@@ -346,6 +596,163 @@ function drawBreakdown(score) {
 }
 
 byId('detail-close').addEventListener('click', () => detail.close());
+detail.addEventListener('close', () => {
+  shown = null;
+  pending = null;
+});
+
+// ------------------------------------------------------------------ templates
+
+const templateForm = /** @type {HTMLFormElement} */ (byId('template-form'));
+const tName = /** @type {HTMLInputElement} */ (byId('t-name'));
+const tBody = /** @type {HTMLTextAreaElement} */ (byId('t-body'));
+const tDefault = /** @type {HTMLInputElement} */ (byId('t-default'));
+const tCancel = /** @type {HTMLButtonElement} */ (byId('t-cancel'));
+/** @type {string | null} */
+let editing = null;
+
+byId('placeholders').replaceChildren(
+  ...PLACEHOLDERS.flatMap(([name, meaning]) => {
+    const dt = document.createElement('dt');
+    const code = document.createElement('code');
+    code.textContent = name;
+    dt.append(code);
+    const dd = document.createElement('dd');
+    dd.textContent = meaning;
+    return [dt, dd];
+  }),
+);
+
+function keepTemplates() {
+  keep('templates', templates);
+}
+
+function drawTemplates() {
+  byId('templates-empty').hidden = templates.length > 0;
+  byId('template-list').replaceChildren(
+    ...templates.map((template) => {
+      const item = document.createElement('li');
+      item.className = 'card stack';
+      const head = document.createElement('div');
+      head.className = 'radar-detail__head';
+      const name = document.createElement('h3');
+      name.textContent = template.name;
+      head.append(name);
+      if (template.isDefault) head.append(badge('Default', 'go'));
+      const body = document.createElement('p');
+      body.className = 'radar-description';
+      body.textContent = template.body;
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+      /**
+       * @param {string} label
+       * @param {string} kind
+       * @param {() => void} run
+       */
+      const button = (label, kind, run) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `btn btn--${kind}`;
+        b.textContent = label;
+        b.setAttribute('aria-label', `${label}: ${template.name}`);
+        b.addEventListener('click', run);
+        return b;
+      };
+      actions.append(
+        button('Edit', 'secondary', () => editTemplate(template)),
+        ...(template.isDefault
+          ? []
+          : [
+              button('Make default', 'ghost', () => {
+                templates = templates.map((t) => ({ ...t, isDefault: t.id === template.id }));
+                keepTemplates();
+                drawTemplates();
+                say('success', `“${template.name}” is now the default template.`);
+              }),
+            ]),
+        button('Delete', 'danger', async () => {
+          const ok = await confirmAction({
+            title: 'Delete this template?',
+            body: `“${template.name}” is removed from this browser. Bids already logged keep their text.`,
+            confirmLabel: 'Delete',
+            danger: true,
+          });
+          if (!ok) return;
+          templates = templates.filter((t) => t.id !== template.id);
+          if (editing === template.id) resetTemplateForm();
+          keepTemplates();
+          drawTemplates();
+          say('success', `Deleted “${template.name}”.`);
+        }),
+      );
+      item.append(head, body, actions);
+      return item;
+    }),
+  );
+}
+
+/** @param {Template} template */
+function editTemplate(template) {
+  editing = template.id;
+  tName.value = template.name;
+  tBody.value = template.body;
+  tDefault.checked = template.isDefault;
+  byId('template-heading').textContent = `Edit “${template.name}”`;
+  byId('t-save').textContent = 'Save the template';
+  tCancel.hidden = false;
+  tName.focus();
+}
+
+function resetTemplateForm() {
+  editing = null;
+  templateForm.reset();
+  byId('template-heading').textContent = 'Add a template';
+  byId('t-save').textContent = 'Add the template';
+  tCancel.hidden = true;
+  for (const id of ['t-name-error', 't-body-error']) byId(id).hidden = true;
+  tName.removeAttribute('aria-invalid');
+  tBody.removeAttribute('aria-invalid');
+}
+
+tCancel.addEventListener('click', resetTemplateForm);
+
+templateForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = tName.value.trim();
+  const body = tBody.value.trim();
+  const nameError = !name
+    ? 'Give the template a name.'
+    : templates.some((t) => t.id !== editing && t.name.toLowerCase() === name.toLowerCase())
+      ? 'Another template has this name.'
+      : '';
+  const bodyError = body ? '' : 'Write the text of the template.';
+  for (const [input, id, error] of /** @type {const} */ ([
+    [tName, 't-name-error', nameError],
+    [tBody, 't-body-error', bodyError],
+  ])) {
+    byId(id).hidden = !error;
+    byId(id).textContent = error;
+    input.setAttribute('aria-invalid', String(Boolean(error)));
+  }
+  if (nameError || bodyError) {
+    (nameError ? tName : tBody).focus();
+    return;
+  }
+  const isDefault = tDefault.checked || templates.every((t) => t.id === editing);
+  const id = editing ?? crypto.randomUUID();
+  const saved = { id, name, body, isDefault };
+  const others = templates
+    .filter((t) => t.id !== id)
+    .map((t) => (isDefault ? { ...t, isDefault: false } : t));
+  templates = editing
+    ? templates.map((t) => (t.id === id ? saved : (others.find((o) => o.id === t.id) ?? t)))
+    : [...others, saved];
+  keepTemplates();
+  const verb = editing ? 'Saved' : 'Added';
+  resetTemplateForm();
+  drawTemplates();
+  say('success', `${verb} “${name}”.`);
+});
 
 // ------------------------------------------------------------------ filters
 
@@ -536,10 +943,25 @@ skillPicker('skills', 'watch', () => {
 
 const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition']);
 
+/**
+ * The number boxes in settings: the setting, its lowest and highest value, whether it may
+ * be left blank, and whether it must be whole.
+ * @type {readonly (readonly ['pricePct' | 'defaultDays' | 'monthlyLimit', number, number, boolean, boolean])[]}
+ */
+const NUMBER_SETTINGS = [
+  ['pricePct', 1, 100, false, true],
+  ['defaultDays', 1, 365, false, true],
+  ['monthlyLimit', 1, 100_000, true, true],
+];
+
 function fillSettings() {
   field(settingsForm, 'refreshMinutes').value = String(settings.refreshMinutes);
   for (const key of WEIGHTS) {
     field(settingsForm, `w-${key}`).value = String(settings.weights[key]);
+  }
+  for (const [name] of NUMBER_SETTINGS) {
+    const value = settings[name];
+    field(settingsForm, name).value = value === null ? '' : String(value).replace('.', ',');
   }
 }
 
@@ -558,20 +980,34 @@ function wholeIn(input, min, max) {
 
 settingsForm.addEventListener('input', (event) => {
   const target = /** @type {HTMLElement} */ (event.target);
-  if (!(target instanceof HTMLInputElement) || !target.name.startsWith('w-')) return;
-  const weights = { ...settings.weights };
+  if (!(target instanceof HTMLInputElement) || target.type === 'search') return;
+  const next = { ...settings, weights: { ...settings.weights } };
   const bad = [];
   for (const key of WEIGHTS) {
     const input = /** @type {HTMLInputElement} */ (field(settingsForm, `w-${key}`));
     const value = wholeIn(input, 0, 100);
-    if (value === null) bad.push(input.labels?.[0]?.textContent ?? key);
-    else weights[key] = value;
+    if (value === null)
+      bad.push(`${input.labels?.[0]?.textContent ?? key}: a whole number from 0 to 100.`);
+    else next.weights[key] = value;
+  }
+  for (const [name, min, max, blank, whole] of NUMBER_SETTINGS) {
+    const input = /** @type {HTMLInputElement} */ (field(settingsForm, name));
+    const value = parseNumber(input.value);
+    const ok =
+      value === null
+        ? blank
+        : !Number.isNaN(value) &&
+          value >= min &&
+          value <= max &&
+          (!whole || Number.isInteger(value));
+    input.setAttribute('aria-invalid', String(!ok));
+    const rule = `${whole ? 'a whole number' : 'a number'} from ${String(min)} to ${String(max)}${blank ? ', or blank' : ''}`;
+    if (!ok) bad.push(`${input.labels?.[0]?.textContent ?? name}: ${rule}.`);
+    else next[name] = /** @type {number} */ (value);
   }
   settingsError.hidden = bad.length === 0;
-  settingsError.textContent = bad.length
-    ? `Enter a whole number from 0 to 100 in: ${bad.join(', ')}.`
-    : '';
-  settings = { ...settings, weights };
+  settingsError.textContent = bad.join(' ');
+  settings = next;
   keepSettings();
   render();
 });
@@ -600,6 +1036,7 @@ settingsError.hidden = true;
 
 fillFilters();
 fillSettings();
+drawTemplates();
 storageWarning.hidden = writeJson('probe', Date.now());
 render();
 void refresh();

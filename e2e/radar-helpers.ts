@@ -50,6 +50,13 @@ export async function serveFreelancer(
   options: { projects?: RawProject[] | number } = {},
 ): Promise<FreelancerCalls> {
   const calls: FreelancerCalls = { projects: [], skills: 0, directory: [] };
+  // Pages the radar opens in a new tab (a project, a freelancer's profile) land here.
+  await page.context().route('https://www.freelancer.com/{projects,u}/**', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<!doctype html><title>Freelancer.com</title>',
+    }),
+  );
   await page.route(`${FREELANCER_API}/**`, async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/api/projects/0.1/projects/active/') {

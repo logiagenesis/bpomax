@@ -37,7 +37,10 @@
 
     <main class="container stack page">
       <div>
-        <h1>Radar</h1>
+        <div class="page__title">
+          <h1>Radar</h1>
+          <p class="radar-counter" id="bid-counter"></p>
+        </div>
         <p>
           Live projects from Freelancer.com's public search, read by this page in your browser.
           Nothing here signs in to Freelancer.com or bids for you: you submit every bid there
@@ -64,6 +67,17 @@
           aria-selected="true"
         >
           Feed
+        </button>
+        <button
+          type="button"
+          class="radar-tab"
+          role="tab"
+          id="tab-templates"
+          aria-controls="panel-templates"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Templates
         </button>
         <button
           type="button"
@@ -157,6 +171,65 @@
 
       <section
         class="stack"
+        id="panel-templates"
+        role="tabpanel"
+        aria-labelledby="tab-templates"
+        hidden
+      >
+        <div class="card stack">
+          <h2>Placeholders</h2>
+          <p class="field__hint">
+            A template is your own wording. These are filled in from the project; anything else in
+            braces is left as you wrote it.
+          </p>
+          <dl class="radar-placeholders" id="placeholders"></dl>
+        </div>
+        <div class="empty" id="templates-empty" hidden>
+          <p>
+            Add your first template. Write it as you would write a bid, using the placeholders
+            above.
+          </p>
+        </div>
+        <ul class="radar-list" id="template-list"></ul>
+        <form id="template-form" class="card stack" novalidate aria-labelledby="template-heading">
+          <h2 id="template-heading">Add a template</h2>
+          <div class="field">
+            <label class="field__label" for="t-name">Name</label>
+            <input
+              class="input"
+              id="t-name"
+              name="name"
+              autocomplete="off"
+              aria-describedby="t-name-error"
+            />
+            <p class="field__error" id="t-name-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="t-body">Text</label>
+            <textarea
+              class="textarea"
+              id="t-body"
+              name="body"
+              rows="8"
+              aria-describedby="t-body-error"
+            ></textarea>
+            <p class="field__error" id="t-body-error" hidden></p>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="t-default" name="isDefault" />
+            Use this template first
+          </label>
+          <div class="row-actions">
+            <button type="submit" class="btn btn--primary" id="t-save">Add the template</button>
+            <button type="button" class="btn btn--ghost" id="t-cancel" hidden>
+              Cancel editing
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section
+        class="stack"
         id="panel-settings"
         role="tabpanel"
         aria-labelledby="tab-settings"
@@ -223,6 +296,37 @@
           </fieldset>
 
           <fieldset class="card stack radar-fieldset">
+            <legend>Bidding</legend>
+            <div class="radar-form">
+              <div class="field">
+                <label class="field__label" for="s-pricePct"
+                  >Opening price, % of the project’s maximum</label
+                >
+                <input class="input" id="s-pricePct" name="pricePct" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-defaultDays"
+                  >Delivery days, unless you change them</label
+                >
+                <input class="input" id="s-defaultDays" name="defaultDays" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-monthlyLimit"
+                  >Bids your membership allows a month</label
+                >
+                <input
+                  class="input"
+                  id="s-monthlyLimit"
+                  name="monthlyLimit"
+                  inputmode="numeric"
+                  aria-describedby="s-monthlyLimit-hint"
+                />
+                <p class="field__hint" id="s-monthlyLimit-hint">Leave blank to show no limit.</p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
             <legend>Refresh</legend>
             <div class="field">
               <label class="field__label" for="s-refreshMinutes">Read the feed again</label>
@@ -252,6 +356,77 @@
             >Open on Freelancer.com</a
           >
         </div>
+        <section class="card stack" aria-labelledby="bid-heading">
+          <h3 id="bid-heading">Your bid</h3>
+          <p class="alert alert--info" id="bid-placed" hidden></p>
+          <div class="empty" id="p-empty" hidden>
+            <p>Add your first template to write a proposal here.</p>
+            <button type="button" class="btn btn--secondary" id="p-go-templates">
+              Add a template
+            </button>
+          </div>
+          <div class="stack" id="p-form">
+            <div class="field">
+              <label class="field__label" for="p-template">Template</label>
+              <select class="select" id="p-template"></select>
+            </div>
+            <div class="radar-form radar-form--tight">
+              <div class="field">
+                <label class="field__label" for="p-price" id="p-price-label">Price</label>
+                <input
+                  class="input"
+                  id="p-price"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  aria-describedby="p-price-hint"
+                />
+                <p class="field__hint" id="p-price-hint"></p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="p-days">Delivery days</label>
+                <input class="input" id="p-days" inputmode="numeric" autocomplete="off" />
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="p-text">Proposal</label>
+              <textarea
+                class="textarea"
+                id="p-text"
+                rows="10"
+                aria-describedby="p-count p-text-hint"
+              ></textarea>
+              <p class="field__hint" id="p-count"></p>
+              <p class="field__hint" id="p-text-hint">
+                Changing the template, price or days writes the text again from the template.
+              </p>
+            </div>
+            <p class="field__error" id="p-error" hidden></p>
+            <div class="row-actions">
+              <button type="button" class="btn btn--primary" id="p-bid">Bid on Freelancer</button>
+            </div>
+            <div class="alert alert--info stack" id="bid-panel" hidden>
+              <p id="bid-price-line"></p>
+              <p>
+                Paste the proposal into the bid form on Freelancer.com, enter the price and days,
+                and submit it there. Then come back and press I placed the bid.
+              </p>
+              <div class="row-actions">
+                <button type="button" class="btn btn--secondary" id="bid-copy-price">
+                  Copy price
+                </button>
+                <button type="button" class="btn btn--primary" id="bid-placed-button">
+                  I placed the bid
+                </button>
+                <button type="button" class="btn btn--ghost" id="bid-cancel">Cancel</button>
+              </div>
+              <p class="field__hint">
+                The project did not open?
+                <a id="bid-open-again" target="_blank" rel="noopener">Open it on Freelancer.com</a>
+              </p>
+            </div>
+            <div role="status" aria-live="polite" id="detail-status"></div>
+          </div>
+        </section>
         <h3 id="detail-score"></h3>
         <div class="table-wrap">
           <table class="table">

@@ -100,7 +100,7 @@ test('the weights are the owner’s, checked, saved and applied', async ({ page 
   await page.getByLabel('Freshness').fill('0');
   await page.getByLabel('Competition').fill('150');
   await expect(page.locator('#settings-error')).toHaveText(
-    'Enter a whole number from 0 to 100 in: Competition.',
+    'Competition: a whole number from 0 to 100.',
   );
   await page.getByLabel('Competition').fill('10');
   await expect(page.locator('#settings-error')).toBeHidden();
