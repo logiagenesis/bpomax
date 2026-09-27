@@ -71,3 +71,15 @@ export function budgetText(project) {
       : ` (${String(formatRange(min === null ? null : min * rate, max === null ? null : max * rate, 'USD'))})`;
   return project.type === 'hourly' ? `${own}${usd} per hour · Hourly` : `${own}${usd} · Fixed`;
 }
+
+/**
+ * A price as typed: `USD 450`, or `USD 12,50` when it has cents.
+ * @param {number} value
+ * @param {string} currency
+ */
+export function formatPrice(value, currency) {
+  const cents = Math.round(value * 100);
+  if (cents % 100 === 0) return formatAmount(cents / 100, currency);
+  const whole = formatWhole(Math.trunc(cents / 100));
+  return `${currency} ${whole},${String(Math.abs(cents % 100)).padStart(2, '0')}`;
+}
