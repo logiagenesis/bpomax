@@ -2,6 +2,7 @@
 import { formatTime } from './lib/format.js';
 import { applyFilters } from './radar/filter.js';
 import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import { byRank, scoreProject } from './radar/score.js';
 import { loadSettings, readJson, saveSettings, writeJson } from './radar/store.js';
 import { budgetText, formatAge, formatAmount } from './radar/text.js';
 
@@ -16,6 +17,7 @@ import { budgetText, formatAge, formatAmount } from './radar/text.js';
  * @typedef {import('./radar/freelancer.js').Project} Project
  * @typedef {import('./radar/store.js').Skill} Skill
  * @typedef {import('./radar/store.js').Settings} Settings
+ * @typedef {import('./radar/score.js').Score} Score
  */
 
 /** @param {string} id */
@@ -183,8 +185,26 @@ function flags(project) {
   return list;
 }
 
-/** @param {Project} project */
-function row(project) {
+/**
+ * @param {Score} score
+ */
+function scoreBadge(score) {
+  const box = document.createElement('span');
+  box.className = `radar-score${score.total >= 70 ? ' radar-score--high' : score.total >= 40 ? ' radar-score--mid' : ''}`;
+  box.textContent = String(score.total);
+  box.title = 'Rank score out of 100';
+  const note = document.createElement('span');
+  note.className = 'visually-hidden';
+  note.textContent = ' out of 100';
+  box.append(note);
+  return box;
+}
+
+/**
+ * @param {Project} project
+ * @param {Score} score
+ */
+function row(project, score) {
   const item = document.createElement('li');
   item.className = 'card radar-row';
   item.dataset['id'] = String(project.id);
@@ -198,7 +218,7 @@ function row(project) {
   titleButton.dataset['action'] = 'detail';
   titleButton.textContent = project.title;
   title.append(titleButton);
-  head.append(title);
+  head.append(scoreBadge(score), title);
 
   const meta = document.createElement('p');
   meta.className = 'radar-row__meta';
@@ -234,8 +254,13 @@ function row(project) {
 
 function render() {
   const now = Date.now();
-  const shown = applyFilters(projects, settings.filters, { acted: dismissed, now });
-  feedList.replaceChildren(...shown.map((project) => row(project)));
+  const shown = byRank(
+    applyFilters(projects, settings.filters, { acted: dismissed, now }).map((project) => ({
+      project,
+      score: scoreProject(project, settings, now),
+    })),
+  );
+  feedList.replaceChildren(...shown.map(({ project, score }) => row(project, score)));
   feedCount.textContent = projects.length
     ? `Showing ${String(shown.length)} of the ${String(projects.length)} projects read.`
     : '';
@@ -281,8 +306,43 @@ function openDetail(project) {
   byId('detail-meta').textContent = metaText(project);
   byId('detail-skills').textContent = project.skills.map((skill) => skill.name).join(' · ');
   /** @type {HTMLAnchorElement} */ (byId('detail-open')).href = project.url;
+  drawBreakdown(scoreProject(project, settings, Date.now()));
   byId('detail-description').textContent = project.description;
   if (!detail.open) detail.showModal();
+}
+
+const PART_NAMES = /** @type {const} */ ([
+  ['skill', 'Skill fit'],
+  ['budget', 'Budget'],
+  ['fresh', 'Freshness'],
+  ['competition', 'Competition'],
+]);
+
+/**
+ * Points with one decimal, as the rest of the app writes decimals: `12,5`.
+ * @param {number} n
+ */
+const pts = (n) => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
+
+/** @param {Score} score */
+function drawBreakdown(score) {
+  byId('detail-score').textContent = `Rank score ${String(score.total)} of 100`;
+  byId('detail-parts').replaceChildren(
+    ...PART_NAMES.map(([key, name]) => {
+      const part = score.parts[key];
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = name;
+      const got = document.createElement('td');
+      got.className = 'num';
+      got.textContent = `${pts(part.points)} of ${pts(part.max)}`;
+      const why = document.createElement('td');
+      why.textContent = part.why;
+      tr.append(th, got, why);
+      return tr;
+    }),
+  );
 }
 
 byId('detail-close').addEventListener('click', () => detail.close());
@@ -465,6 +525,7 @@ function skillPicker(key, prefix, onChange) {
 
 /** @type {ReturnType<typeof setTimeout> | undefined} */
 let reread;
+skillPicker('inHouse', 'inhouse', () => render());
 skillPicker('skills', 'watch', () => {
   // A new set of skills is a new search: read again once the picking pauses.
   clearTimeout(reread);
@@ -473,9 +534,47 @@ skillPicker('skills', 'watch', () => {
 
 // ------------------------------------------------------------------ settings
 
+const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition']);
+
 function fillSettings() {
   field(settingsForm, 'refreshMinutes').value = String(settings.refreshMinutes);
+  for (const key of WEIGHTS) {
+    field(settingsForm, `w-${key}`).value = String(settings.weights[key]);
+  }
 }
+
+/**
+ * Reads a whole-number box; shows and returns null when it is not one from `min` to `max`.
+ * @param {HTMLInputElement} input
+ * @param {number} min
+ * @param {number} max
+ */
+function wholeIn(input, min, max) {
+  const value = parseNumber(input.value);
+  const ok = value !== null && Number.isInteger(value) && value >= min && value <= max;
+  input.setAttribute('aria-invalid', String(!ok));
+  return ok ? value : null;
+}
+
+settingsForm.addEventListener('input', (event) => {
+  const target = /** @type {HTMLElement} */ (event.target);
+  if (!(target instanceof HTMLInputElement) || !target.name.startsWith('w-')) return;
+  const weights = { ...settings.weights };
+  const bad = [];
+  for (const key of WEIGHTS) {
+    const input = /** @type {HTMLInputElement} */ (field(settingsForm, `w-${key}`));
+    const value = wholeIn(input, 0, 100);
+    if (value === null) bad.push(input.labels?.[0]?.textContent ?? key);
+    else weights[key] = value;
+  }
+  settingsError.hidden = bad.length === 0;
+  settingsError.textContent = bad.length
+    ? `Enter a whole number from 0 to 100 in: ${bad.join(', ')}.`
+    : '';
+  settings = { ...settings, weights };
+  keepSettings();
+  render();
+});
 
 settingsForm.addEventListener('change', (event) => {
   const target = /** @type {HTMLElement} */ (event.target);
