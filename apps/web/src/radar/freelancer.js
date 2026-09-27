@@ -131,8 +131,10 @@ export async function getResult(url, fetchImpl = fetch) {
 }
 
 /**
- * Up to 300 active projects, newest first, in pages of 100. A project that moves across
- * a page boundary while the pages are read appears once.
+ * Up to 300 active projects, newest first, in pages of 100. A page can come back a few
+ * short of 100 with more to follow (98 and 99 on 27/09/2026), so reading stops only at an
+ * empty page or the search's `total_count`. A project that moves across a page boundary
+ * while the pages are read appears once.
  * @param {number[]} skillIds
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<Project[]>}
@@ -147,7 +149,8 @@ export async function fetchProjects(skillIds, fetchImpl = fetch) {
       const project = normaliseProject(raw);
       if (!seen.has(project.id)) seen.set(project.id, project);
     }
-    if (page.length < PAGE) break;
+    const total = typeof result?.total_count === 'number' ? result.total_count : null;
+    if (page.length === 0 || (total !== null && offset + PAGE >= total)) break;
   }
   return [...seen.values()];
 }

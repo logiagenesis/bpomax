@@ -83,7 +83,10 @@ export async function serveFreelancer(
       }
       const offset = Number(url.searchParams.get('offset') ?? '0');
       await route.fulfill({
-        json: { status: 'success', result: { projects: offset ? [] : answer, users: {} } },
+        json: {
+          status: 'success',
+          result: { projects: offset ? [] : answer, users: {}, total_count: answer.length },
+        },
         headers: { 'access-control-allow-origin': '*' },
       });
       return;
