@@ -22,6 +22,22 @@ into `main` as soon as CI is green. `main` is the only branch that matters.
 - **Next.** The owner's items in section 5, then each unblocked ticket's own clause
   (section 6).
 
+## Radar — 27/09/2026 (LI-PROMPT-BPOMAX-RADAR-20260927)
+
+1. https://bpomax.vercel.app/radar.html
+2. Dennis can read live Freelancer.com projects ranked 0–100, open one, get a proposal from his own template and a price, press **Bid on Freelancer**, paste and submit on Freelancer.com, log the bid, then track replies, awards and margin, shortlist developers and get alerts, with nothing to sign in to or set up.
+3. `main` at 90ccd26 (PR #53), CI green: https://github.com/logiagenesis/bpomax/actions/runs/36304653414
+4. [docs/audit/radar-live-27-09-2026.png](audit/radar-live-27-09-2026.png): the live page at 10:01 SAST, 297 projects read, the top 20 shown with scores.
+5. F7: `users` comes back as an empty `{}` rather than absent (still no client data). F1: a `limit=100` page holds 98–99 projects, so the feed reads on to 300 regardless. F6: there is no `jobs` field; jobs are `reputation.entire_history.all`, and `hourly_rate` is in USD. The live check ran in a remote browser because this build environment cannot reach bpomax.vercel.app.
+
+What Dennis does once it is live:
+
+1. Open https://bpomax.vercel.app/radar.html.
+2. Settings: pick your skills, tick the ones Logi-Ink delivers in-house, set the price %, default days and your monthly bid limit.
+3. Templates: add one proposal template.
+4. Tap the top project, check the text and price, press **Bid on Freelancer**, paste, submit, press **I placed the bid**.
+5. Mark replies and awards in **Bids**. Press **Export** once a week.
+
 ## 1. State of `main`
 
 | Item | Value |
