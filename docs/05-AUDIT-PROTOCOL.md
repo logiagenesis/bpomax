@@ -54,7 +54,7 @@ Rules:
 
 1. Tests green locally and in CI.
 2. Board row updated (Status, SHA).
-3. Pushed to the task's branch; `git ls-remote origin <branch>` SHA equals local HEAD. The owner merges the pull request (branching rule in /CLAUDE.md).
+3. Pushed; `git ls-remote origin main` SHA equals local HEAD.
 4. At phase end: tag pushed, preview deployed, four links printed.
 
 ## 7. Triple-check
