@@ -178,6 +178,51 @@
           </fieldset>
 
           <fieldset class="card stack radar-fieldset">
+            <legend>Delivered in-house</legend>
+            <p class="field__hint">
+              The skills Logi-Ink delivers itself. A project scores its skill fit from the share of
+              its skills on this list.
+            </p>
+            <ul class="radar-chips" id="inhouse-chosen"></ul>
+            <div class="field">
+              <label class="field__label" for="inhouse-search">Find an in-house skill</label>
+              <input class="input" id="inhouse-search" type="search" autocomplete="off" />
+            </div>
+            <ul class="radar-matches" id="inhouse-matches"></ul>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
+            <legend>Rank weights</legend>
+            <p class="field__hint">
+              Points each part of the rank score is worth. They are scaled so the best a project can
+              score is 100.
+            </p>
+            <div class="radar-form">
+              <div class="field">
+                <label class="field__label" for="s-w-skill">Skill fit</label>
+                <input class="input" id="s-w-skill" name="w-skill" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-w-budget">Budget</label>
+                <input class="input" id="s-w-budget" name="w-budget" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-w-fresh">Freshness</label>
+                <input class="input" id="s-w-fresh" name="w-fresh" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="s-w-competition">Competition</label>
+                <input
+                  class="input"
+                  id="s-w-competition"
+                  name="w-competition"
+                  inputmode="numeric"
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
             <legend>Refresh</legend>
             <div class="field">
               <label class="field__label" for="s-refreshMinutes">Read the feed again</label>
@@ -206,6 +251,22 @@
           <a class="btn btn--secondary" id="detail-open" target="_blank" rel="noopener"
             >Open on Freelancer.com</a
           >
+        </div>
+        <h3 id="detail-score"></h3>
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Why the project ranks where it does
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Part</th>
+                <th scope="col" class="num">Points</th>
+                <th scope="col">Because</th>
+              </tr>
+            </thead>
+            <tbody id="detail-parts"></tbody>
+          </table>
         </div>
         <h3>Description</h3>
         <p class="radar-description" id="detail-description"></p>
