@@ -7,7 +7,7 @@
  */
 import { FREELANCER } from './links.js';
 
-const API = `${FREELANCER}/api`;
+export const API = `${FREELANCER}/api`;
 const PAGE = 100;
 /** The most projects one refresh reads: three pages. */
 export const MAX_PROJECTS = 300;
@@ -103,7 +103,7 @@ export function normaliseProject(raw) {
  * @param {string} url
  * @param {typeof fetch} fetchImpl
  */
-async function getResult(url, fetchImpl = fetch) {
+export async function getResult(url, fetchImpl = fetch) {
   let response;
   try {
     response = await fetchImpl(url, { headers: { accept: 'application/json' } });
