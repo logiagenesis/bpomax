@@ -25,7 +25,7 @@ This folder is the single source of truth for building ARBITRON (working name): 
 2. Owner: generate the images in 03 (optional before Phase 1).
 3. Owner: create an empty folder, copy this whole package into it as `/docs`, open Claude Code there.
 4. Owner: paste the code block from 01-MASTER-BUILD-PROMPT.md.
-5. Claude Code: creates `logiagenesis/arbitron`, pushes, and works the board ticket by ticket, pushing after each one.
+5. Claude Code: creates `logiagenesis/arbitron`, pushes, and works the board ticket by ticket, pushing each one to the task's one branch and pull request. The owner merges it (branching rule in /CLAUDE.md).
 6. At the end of each phase Claude Code prints four links: repository, latest commit, phase tag, live preview. No four links means the phase is not done.
 7. Owner: opens the links, spot-checks per 05 section 7, signs off.
 

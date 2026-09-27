@@ -78,6 +78,7 @@ Decided by: Owner (explicit instruction, this session)
 Decision:
 
 - Work 04-PROJECT-BOARD.md continuously: commit and push after each ticket, update the board as we go, and do not pause for approval on settings, commit messages or minor choices.
+- Amended 27/09/2026 by the owner: each push goes to the task's one branch and one pull request, which the owner merges; Claude Code never merges it (branching rule in CLAUDE.md).
 - Minor choices are decided here in DECISIONS.md rather than raised with the owner.
 - Only genuine blockers stop the work: missing credentials, a paid service, or a decision the docs contradict. Those go in docs/BLOCKERS.md and the dependent ticket is marked BLOCKED, per 01 rule 6.
 
@@ -2246,6 +2247,9 @@ Decision:
 - No other session writes to `main` (the "hourly routine session" in the old handoff was
   not found). The board claim is now the first commit of the ticket's own pull request,
   not a separate push to `main`.
+- Amended 27/09/2026 by the owner: there is no pull request per ticket any more. The claim
+  is the first commit of the task's one pull request, which the owner merges (branching
+  rule in CLAUDE.md).
 
 Why: docs/01 rule 6 (no claim the build cannot prove), the owner's instruction to build
 every buildable ticket, and the audit's evidence.
