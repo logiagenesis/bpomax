@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { URL, fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
-import { contentSecurityPolicy, withPolicy } from './csp.js';
+import { FREELANCER_ORIGIN, contentSecurityPolicy, withPolicy } from './csp.js';
 
 // Static multi-page build: every page is its own HTML file (01 section I).
 // Pages are registered here as they are built (ARB-061).
@@ -22,11 +22,19 @@ export default defineConfig(({ mode }) => {
   const policy = contentSecurityPolicy(
     demo ? {} : { supabaseUrl: env.SUPABASE_URL, apiUrl: env.API_URL },
   );
+  // The radar page calls neither Supabase nor the API, only Freelancer.com's public
+  // search, so its policy allows that origin and nothing else.
+  const radarPolicy = contentSecurityPolicy({ also: [FREELANCER_ORIGIN] });
+  /** @param {string} path */
+  const isRadar = (path) => path.endsWith('/radar.html');
   /** @type {import('vite').Plugin} */
   const csp = {
     name: 'arbitron-csp',
     apply: 'build',
-    transformIndexHtml: { order: 'post', handler: (html) => withPolicy(html, policy) },
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html, ctx) => withPolicy(html, isRadar(ctx.path) ? radarPolicy : policy),
+    },
   };
   return {
     root: 'src',
@@ -35,14 +43,18 @@ export default defineConfig(({ mode }) => {
           csp,
           {
             name: 'arbitron-demo',
-            // 'pre', so Vite then bundles the injected script like the page's own.
+            // 'pre', so Vite then bundles the injected script like the page's own. Not the
+            // radar page: it shows live Freelancer.com projects in every build, so the
+            // banner's "sample data only" would be untrue there.
             transformIndexHtml: {
               order: 'pre',
-              handler: (html) =>
-                html.replace(
-                  '<head>',
-                  '<head>\n    <script type="module" src="./demo/demo.js"></script>',
-                ),
+              handler: (html, ctx) =>
+                isRadar(ctx.path)
+                  ? html
+                  : html.replace(
+                      '<head>',
+                      '<head>\n    <script type="module" src="./demo/demo.js"></script>',
+                    ),
             },
           },
         ]
@@ -80,6 +92,7 @@ export default defineConfig(({ mode }) => {
           affiliates: 'src/affiliates.html',
           'freelancer-callback': 'src/freelancer-callback.html',
           'upwork-callback': 'src/upwork-callback.html',
+          radar: 'src/radar.html',
         },
       },
     },

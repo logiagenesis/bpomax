@@ -10,13 +10,16 @@ import { URL } from 'node:url';
  * build as a `<meta http-equiv>`; the headers that a meta tag cannot carry
  * (`frame-ancestors`, and the rest) come from vercel.json. A demo build calls nothing.
  *
- * @param {{ supabaseUrl?: string, apiUrl?: string }} hosts
+ * A page may name further origins it calls (`also`): the radar page reads Freelancer.com's
+ * public project search from the browser, so its policy alone allows that origin.
+ *
+ * @param {{ supabaseUrl?: string, apiUrl?: string, also?: string[] }} hosts
  * @returns {string}
  */
 export function contentSecurityPolicy(hosts) {
   /** @type {string[]} */
   const connect = ["'self'"];
-  for (const url of [hosts.supabaseUrl, hosts.apiUrl]) {
+  for (const url of [hosts.supabaseUrl, hosts.apiUrl, ...(hosts.also ?? [])]) {
     if (!url) continue;
     let origin;
     try {
@@ -38,6 +41,12 @@ export function contentSecurityPolicy(hosts) {
     "form-action 'self'",
   ].join('; ');
 }
+
+/**
+ * The one origin the radar page calls (LI-PROMPT-BPOMAX-RADAR-20260927): Freelancer.com's
+ * public API, which answers any origin (`access-control-allow-origin: *`) with no key.
+ */
+export const FREELANCER_ORIGIN = 'https://www.freelancer.com';
 
 /**
  * Puts the policy first in `<head>`, so it governs everything after it.

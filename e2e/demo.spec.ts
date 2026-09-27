@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { serveFreelancer } from './radar-helpers.js';
 
 /**
  * Demo mode (D-043): the build deployed while credentials are missing. Every page must
@@ -402,4 +403,14 @@ test('sign-up in the demo stays closed while the terms are pending', async ({ pa
     'Sign-up opens once the terms of service are published. Until then, an owner can add you to their organisation.',
   );
   await expect(page.getByRole('button', { name: 'Create account' })).toBeDisabled();
+});
+
+test('/radar.html reads Freelancer.com in the demo build too, with no sample-data banner', async ({
+  page,
+}) => {
+  await serveFreelancer(page);
+  await page.goto('/radar.html');
+  await expect(page.locator('#status')).toHaveText(/^Read \d+ projects from Freelancer\.com\.$/);
+  await expect(page.locator('#feed-list > li').first()).toBeVisible();
+  await expect(page.locator('#demo-banner')).toHaveCount(0);
 });

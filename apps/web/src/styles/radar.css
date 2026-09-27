@@ -1,0 +1,211 @@
+/* The radar page (LI-PROMPT-BPOMAX-RADAR-20260927). Arrangements only: every colour, space
+   and control comes from tokens.css and components.css. Works from 380 px up. */
+
+.radar-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.radar-bar__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+.radar-counter {
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Tabs */
+.radar-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.radar-tab {
+  font: inherit;
+  color: var(--color-text-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-2) var(--space-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+.radar-tab:hover {
+  color: var(--color-text);
+}
+.radar-tab[aria-selected='true'] {
+  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+}
+.radar-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Forms */
+.radar-summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-bold);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.radar-form {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  margin-top: var(--space-4);
+}
+.radar-fieldset {
+  margin: 0;
+  min-width: 0;
+}
+.radar-fieldset legend {
+  font-weight: var(--font-weight-bold);
+  padding: 0 var(--space-2);
+}
+
+/* Skill pickers */
+.radar-chips,
+.radar-matches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.radar-chips:empty {
+  display: none;
+}
+.radar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  padding: 0 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+}
+.radar-chip button {
+  font: inherit;
+  color: var(--color-text-muted);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  min-width: 32px;
+  min-height: 32px;
+  cursor: pointer;
+}
+.radar-chip button:hover {
+  color: var(--color-text);
+}
+.radar-matches .check {
+  font-size: var(--font-size-sm);
+}
+
+/* The feed */
+.radar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.radar-row {
+  display: grid;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.radar-row:hover {
+  border-color: var(--color-border-strong);
+}
+.radar-row__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.radar-row__title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-tight);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.radar-row__title button {
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.radar-row__title button:hover {
+  color: var(--color-primary);
+}
+.radar-row__meta,
+.radar-row__skills {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+.radar-score {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+}
+.radar-score--high {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+.radar-score--mid {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+.radar-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.radar-flags:empty {
+  display: none;
+}
+
+/* The detail panel */
+.radar-detail {
+  width: min(48rem, calc(100vw - 2 * var(--space-4)));
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+.radar-detail__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.radar-detail__head h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  overflow-wrap: anywhere;
+}
+.radar-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
