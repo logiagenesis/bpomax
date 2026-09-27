@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Live Freelancer.com projects, ranked, with a proposal and price ready to bid."
+    />
+    <title>Radar — Arbitron</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <link rel="stylesheet" href="./styles/radar.css" />
+    <script type="module" src="./radar.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
+        <nav aria-label="Primary">
+          <ul class="nav">
+            <li><a href="./dashboard.html">Dashboard</a></li>
+            <li><a href="./feed.html">Feed</a></li>
+            <li><a href="./approvals.html">Approvals</a></li>
+            <li><a href="./conversations.html">Conversations</a></li>
+            <li><a href="./suppliers.html">Suppliers</a></li>
+            <li><a href="./sourcing.html">Sourcing</a></li>
+            <li><a href="./pipeline.html">Pipeline</a></li>
+            <li><a href="./templates.html">Templates</a></li>
+            <li><a href="./analytics.html">Analytics</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            <li><a href="./audit-log.html">Audit log</a></li>
+            <li><a href="./radar.html" aria-current="page">Radar</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container stack page">
+      <div>
+        <h1>Radar</h1>
+        <p>
+          Live projects from Freelancer.com's public search, read by this page in your browser.
+          Nothing here signs in to Freelancer.com or bids for you: you submit every bid there
+          yourself. What you save here stays in this browser.
+        </p>
+      </div>
+
+      <div class="card radar-bar">
+        <button type="button" class="btn btn--secondary" id="refresh">Refresh now</button>
+        <p class="radar-bar__note" id="updated">Not updated yet</p>
+      </div>
+      <div role="status" aria-live="polite" id="status"></div>
+      <p class="alert alert--warning" id="storage-warning" hidden>
+        This browser is not keeping what you save here (private window or blocked site data).
+      </p>
+
+      <div class="radar-tabs" role="tablist" aria-label="Radar sections">
+        <button
+          type="button"
+          class="radar-tab"
+          role="tab"
+          id="tab-feed"
+          aria-controls="panel-feed"
+          aria-selected="true"
+        >
+          Feed
+        </button>
+        <button
+          type="button"
+          class="radar-tab"
+          role="tab"
+          id="tab-settings"
+          aria-controls="panel-settings"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Settings
+        </button>
+      </div>
+
+      <section class="stack" id="panel-feed" role="tabpanel" aria-labelledby="tab-feed">
+        <details class="card" id="filters-box">
+          <summary class="radar-summary">Filters</summary>
+          <form id="filters" class="radar-form" novalidate>
+            <div class="field">
+              <label class="field__label" for="f-type">Type</label>
+              <select class="select" id="f-type" name="type">
+                <option value="both">Fixed and hourly</option>
+                <option value="fixed">Fixed only</option>
+                <option value="hourly">Hourly only</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-minBudgetUsd">Minimum budget, fixed (USD)</label>
+              <input
+                class="input"
+                id="f-minBudgetUsd"
+                name="minBudgetUsd"
+                inputmode="decimal"
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-minHourlyUsd">Minimum rate, hourly (USD)</label>
+              <input
+                class="input"
+                id="f-minHourlyUsd"
+                name="minHourlyUsd"
+                inputmode="decimal"
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-maxBids">Most bids already placed</label>
+              <input
+                class="input"
+                id="f-maxBids"
+                name="maxBids"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-maxAgeHours">Oldest, in hours</label>
+              <input
+                class="input"
+                id="f-maxAgeHours"
+                name="maxAgeHours"
+                inputmode="decimal"
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-excludeWords">Leave out titles with</label>
+              <input
+                class="input"
+                id="f-excludeWords"
+                name="excludeWords"
+                autocomplete="off"
+                aria-describedby="f-excludeWords-hint"
+              />
+              <p class="field__hint" id="f-excludeWords-hint">
+                Words separated by commas, for example: contest, test
+              </p>
+            </div>
+            <label class="check">
+              <input type="checkbox" id="f-hideActed" name="hideActed" />
+              Hide projects already bid on or dismissed
+            </label>
+            <p class="field__error" id="filters-error" hidden></p>
+          </form>
+        </details>
+        <p class="field__hint" id="feed-count"></p>
+        <ol class="radar-list" id="feed-list"></ol>
+        <div class="empty" id="feed-empty" hidden></div>
+      </section>
+
+      <section
+        class="stack"
+        id="panel-settings"
+        role="tabpanel"
+        aria-labelledby="tab-settings"
+        hidden
+      >
+        <form id="settings" class="stack" novalidate>
+          <fieldset class="card stack radar-fieldset">
+            <legend>Skills to watch</legend>
+            <p class="field__hint">
+              The feed reads the projects that need at least one of these. With none picked it reads
+              every new project.
+            </p>
+            <ul class="radar-chips" id="watch-chosen"></ul>
+            <div class="field">
+              <label class="field__label" for="watch-search">Find a skill</label>
+              <input class="input" id="watch-search" type="search" autocomplete="off" />
+            </div>
+            <ul class="radar-matches" id="watch-matches"></ul>
+          </fieldset>
+
+          <fieldset class="card stack radar-fieldset">
+            <legend>Refresh</legend>
+            <div class="field">
+              <label class="field__label" for="s-refreshMinutes">Read the feed again</label>
+              <select class="select" id="s-refreshMinutes" name="refreshMinutes">
+                <option value="2">Every 2 minutes</option>
+                <option value="5">Every 5 minutes</option>
+                <option value="10">Every 10 minutes</option>
+                <option value="0">Only when I press Refresh now</option>
+              </select>
+            </div>
+          </fieldset>
+          <p class="field__error" id="settings-error" hidden></p>
+        </form>
+      </section>
+    </main>
+
+    <dialog class="dialog radar-detail" id="detail" aria-labelledby="detail-title">
+      <div class="stack">
+        <div class="radar-detail__head">
+          <h2 id="detail-title"></h2>
+          <button type="button" class="btn btn--ghost" id="detail-close">Close</button>
+        </div>
+        <p class="radar-row__meta" id="detail-meta"></p>
+        <p class="radar-row__skills" id="detail-skills"></p>
+        <div class="row-actions">
+          <a class="btn btn--secondary" id="detail-open" target="_blank" rel="noopener"
+            >Open on Freelancer.com</a
+          >
+        </div>
+        <h3>Description</h3>
+        <p class="radar-description" id="detail-description"></p>
+      </div>
+    </dialog>
+  </body>
+</html>

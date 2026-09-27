@@ -1,6 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { serveFreelancer } from './radar-helpers.js';
 
 /**
  * ARB-501, the owner's audit S-03: every built page carries the content security policy
@@ -25,6 +26,8 @@ for (const page of PAGES) {
         seen.push(`${event.violatedDirective} ${event.blockedURI}`);
       });
     });
+    // The radar page reads Freelancer.com; answered from the saved responses, not live.
+    await serveFreelancer(browser);
     await browser.goto(`/${page}`);
     await browser.waitForLoadState('networkidle').catch(() => undefined);
     const policy = await browser

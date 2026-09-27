@@ -1,0 +1,4002 @@
+{
+  "status": "success",
+  "result": {
+    "projects": [
+      {
+        "id": 40735847,
+        "owner_id": null,
+        "title": "Chennai Collections Specialist",
+        "status": "active",
+        "seo_url": "account-management/Chennai-Collections-Specialist",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I need a dependable Collection & Recovery agent based in Chennai to handle day-to-day follow-ups with our small-business customers. Your core task is to recover unpaid rental bills quickly and professionally, almost entirely over the phone.  \n\nYou’ll receive a daily list of accounts with ageing details. I expect you to:  \n• Call each customer, remind them of the outstanding amount, and agree on a realistic payment date.  \n• Update the status of every call in the tracker I provide so that figures, promises-to-pay, and any disputes are always current.  \n• Escalate accounts that require legal or senior-management attention.  \n\nConsistent results matter more than high-pressure tactics, so tactfu",
+        "preview_description": "I need a dependable Collection & Recovery agent based in Chennai to handle day-to-day follow-ups wit",
+        "jobs": [
+          {
+            "id": 39,
+            "name": "Data Entry",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 64,
+            "name": "Sales",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 147,
+            "name": "CRM",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 217,
+            "name": "Phone Support",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 671,
+            "name": "Customer Service",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 682,
+            "name": "Time Management",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 1175,
+            "name": "Account Management",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 2470,
+            "name": "Payment Processing",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 1500.0,
+          "maximum": 12500.0
+        },
+        "bid_stats": {
+          "bid_count": 0,
+          "bid_avg": null
+        },
+        "time_submitted": 1790491694,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735227,
+        "owner_id": null,
+        "title": "Remote Zoho ERP Full Setup",
+        "status": "active",
+        "seo_url": "zoho/Remote-Zoho-ERP-Full-Setup",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I’m ready to launch Zoho ERP and need an expert to configure everything live on my computer via AnyDesk. While I stay on the call to supply data and approvals, you’ll do the hands-on setup so the system is production-ready by the time we disconnect.\n\nCore areas to be completed\n• Invoices – design templates, bring in my historical bills, and establish the recurring schedules I specify.  \n• Employee module – add every staff member, update any partial profiles, and fine-tune roles and permissions so access is clean and secure.  \n• Inventory – load items, opening stock, locations, and reorder parameters.  \n• Payroll, tax rules, plus travel & expense – ensure each is switched on, mapped to the ri",
+        "preview_description": "I’m ready to launch Zoho ERP and need an expert to configure everything live on my computer via AnyD",
+        "jobs": [
+          {
+            "id": 53,
+            "name": "Accounting",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 147,
+            "name": "CRM",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 179,
+            "name": "Finance",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 289,
+            "name": "Inventory Management",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 566,
+            "name": "Zoho",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1296,
+            "name": "Tax Compliance",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 2300,
+            "name": "Zoho CRM",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 3381,
+            "name": "Workflow Automation",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 600.0,
+          "maximum": 1500.0
+        },
+        "bid_stats": {
+          "bid_count": 8,
+          "bid_avg": 937.5
+        },
+        "time_submitted": 1790448139,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735846,
+        "owner_id": null,
+        "title": "Retail Store Interior Design",
+        "status": "active",
+        "seo_url": "design/Retail-Store-Interior-Design",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I need a skilled interior designer to optimize space usage for a retail store. \n\nKey Requirements:\n- Design should maximize space efficiency\n- Experience in retail store design is essential\n- Proven track record in similar projects\n\nPlease include relevant experience in your application.",
+        "preview_description": "I need a skilled interior designer to optimize space usage for a retail store. \n\nKey Requirements:\n-",
+        "jobs": [
+          {
+            "id": 84,
+            "name": "Building Architecture",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 93,
+            "name": "3D Rendering",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 277,
+            "name": "Interior Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 394,
+            "name": "3D Modelling",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 505,
+            "name": "3D Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 816,
+            "name": "Building Design",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          },
+          {
+            "id": 961,
+            "name": "Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2489,
+            "name": "Construction Management",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 1500.0,
+          "maximum": 12500.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 7000.0
+        },
+        "time_submitted": 1790491648,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735844,
+        "owner_id": null,
+        "title": "Commercial Building AC Design Plans",
+        "status": "active",
+        "seo_url": "hvac/Commercial-Building-Design-Plans",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I have uploaded a PDF that shows the full layout of a commercial premises and now need a complete air-conditioning design built around a mix of packaged units and wall-mounted split systems. Heating and general ventilation are handled elsewhere, so the scope here is cooling only.\n\n\n work primarily in AutoCAD, so native DWG files are essential alongside PDFs. \n\nall outdoor units and package on the roof floor",
+        "preview_description": "I have uploaded a PDF that shows the full layout of a commercial premises and now need a complete ai",
+        "jobs": [
+          {
+            "id": 76,
+            "name": "CAD/CAM",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 166,
+            "name": "Mechanical Engineering",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 271,
+            "name": "AutoCAD",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 654,
+            "name": "Air Conditioning",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          },
+          {
+            "id": 816,
+            "name": "Building Design",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          },
+          {
+            "id": 1676,
+            "name": "Technical Documentation",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 2055,
+            "name": "HVAC",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 10.0,
+          "maximum": 30.0
+        },
+        "bid_stats": {
+          "bid_count": 2,
+          "bid_avg": 17.5
+        },
+        "time_submitted": 1790491572,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735834,
+        "owner_id": null,
+        "title": "IT Recruiter for Interviews",
+        "status": "active",
+        "seo_url": "article-writing/Recruiter-for-Interviews",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "Our growing IT services company is expanding headcount across engineering, product, sales, and operations, and the interview stage of the hiring funnel now needs dedicated ownership. The assignment revolves around interviewing candidates for both technical and non-technical positions, then supplying clear, structured feedback that enables fast, confident hiring decisions.\n\nBecause the roles sit inside the Information Technology space, familiarity with developer stacks, cloud terminology, and common SaaS business functions is essential—you’ll be talking shop with full-stack engineers one hour and a customer-success lead the next. Sourcing and onboarding are handled in-house; your primary resp",
+        "preview_description": "Our growing IT services company is expanding headcount across engineering, product, sales, and opera",
+        "jobs": [
+          {
+            "id": 47,
+            "name": "Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 123,
+            "name": "Report Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 145,
+            "name": "Human Resources",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 174,
+            "name": "Article Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 194,
+            "name": "Research Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 1442,
+            "name": "Talent Acquisition",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 1672,
+            "name": "Sourcing",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 1675,
+            "name": "Interviewing",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 250.0,
+          "maximum": 750.0
+        },
+        "bid_stats": {
+          "bid_count": 2,
+          "bid_avg": 375.0
+        },
+        "time_submitted": 1790491450,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735843,
+        "owner_id": null,
+        "title": "PDF-to-Word Conversion Specialist",
+        "status": "active",
+        "seo_url": "microsoft-word/PDF-Word-Conversion-Specialist-40735843",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I have a set of PDFs that contain only text, yet the layout relies on several text boxes to keep paragraphs in the right places. I need each file converted into an editable Microsoft Word document while retaining the original look and feel—fonts, alignment, spacing, and, most importantly, every text box exactly where it appears in the source.  \n\nNo images, tables, or footnotes are involved, so your attention can stay squarely on accurate text transfer and faithful formatting reproduction. I will provide the PDFs once we start; you return fully formatted .docx files ready for immediate use.  \n\nIf you have a proven workflow for precise PDF-to-Word conversions and can commit to preserving those",
+        "preview_description": "I have a set of PDFs that contain only text, yet the layout relies on several text boxes to keep par",
+        "jobs": [
+          {
+            "id": 55,
+            "name": "Excel",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 158,
+            "name": "PDF",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 375,
+            "name": "Copy Typing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 670,
+            "name": "Word Processing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 686,
+            "name": "Microsoft Office",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 2505,
+            "name": "Microsoft Word",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 12500.0,
+          "maximum": 37500.0
+        },
+        "bid_stats": {
+          "bid_count": 7,
+          "bid_avg": 20035.714285714286
+        },
+        "time_submitted": 1790491203,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735842,
+        "owner_id": null,
+        "title": "Vibrant Product Pinterest Pins",
+        "status": "active",
+        "seo_url": "adobe-photoshop/Vibrant-Product-Pinterest-Pins",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I’m refreshing my Pinterest catalogue and need a set of eye-catching, vibrant, and colorful pins that showcase my products in the best light. Each design has to feel energetic and on-brand while remaining clear and readable on both desktop and mobile feeds.  \n\nHere’s what I’m after:  \n• A small collection of reusable templates plus finished pins ready for immediate upload  \n• Consistent use of my brand palette, fonts, and product photos (I’ll provide the assets)  \n• Proper sizing and aspect ratios for Pinterest’s current guidelines, with text kept safely within viewable areas  \n• Exported PNGs plus the layered source files (Canva or Photoshop are both fine) so I can tweak future promos mysel",
+        "preview_description": "I’m refreshing my Pinterest catalogue and need a set of eye-catching, vibrant, and colorful pins tha",
+        "jobs": [
+          {
+            "id": 20,
+            "name": "Graphic Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 57,
+            "name": "Photoshop",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 70,
+            "name": "Illustrator",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 97,
+            "name": "Branding",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 284,
+            "name": "Photoshop Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2163,
+            "name": "Canva",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2246,
+            "name": "Visual Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2507,
+            "name": "Adobe Photoshop",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 15.0,
+          "maximum": 25.0
+        },
+        "bid_stats": {
+          "bid_count": 11,
+          "bid_avg": 17.545454545454547
+        },
+        "time_submitted": 1790491202,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735840,
+        "owner_id": null,
+        "title": "Recreational Motorboat Design",
+        "status": "active",
+        "seo_url": "marine-engineering/Recreational-Motorboat-Design-40735840",
+        "currency": {
+          "id": 3,
+          "code": "AUD",
+          "sign": "$",
+          "name": "Australian Dollar",
+          "exchange_rate": 0.703284,
+          "country": "AU"
+        },
+        "description": "I'm seeking an experienced boat designer to create a recreational motorboat. \n\nKey Features:\n- Cabin with sleeping quarters\n- Sunbathing deck\n\nIdeal Skills:\n- Boat design expertise, especially in motorboats\n- Experience designing cabins and sunbathing decks\n- Knowledge of recreational boating needs\n\nPlease provide a portfolio with relevant designs and ensure all safety and regulatory standards are met.\n\nProject Overview\n\nI am looking for an experienced naval architect / marine engineer / yacht designer to develop a complete design package for a custom approximately 55-foot luxury open-deck centre-console motor yacht.\n\nThe overall design direction should be a modern, clean European-style day ",
+        "preview_description": "I'm seeking an experienced boat designer to create a recreational motorboat. \n\nKey Features:\n- Cabin",
+        "jobs": [
+          {
+            "id": 20,
+            "name": "Graphic Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 93,
+            "name": "3D Rendering",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 139,
+            "name": "Solidworks",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 188,
+            "name": "Structural Engineering",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 271,
+            "name": "AutoCAD",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 277,
+            "name": "Interior Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 324,
+            "name": "Product Design",
+            "category": {
+              "id": 8,
+              "name": "Product Sourcing & Manufacturing"
+            }
+          },
+          {
+            "id": 394,
+            "name": "3D Modelling",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1982,
+            "name": "Marine Engineering",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 3000.0,
+          "maximum": 5000.0
+        },
+        "bid_stats": {
+          "bid_count": 14,
+          "bid_avg": 3845.7135714285714
+        },
+        "time_submitted": 1790491066,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735828,
+        "owner_id": null,
+        "title": "Plain Text Data Entry",
+        "status": "active",
+        "seo_url": "data-management/Plain-Text-Data-Entry",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I have a batch of PDFs and Word documents that contain a mix of numbers, labels, and short paragraphs. Everything needs to be transferred exactly as shown into a single plain-text file—no extra styling, just carriage returns where they appear in the source.\n\nYou will receive the digital files via shared drive. Simply open each one, copy or re-type the content if necessary, and place it into the .txt document while preserving every character, line break, and spacing that appears in the originals. No fonts, bold, or other formatting instructions are required; the final file should open cleanly in Notepad.\n\nDeliverable\n• One UTF-8 encoded .txt file containing all content, in the same order as t",
+        "preview_description": "I have a batch of PDFs and Word documents that contain a mix of numbers, labels, and short paragraph",
+        "jobs": [
+          {
+            "id": 36,
+            "name": "Data Processing",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 670,
+            "name": "Word Processing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 686,
+            "name": "Microsoft Office",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 2292,
+            "name": "Data Management",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 1500.0,
+          "maximum": 12500.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 4300.0
+        },
+        "time_submitted": 1790490994,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735821,
+        "owner_id": null,
+        "title": "Social Media Content Creator Needed",
+        "status": "active",
+        "seo_url": "adobe-creative-cloud/Social-Media-Content-Creator-Needed-40735821",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I’m looking for a creative partner who can take over the day-to-day content production for my Instagram, Facebook, and YouTube channels. The focus is strictly on social media posts, and I’ll need a steady mix of eye-catching images, short-form videos, and story assets that stay on brand and feel cohesive across all three platforms.\n\nHere’s how I picture the workflow:\n• You draft a monthly content calendar based on the themes and promotions I provide.\n• For each approved idea, you design the accompanying image set (1080×1080/1080×1920 where needed), shoot or edit a quick video clip, and adapt everything into vertical story format.\n• Captions and basic hashtag suggestions should be included so",
+        "preview_description": "I’m looking for a creative partner who can take over the day-to-day content production for my Instag",
+        "jobs": [
+          {
+            "id": 20,
+            "name": "Graphic Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 57,
+            "name": "Photoshop",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 70,
+            "name": "Illustrator",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 284,
+            "name": "Photoshop Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1055,
+            "name": "Social Media Management",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2075,
+            "name": "Content Creation",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 2152,
+            "name": "Adobe Creative Cloud",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2163,
+            "name": "Canva",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 2.0,
+          "maximum": 8.0
+        },
+        "bid_stats": {
+          "bid_count": 13,
+          "bid_avg": 4.538461538461538
+        },
+        "time_submitted": 1790490969,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735838,
+        "owner_id": null,
+        "title": "Web Clothing Virtual Try-On App",
+        "status": "active",
+        "seo_url": "web-development/Web-Clothing-Virtual-Try-App",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I’m putting together a browser-based fitting room that lets shoppers see how an item will look before they commit to the cart. The core experience must run entirely in a standard web browser, with no downloads or plug-ins.\n\nHere is the workflow I have in mind:\n\n• A shopper lands on the page and either uploads a well-lit full-body photo or steps through a short flow that builds a personalized 3-D avatar from a set of guided snapshots and basic body measurements.  \n• The garment library (tops, bottoms, dresses, etc.) is pulled from our catalogue; once a piece is selected it is rendered in correct scale and draped realistically on the user’s photo or avatar.  \n• They can rotate, zoom, and switc",
+        "preview_description": "I’m putting together a browser-based fitting room that lets shoppers see how an item will look befor",
+        "jobs": [
+          {
+            "id": 394,
+            "name": "3D Modelling",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 999,
+            "name": "Image Processing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1031,
+            "name": "Web Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1093,
+            "name": "Frontend Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1126,
+            "name": "Vue.js",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1711,
+            "name": "Three.js",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1935,
+            "name": "GraphQL",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2703,
+            "name": "REST API",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 37500.0,
+          "maximum": 75000.0
+        },
+        "bid_stats": {
+          "bid_count": 23,
+          "bid_avg": 48739.782608695656
+        },
+        "time_submitted": 1790490896,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735837,
+        "owner_id": null,
+        "title": "Educational Shorts Video Editor Needed",
+        "status": "active",
+        "seo_url": "motion-graphics/Educational-Shorts-Video-Editor-Needed-40735837",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I need an agile video editor who can turn raw footage into polished, bite-size lessons that play perfectly on TikTok, Instagram Reels, and YouTube Shorts.  \n\nWhat I’m after  \n• A professional, clean editing style that keeps the viewer focused on the key takeaway.  \n• Vertical 9:16 exports, up to 60 seconds each, optimised natively for all three platforms.  \n• Dynamic, on-screen captions, crisp transitions, subtle motion graphics, and royalty-free background music that match an educational tone.  \n• Consistent colour grading and audio levelling so a series of videos feels cohesive.  \n\nTypical workflow  \n1. I provide raw clips, a brief outline, and any brand assets via Google Drive.  \n2. You e",
+        "preview_description": "I need an agile video editor who can turn raw footage into polished, bite-size lessons that play per",
+        "jobs": [
+          {
+            "id": 52,
+            "name": "Video Services",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 171,
+            "name": "After Effects",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 474,
+            "name": "Motion Graphics",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 676,
+            "name": "Video Production",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 688,
+            "name": "Video Editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 947,
+            "name": "Adobe Premiere Pro",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1624,
+            "name": "DaVinci Resolve",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2565,
+            "name": "Color Grading",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 15.0,
+          "maximum": 25.0
+        },
+        "bid_stats": {
+          "bid_count": 18,
+          "bid_avg": 18.166666666666668
+        },
+        "time_submitted": 1790490863,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735830,
+        "owner_id": null,
+        "title": "Remote Co-Listing Agents for Short-Term Rental",
+        "status": "active",
+        "seo_url": "airbnb/Remote-Listing-Agents-for-Short",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "NOW HIRING: REMOTE CO-LISTING AGENTS\nCompany: SILK N SILICON\nIndustry: Short-Term Rental Property Management\nPosition: Co-Listing Agent\nWork Arrangement: 100% Remote\nEmployment Type: Part-Time or Full-Time\nCompensation: Competitive Salary + Commission\nYOU WILL WORK WITH OUR CONTRACTED  British short-term rental property management company, is looking for reliable and motivated Co-Listing Agents to join our growing remote team.\nWhat We're Looking For\nNo previous professional experience is required. However, you must have a verified Airbnb account and be comfortable navigating and using the Airbnb platform.\nMandatory requirement:\n•\tAn active, verified Airbnb account\nWorking Hours\nWe offer flex",
+        "preview_description": "NOW HIRING: REMOTE CO-LISTING AGENTS\nCompany: SILK N SILICON\nIndustry: Short-Term Rental Property Ma",
+        "jobs": [
+          {
+            "id": 39,
+            "name": "Data Entry",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 64,
+            "name": "Sales",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 339,
+            "name": "Market Research",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 443,
+            "name": "Real Estate",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 493,
+            "name": "Property Management",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 671,
+            "name": "Customer Service",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 682,
+            "name": "Time Management",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 755,
+            "name": "Airbnb",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 2.0,
+          "maximum": 8.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 2.0
+        },
+        "time_submitted": 1790490276,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735815,
+        "owner_id": null,
+        "title": "Type & Format Business Document",
+        "status": "active",
+        "seo_url": "business-writing/Type-Format-Business-Document",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I have a block of text that needs to be re-created in Microsoft Word and polished so it reads and looks like a professional business document. Everything is text-only—no images, tables, or graphics—so the focus is entirely on clean, consistent formatting. Please keep the entire file in Times New Roman and follow a standard business layout: logical heading levels, 1-inch margins, uniform line-spacing, numbered or bulleted lists where they make sense, and automatic page numbers in the footer.\n\nWhen you return the file I should be able to print or share it immediately without further tweaks. Accuracy in typing, zero stray spaces, and consistent indents are essential.  \n\nDeliverables  \n• Final, ",
+        "preview_description": "I have a block of text that needs to be re-created in Microsoft Word and polished so it reads and lo",
+        "jobs": [
+          {
+            "id": 103,
+            "name": "Technical Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 104,
+            "name": "Editing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 158,
+            "name": "PDF",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 675,
+            "name": "English Spelling",
+            "category": {
+              "id": 10,
+              "name": "Translation & Languages"
+            }
+          },
+          {
+            "id": 678,
+            "name": "Business Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 2505,
+            "name": "Microsoft Word",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 15.0,
+          "maximum": 25.0
+        },
+        "bid_stats": {
+          "bid_count": 28,
+          "bid_avg": 16.678571428571427
+        },
+        "time_submitted": 1790490256,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735825,
+        "owner_id": null,
+        "title": "Legal Counsel for Trust Disputes",
+        "status": "active",
+        "seo_url": "mediation/Legal-Counsel-for-Trust-Disputes",
+        "currency": {
+          "id": 8,
+          "code": "EUR",
+          "sign": "€",
+          "name": "Euro",
+          "exchange_rate": 1.1391,
+          "country": "EU"
+        },
+        "description": "I need a legal expert specializing in trusts to advise on a trust dispute. \n\nKey requirements:\n- In-depth knowledge of trust law\n- Experience in handling trust disputes\n- Strong negotiation and mediation skills\n\nIdeal skills and experience:\n- Law degree with a focus on trusts\n- Proven track record in resolving trust disputes\n- Excellent communication skills  \n\nPlease provide a detailed plan on how you would approach this dispute.",
+        "preview_description": "I need a legal expert specializing in trusts to advise on a trust dispute. \n\nKey requirements:\n- In-",
+        "jobs": [
+          {
+            "id": 24,
+            "name": "Legal",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 182,
+            "name": "Contracts",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 183,
+            "name": "Legal Research",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 708,
+            "name": "Legal Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 2476,
+            "name": "Conflict Resolution",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 2634,
+            "name": "Legal Analysis",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 2635,
+            "name": "Legal Consultation",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 3461,
+            "name": "Mediation",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 250.0,
+          "maximum": 750.0
+        },
+        "bid_stats": {
+          "bid_count": 2,
+          "bid_avg": 275.0
+        },
+        "time_submitted": 1790490199,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735823,
+        "owner_id": null,
+        "title": "TradingView Indicator Setup Guidance",
+        "status": "active",
+        "seo_url": "tradingview/TradingView-Indicator-Setup-Guidance",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I work with three TradingView scripts—Price Angles, Gann Star and Semafor—and I want rock-solid rules for pinpointing stock entries and exits with them. Your first task is to review how I currently layer the indicators, then explain, in plain language, what each signal actually means once several are on the same chart.  \n\nIf you spot ways to tighten the logic, suggest them; I’m open to custom Pine tweaks or alert conditions if they genuinely sharpen the edge, but I don’t yet know what’s required, so your guidance here matters.  \n\nDeliverables  \n• A concise, step-by-step decision flow (text or annotated screenshots) that shows exactly when to buy, sell or stay flat.  \n• Optional: Pine edits o",
+        "preview_description": "I work with three TradingView scripts—Price Angles, Gann Star and Semafor—and I want rock-solid rule",
+        "jobs": [
+          {
+            "id": 3,
+            "name": "PHP",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 9,
+            "name": "JavaScript",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 13,
+            "name": "Python",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 148,
+            "name": "Metatrader",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 680,
+            "name": "Financial Analysis",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 1384,
+            "name": "Pine Script",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 3520,
+            "name": "Algorithmic Trading",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 3521,
+            "name": "TradingView",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 400.0,
+          "maximum": 750.0
+        },
+        "bid_stats": {
+          "bid_count": 12,
+          "bid_avg": 685.4166666666666
+        },
+        "time_submitted": 1790490029,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735819,
+        "owner_id": null,
+        "title": "TopSolid Wood Cabinet Drawings",
+        "status": "active",
+        "seo_url": "3d-cad/TopSolid-Wood-Cabinet-Drawings",
+        "currency": {
+          "id": 3,
+          "code": "AUD",
+          "sign": "$",
+          "name": "Australian Dollar",
+          "exchange_rate": 0.703284,
+          "country": "AU"
+        },
+        "description": "I already have complete kitchen-cabinet designs and I’m at the production stage, so what I need now are fully detailed, production-ready drawings prepared in TopSolid Wood. You will be working from my existing, dimensioned models and shop sketches, translating them into manufacturing files: accurate cut-lists, CNC programs, hardware positions, exploded views and any other sheets required by the workshop.\n\nPlease keep the native .top files fully editable and organise layers, materials and naming conventions exactly as TopSolid expects for seamless nesting and machining. DXF or NC export is a plus, but the TopSolid project itself is the key hand-off.\n\nI’ll supply the reference package as soon ",
+        "preview_description": "I already have complete kitchen-cabinet designs and I’m at the production stage, so what I need now ",
+        "jobs": [
+          {
+            "id": 76,
+            "name": "CAD/CAM",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 93,
+            "name": "3D Rendering",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 271,
+            "name": "AutoCAD",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 394,
+            "name": "3D Modelling",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 505,
+            "name": "3D Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2134,
+            "name": "3D CAD",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2617,
+            "name": "TopSolid",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 3366,
+            "name": "CAD / SolidWorks",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 25.0,
+          "maximum": 50.0
+        },
+        "bid_stats": {
+          "bid_count": 16,
+          "bid_avg": 39.3125
+        },
+        "time_submitted": 1790489861,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735818,
+        "owner_id": null,
+        "title": "Educational Data Analysis & Research Proposal",
+        "status": "active",
+        "seo_url": "data-analysis/Educational-Data-Analysis-Research",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "Pardeep Dharra-I have a dataset of student-completed surveys from a Legal Services Education program and I want to turn those raw responses into meaningful insights on how well our students actually understand the academic material. Your task is to carry out a focused student-performance analysis, interpret what the survey tells us about their academic understanding, and shape the findings into a solid research proposal that can later be expanded into full conference or journal papers.  Here is what I need from you: • Clean and code the survey responses, choosing appropriate statistical or qualitative techniques to reveal patterns in academic understanding.  • Produce clear visualisations an",
+        "preview_description": "Pardeep Dharra-I have a dataset of student-completed surveys from a Legal Services Education program",
+        "jobs": [
+          {
+            "id": 13,
+            "name": "Python",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 47,
+            "name": "Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 194,
+            "name": "Research Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 601,
+            "name": "R Programming Language",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 707,
+            "name": "Statistical Analysis",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 737,
+            "name": "SPSS Statistics",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1383,
+            "name": "Data Visualization",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1420,
+            "name": "Data Analysis",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 750.0,
+          "maximum": 1250.0
+        },
+        "bid_stats": {
+          "bid_count": 16,
+          "bid_avg": 1000.0
+        },
+        "time_submitted": 1790489734,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735816,
+        "owner_id": null,
+        "title": "Gym Trainers for freelancing",
+        "status": "active",
+        "seo_url": "training/Gym-Trainers-for-freelancing-40735816",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I'm looking for an experienced gym trainer who specializes in strength training. The ideal candidate should be able to provide individual training sessions tailored to the needs of each client. Candidates must have advanced-level knowledge and experience in strength training and a proven track record of success. The ideal trainer should be able to create training plans to help clients reach their health and fitness goals through strength training. Knowledge of other forms of exercise, such as cardiovascular training and functional training, is a plus but not required. If you think you have the skills and experience to be the gym trainer for this project, please apply!",
+        "preview_description": "I'm looking for an experienced gym trainer who specializes in strength training. The ideal candidate",
+        "jobs": [
+          {
+            "id": 46,
+            "name": "Training",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 609,
+            "name": "Communications",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 1842,
+            "name": "Fitness",
+            "category": {
+              "id": 103,
+              "name": "Health & Medicine"
+            }
+          },
+          {
+            "id": 2232,
+            "name": "Physical Fitness Training",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 750.0,
+          "maximum": 1250.0
+        },
+        "bid_stats": {
+          "bid_count": 0,
+          "bid_avg": null
+        },
+        "time_submitted": 1790489651,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735810,
+        "owner_id": null,
+        "title": "AI Utilities & Chatbots Development",
+        "status": "active",
+        "seo_url": "ai-chatbot-development/Utilities-Chatbots-Development",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I’m looking to create a suite of small yet powerful AI-driven utilities that work both on my local environment and within my website. The core of this project is a set of conversational agents:  \n\n• A customer-support chatbot that can field common questions, pull answers from my existing documentation, and escalate complex issues.  \n• A sales & marketing chatbot capable of guiding visitors through offers, collecting lead details, and triggering email or push campaigns.  \n• A task-automation agent that can run scheduled or event-driven jobs, such as data entry, simple report generation, or notifications.  \n\nThese agents need tight integration with my website plus companion hooks for a future ",
+        "preview_description": "I’m looking to create a suite of small yet powerful AI-driven utilities that work both on my local e",
+        "jobs": [
+          {
+            "id": 13,
+            "name": "Python",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 131,
+            "name": "Google App Engine",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 741,
+            "name": "Git",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1002,
+            "name": "Docker",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1240,
+            "name": "RESTful API",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2164,
+            "name": "API Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2878,
+            "name": "LangChain",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 2916,
+            "name": "AI Chatbot Development",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 2936,
+            "name": "Chatbot Integration",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 2986,
+            "name": "AI Development",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 600.0,
+          "maximum": 1500.0
+        },
+        "bid_stats": {
+          "bid_count": 16,
+          "bid_avg": 5228.25
+        },
+        "time_submitted": 1790489491,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735811,
+        "owner_id": null,
+        "title": "Rapid PDF-to-Word Reformat",
+        "status": "active",
+        "seo_url": "microsoft-word/Rapid-PDF-Word-Reformat",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I have a PDF that contains only plain text and I need every word moved into a Microsoft Word file today. Once the text is in Word it must be laid out using a new template rather than the look it currently has in the PDF. I will provide the template (or, if you already have an elegant, professional layout ready, let me know and we can decide quickly).\n\nKey deliverables:\n• Complete, error-free text transfer from the PDF.  \n• Word document rebuilt in the specified template, with headings, paragraphs and spacing matching that style.  \n• Final file returned fully editable—no embedded images of text, no locked sections.\n\nA fast, accurate turnaround is critical, so please tell me how soon you can s",
+        "preview_description": "I have a PDF that contains only plain text and I need every word moved into a Microsoft Word file to",
+        "jobs": [
+          {
+            "id": 20,
+            "name": "Graphic Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 39,
+            "name": "Data Entry",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 48,
+            "name": "Proofreading",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 104,
+            "name": "Editing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 158,
+            "name": "PDF",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 686,
+            "name": "Microsoft Office",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 2505,
+            "name": "Microsoft Word",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 750.0,
+          "maximum": 1250.0
+        },
+        "bid_stats": {
+          "bid_count": 3,
+          "bid_avg": 750.0
+        },
+        "time_submitted": 1790489455,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735809,
+        "owner_id": null,
+        "title": "Transcribe Handwritten Notes",
+        "status": "active",
+        "seo_url": "microsoft-word/Transcribe-Handwritten-Notes-40735809",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I have a set of handwritten notes in English that I need typed up into a Microsoft Word document. The content should be transferred exactly as written—no edits—using simple, continuous text with no added headings, sub-headings, bullets, or numbering.  \n\nPlease keep original line breaks where they help readability, but otherwise maintain a clean flow so the file is easy to copy-paste later. I will supply clear scans of the pages; you return a .docx file that mirrors the wording faithfully.  \n\nAccuracy and careful proofreading are the priorities, as I’ll be using the text for further drafting work. If any section is unreadable, flag it with “[illegible]” and note the page number so I can clari",
+        "preview_description": "I have a set of handwritten notes in English that I need typed up into a Microsoft Word document. Th",
+        "jobs": [
+          {
+            "id": 39,
+            "name": "Data Entry",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 48,
+            "name": "Proofreading",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 104,
+            "name": "Editing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 121,
+            "name": "Transcription",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 375,
+            "name": "Copy Typing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 1018,
+            "name": "Typing",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 2505,
+            "name": "Microsoft Word",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 100.0,
+          "maximum": 400.0
+        },
+        "bid_stats": {
+          "bid_count": 3,
+          "bid_avg": 103.33333333333333
+        },
+        "time_submitted": 1790489435,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735808,
+        "owner_id": null,
+        "title": "Indian new video editors for ytshorts clips channel ",
+        "status": "active",
+        "seo_url": "adobe-premiere-pro/Indian-new-video-editors-for",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I run a lifestyle-focused YouTube Shorts channel and I’m ready to hand the editing reins to someone who can inject quick energy into every clip. All videos must feel trendy and fast-paced, matching the current Shorts aesthetic while still keeping the content warm and relatable.\n\nWhat I’ll send you:\n• Vertical raw footage (usually already rough-cut down to the key moments)\n• Occasional notes on beats, captions, or calls to action\n\nWhat I need back from you:\n• Crisp text overlays that pop at the right moments  \n• Smooth, inventive transitions that keep viewers glued  \n• Royalty-free background music that fits a modern lifestyle vibe  \n\nTechnical must-haves:\n• Final files delivered in 1080 × 19",
+        "preview_description": "I run a lifestyle-focused YouTube Shorts channel and I’m ready to hand the editing reins to someone ",
+        "jobs": [
+          {
+            "id": 52,
+            "name": "Video Services",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 171,
+            "name": "After Effects",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 390,
+            "name": "Final Cut Pro",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 475,
+            "name": "Videography",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 676,
+            "name": "Video Production",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 688,
+            "name": "Video Editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 947,
+            "name": "Adobe Premiere Pro",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1624,
+            "name": "DaVinci Resolve",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1673,
+            "name": "Video Post-editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2565,
+            "name": "Color Grading",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 600.0,
+          "maximum": 1500.0
+        },
+        "bid_stats": {
+          "bid_count": 15,
+          "bid_avg": 1032.0
+        },
+        "time_submitted": 1790489383,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40734697,
+        "owner_id": null,
+        "title": "Engaging Health Content Writer",
+        "status": "active",
+        "seo_url": "article-rewriting/Engaging-Health-Content-Writer",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I’m putting together a stream of educational articles, blog posts, and short-form pieces for websites and social channels that serve health professionals who work with – or research – teenagers. Each piece must translate evidence-based information on health, nutrition, fitness, lifestyle, and general wellness into clear, engaging language that busy clinicians and allied specialists can absorb at a glance and share with their adolescent audience.\n\nWhat I need from you  \n• Original, well-structured copy that speaks the language of healthcare while remaining accessible and teen-relevant.  \n• Thorough research with citations from reputable journals, guidelines, or recognised authorities.  \n• Fla",
+        "preview_description": "I’m putting together a stream of educational articles, blog posts, and short-form pieces for website",
+        "jobs": [
+          {
+            "id": 21,
+            "name": "Copywriting",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 47,
+            "name": "Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 104,
+            "name": "Editing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 156,
+            "name": "Ghostwriting",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 174,
+            "name": "Article Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 250,
+            "name": "Article Rewriting",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 662,
+            "name": "Content Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 1070,
+            "name": "Blog Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 1500.0,
+          "maximum": 12500.0
+        },
+        "bid_stats": {
+          "bid_count": 15,
+          "bid_avg": 5786.666666666667
+        },
+        "time_submitted": 1790489290,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735806,
+        "owner_id": null,
+        "title": "Real Estate Personal Assistant",
+        "status": "active",
+        "seo_url": "social-media-management/Real-Estate-Personal-Assistant",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I run a fast-paced real-estate brokerage and I’m ready to hand off a range of daily admin and marketing tasks to one reliable, full-time assistant on a fixed monthly retainer.\n\nCore duties  \n• Build property-listing presentations: you’ll use the AI tool I’ve already trained to generate polished decks that highlight photos, key numbers and selling points.  \n• Upload every new listing to our WordPress site, ensuring photos, copy and meta data are all in place before the listing goes live.  \n• Keep my files in order—Dropbox/Google Drive naming, folder structure and quick retrieval matter to me.  \n• Draft and send routine client emails so our buyers, sellers and partners stay updated without del",
+        "preview_description": "I run a fast-paced real-estate brokerage and I’m ready to hand off a range of daily admin and market",
+        "jobs": [
+          {
+            "id": 3,
+            "name": "PHP",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 17,
+            "name": "Website Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 69,
+            "name": "WordPress",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 129,
+            "name": "Virtual Assistant",
+            "category": {
+              "id": 99,
+              "name": "Jobs for Anyone"
+            }
+          },
+          {
+            "id": 335,
+            "name": "HTML",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1055,
+            "name": "Social Media Management",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1691,
+            "name": "Administrative Support",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 2075,
+            "name": "Content Creation",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 2.0,
+          "maximum": 8.0
+        },
+        "bid_stats": {
+          "bid_count": 43,
+          "bid_avg": 16.436046511627907
+        },
+        "time_submitted": 1790489249,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735773,
+        "owner_id": null,
+        "title": "Transcribe Handwritten Notes to PDF",
+        "status": "active",
+        "seo_url": "copy-typing/Transcribe-Handwritten-Notes-PDF-40735773",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I will share a batch of scanned, handwritten pages that need to be typed up and delivered as a clean, searchable PDF. The pages are text-only; however, they do include clear headings and subheadings that must be retained in the same hierarchy inside the final document.\n\n Accuracy in spelling, punctuation, and paragraph breaks is essential. You are free to draft in Word, Google Docs, or similar software as long as the finished file is exported to PDF and the visual structure of the headings is preserved. No diagrams, equations, or special layouts are involved, so the focus is purely on faithful transcription and tidy formatting.\n\nDeliverable:\n• Final formatted PDF (ready to share or print)  \n",
+        "preview_description": "I will share a batch of scanned, handwritten pages that need to be typed up and delivered as a clean",
+        "jobs": [
+          {
+            "id": 39,
+            "name": "Data Entry",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 104,
+            "name": "Editing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 121,
+            "name": "Transcription",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 158,
+            "name": "PDF",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 375,
+            "name": "Copy Typing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 670,
+            "name": "Word Processing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 1660,
+            "name": "Google Docs",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 12500.0,
+          "maximum": 37500.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 18800.0
+        },
+        "time_submitted": 1790489135,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735800,
+        "owner_id": null,
+        "title": "Cartoonish Tree-Chopping Game Development",
+        "status": "active",
+        "seo_url": "game-art/Cartoonish-Tree-Chopping-Game",
+        "currency": {
+          "id": 3,
+          "code": "AUD",
+          "sign": "$",
+          "name": "Australian Dollar",
+          "exchange_rate": 0.703284,
+          "country": "AU"
+        },
+        "description": "I'm looking for a skilled game developer to create a PC-based, third-person, cartoonish art style game.\n\nKey features include:\n- Tree chopping mechanics\n- Selling trees for in-game currency\n- Purchasing different axes with earnings\n-Different axes help chop down better trees \n\nIdeal skills and experience:\n- Proficiency in game development for PC\n- Experience with third-person gameplay mechanics\n- Strong ability in creating engaging, cartoonish art styles\n- Familiarity with in-game currency systems and item purchasing\n\nPlease provide a portfolio showcasing similar work.",
+        "preview_description": "I'm looking for a skilled game developer to create a PC-based, third-person, cartoonish art style ga",
+        "jobs": [
+          {
+            "id": 44,
+            "name": "Mobile App Development",
+            "category": {
+              "id": 9,
+              "name": "Mobile Phones & Computing"
+            }
+          },
+          {
+            "id": 60,
+            "name": "Game Design",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 395,
+            "name": "3D Animation",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 668,
+            "name": "Game Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2642,
+            "name": "Game Art",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 3145,
+            "name": "3D Art",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 3307,
+            "name": "Game Animation",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 3309,
+            "name": "Game Programming",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 750.0,
+          "maximum": 1500.0
+        },
+        "bid_stats": {
+          "bid_count": 27,
+          "bid_avg": 1179.641851851852
+        },
+        "time_submitted": 1790489093,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735789,
+        "owner_id": null,
+        "title": "Precise Data Entry & Typing - 27/09/2026 01:50 EDT",
+        "status": "active",
+        "seo_url": "data-annotation/Precise-Data-Entry-Typing-EDT",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I have a steady flow of PDFs, images, and other scanned paperwork that all need to be re-created in Microsoft Excel or Word exactly as they appear on the originals. Many of these files include tables, charts, and embedded form fields, so I need someone who notices every border, alignment choice, and font style and can reproduce them with zero loss of fidelity.\n\nHere’s what working with me looks like:\n\n• I upload a batch of source files and let you know the required software (usually the latest Excel or Word) and the deadline.  \n• You return a clean, fully formatted version that mirrors the original layout down to column widths, merged cells, and pagination.  \n• We do a quick spot-check toget",
+        "preview_description": "I have a steady flow of PDFs, images, and other scanned paperwork that all need to be re-created in ",
+        "jobs": [
+          {
+            "id": 39,
+            "name": "Data Entry",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 55,
+            "name": "Excel",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 158,
+            "name": "PDF",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 197,
+            "name": "Word",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 420,
+            "name": "OCR",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2292,
+            "name": "Data Management",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2505,
+            "name": "Microsoft Word",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 3428,
+            "name": "Data Annotation",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 12500.0,
+          "maximum": 37500.0
+        },
+        "bid_stats": {
+          "bid_count": 2,
+          "bid_avg": 21900.0
+        },
+        "time_submitted": 1790489083,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735172,
+        "owner_id": null,
+        "title": "Optimize YouTube Channel for Growth & Revenue",
+        "status": "active",
+        "seo_url": "digital-marketing/Optimize-YouTube-Channel-for-Growth",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "YouTube Channel Growth & Monetization Research\n\nI am looking for an experienced YouTube growth and digital marketing specialist to analyze my YouTube channel and provide a practical growth report.\n\nProject Requirements\n\nThe freelancer should:\n\n\nWatch and analyze the videos currently published on my YouTube channel to understand the content, audience, topics, titles, thumbnails, and overall channel positioning.\n\nReview the channel and identify the main factors that may be limiting views, watch time, audience retention, subscribers, and monetization revenue.\nSamples of videos. Link:\nhttps://youtu.be/B_IQP5nDONg?si=KSYSEP0qN5IqXjQV\nhttps://youtu.be/XUgPpFKLhyA?si=bSLEVWYfrEVgpaYe\nhttps://youtu.",
+        "preview_description": "YouTube Channel Growth & Monetization Research\n\nI am looking for an experienced YouTube growth and d",
+        "jobs": [
+          {
+            "id": 25,
+            "name": "Internet Marketing",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 38,
+            "name": "SEO",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 47,
+            "name": "Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 152,
+            "name": "YouTube",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 663,
+            "name": "Social Media Marketing",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 1023,
+            "name": "Digital Marketing",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1069,
+            "name": "Content Strategy",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 2075,
+            "name": "Content Creation",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 250.0,
+          "maximum": 750.0
+        },
+        "bid_stats": {
+          "bid_count": 69,
+          "bid_avg": 357.6231884057971
+        },
+        "time_submitted": 1790448052,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735798,
+        "owner_id": null,
+        "title": "Social Media Outreach for Long-COVID Research",
+        "status": "active",
+        "seo_url": "social-media-management/Social-Media-Outreach-for-Long",
+        "currency": {
+          "id": 4,
+          "code": "GBP",
+          "sign": "£",
+          "name": "British Pounds",
+          "exchange_rate": 1.32505,
+          "country": "UK"
+        },
+        "description": "I need a social-savvy collaborator to amplify a new questionnaire on long-COVID and Chronic Fatigue interventions. The goal is simple: reach as many potential respondents as possible—especially within the UK—and motivate them to share their experiences so the study gains the statistical power it needs.\n\nThe work revolves around seven core platforms: Facebook, Twitter, Instagram, YouTube, TikTok, LinkedIn and Reddit. You will open or optimise accounts, join relevant groups, sub-reddits and hashtag threads, then post, comment, DM and generally keep the conversation alive. Every outreach session should be streamed live when feasible and screen-recorded for later editing into short clips or high",
+        "preview_description": "I need a social-savvy collaborator to amplify a new questionnaire on long-COVID and Chronic Fatigue ",
+        "jobs": [
+          {
+            "id": 47,
+            "name": "Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 72,
+            "name": "Twitter",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 74,
+            "name": "Facebook Marketing",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 663,
+            "name": "Social Media Marketing",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 688,
+            "name": "Video Editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1055,
+            "name": "Social Media Management",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1083,
+            "name": "Twitter Marketing",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 2075,
+            "name": "Content Creation",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 2.0,
+          "maximum": 5.0
+        },
+        "bid_stats": {
+          "bid_count": 20,
+          "bid_avg": 4.45
+        },
+        "time_submitted": 1790489002,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735796,
+        "owner_id": null,
+        "title": "Steady Car Review Video Editing",
+        "status": "active",
+        "seo_url": "video-editing/Steady-Car-Review-Video-Editing",
+        "currency": {
+          "id": 3,
+          "code": "AUD",
+          "sign": "$",
+          "name": "Australian Dollar",
+          "exchange_rate": 0.703284,
+          "country": "AU"
+        },
+        "description": "I’m looking for a skilled video editor to turn my multi-angle raw footage and recorded voiceovers into clear, engaging car review videos. The pacing should stay informative and steady—viewers need time to absorb details rather than be rushed through flashy cuts.\n\nEach review must spotlight:\n• Interior features  \n• Driving experience  \n• Technical specifications  \n\nI’ll supply all camera angles, B-roll and a voice track that alternates between straight commentary and short interview segments; your task is to weave these together so the audio flows naturally with the visuals. Basic colour correction, clean transitions and well-balanced sound are expected, and any on-screen text or lower-thirds",
+        "preview_description": "I’m looking for a skilled video editor to turn my multi-angle raw footage and recorded voiceovers in",
+        "jobs": [
+          {
+            "id": 28,
+            "name": "Audio Services",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 52,
+            "name": "Video Services",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 475,
+            "name": "Videography",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 676,
+            "name": "Video Production",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 688,
+            "name": "Video Editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1673,
+            "name": "Video Post-editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1700,
+            "name": "Audio Editing",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 30.0,
+          "maximum": 250.0
+        },
+        "bid_stats": {
+          "bid_count": 42,
+          "bid_avg": 97.38095238095238
+        },
+        "time_submitted": 1790488800,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735794,
+        "owner_id": null,
+        "title": "Bold Pop-Culture City Tee Designs",
+        "status": "active",
+        "seo_url": "vector-design/Bold-Pop-Culture-City-Tee",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I’m putting together a fresh T-shirt line that celebrates my city through a bold, vibrant pop-culture lens. Think eye-catching colour palettes, strong graphic shapes and playful references that only locals instantly “get.” It could be a landmark turned into comic-panel art, a famous food reimagined as a retro arcade sprite, or a hometown slogan styled like a 90’s band poster—the key is that every design feels unmistakably “us.”\n\nHere’s what I need from you:  \n• 8–10 original front-print illustrations, each sold as a standalone piece.  \n• Source files in vector format (AI or layered PSD) plus high-resolution transparent PNGs ready for DTG or screen printing.  \n• A short style note for each de",
+        "preview_description": "I’m putting together a fresh T-shirt line that celebrates my city through a bold, vibrant pop-cultur",
+        "jobs": [
+          {
+            "id": 20,
+            "name": "Graphic Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 57,
+            "name": "Photoshop",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 70,
+            "name": "Illustrator",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 170,
+            "name": "Illustration",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 1013,
+            "name": "Adobe Illustrator",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2507,
+            "name": "Adobe Photoshop",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2625,
+            "name": "Print Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2717,
+            "name": "Vector Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 1500.0,
+          "maximum": 12500.0
+        },
+        "bid_stats": {
+          "bid_count": 16,
+          "bid_avg": 5775.0625
+        },
+        "time_submitted": 1790488605,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735793,
+        "owner_id": null,
+        "title": "Factory Automation Project Support",
+        "status": "active",
+        "seo_url": "plc/Factory-Automation-Project-Support",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "Dorby Controls & Labs Pvt. Ltd. is an industrial automation and IoT solutions company providing end-to-end solutions for factories and manufacturing industries.\n\nWe undertake projects in Industrial Automation, Energy Management, Water Management, IoT-based Monitoring, Wireless/LoRaWAN Solutions, Industrial Software, AI-based Reporting, and Process/Production Monitoring.\n\nOur capabilities include industrial hardware design, sensor and meter integration, PLC/automation integration, wireless data acquisition, cloud/dashboard development, alert systems, data analytics, and customized software solutions.\n\nWe are interested in collaborating with project brokers, EPC companies, system integrators, ",
+        "preview_description": "Dorby Controls & Labs Pvt. Ltd. is an industrial automation and IoT solutions company providing end-",
+        "jobs": [
+          {
+            "id": 41,
+            "name": "Wireless",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 42,
+            "name": "Engineering",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 43,
+            "name": "Electronics",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 184,
+            "name": "Electrical Engineering",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 1039,
+            "name": "Data Analytics",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 1101,
+            "name": "Documentation",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1607,
+            "name": "Cloud Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1977,
+            "name": "Automation",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2296,
+            "name": "PLC",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 3344,
+            "name": "Sensor Integration",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 12500.0,
+          "maximum": 37500.0
+        },
+        "bid_stats": {
+          "bid_count": 8,
+          "bid_avg": 20203.82
+        },
+        "time_submitted": 1790488560,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735753,
+        "owner_id": null,
+        "title": "Pengembangan Aplikasi Manajemen Data - 27/09/2026 01:32 EDT",
+        "status": "active",
+        "seo_url": "api-developmet/Pengembangan-Aplikasi-Manajemen-Data-EDT",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "Saya ingin membangun sebuah aplikasi yang berfokus pada manajemen data—mulai dari perancangan struktur basis data hingga antarmuka pengguna sederhana untuk operasi CRUD (create, read, update, delete).  \n\nRuang lingkup:\n• Mendesain skema basis data yang efisien beserta relasinya.  \n• Membuat modul impor / ekspor data serta fitur pencarian dan filter.  \n• Menyediakan antarmuka pengguna yang mudah dipahami untuk menambah, mengubah, dan menghapus catatan.  \n• Menambahkan autentikasi dasar agar akses data tetap aman.  \n\nSaya belum mengunci platform tertentu, jadi silakan ajukan pendekatan terbaik Anda (web, desktop, atau mobile) lengkap dengan tumpukan teknologi yang Anda kuasai—misalnya React, V",
+        "preview_description": "Saya ingin membangun sebuah aplikasi yang berfokus pada manajemen data—mulai dari perancangan strukt",
+        "jobs": [
+          {
+            "id": 3,
+            "name": "PHP",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 7,
+            "name": "Java",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 17,
+            "name": "Website Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 115,
+            "name": "User Interface / IA",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 305,
+            "name": "MySQL",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 1031,
+            "name": "Web Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2164,
+            "name": "API Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 15.0,
+          "maximum": 25.0
+        },
+        "bid_stats": {
+          "bid_count": 13,
+          "bid_avg": 18.23076923076923
+        },
+        "time_submitted": 1790488490,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735792,
+        "owner_id": null,
+        "title": "SEEL Strategies Workshop for Teachers",
+        "status": "active",
+        "seo_url": "training-development/SEEL-Strategies-Workshop-for-Teachers",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I’m organising a 90-minute professional-development session for a staff of just over 100 teachers and I want participants to walk away with practical, ready-to-use SEEL strategies that focus on ethical decision-making and responsible behaviour. The tone of the session should sit midway between a lecture and a hands-on training: concise evidence-based input followed by engaging, small-group activities that let teachers immediately practise what they hear.\n\nWhat I need from you  \n• A complete session plan that clearly breaks down timing, content delivery, and interactive segments.  \n• Slide deck and printable/online handouts teachers can use during and after the workshop.  \n• Two or three adap",
+        "preview_description": "I’m organising a 90-minute professional-development session for a staff of just over 100 teachers an",
+        "jobs": [
+          {
+            "id": 47,
+            "name": "Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 123,
+            "name": "Report Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 194,
+            "name": "Research Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 678,
+            "name": "Business Writing",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 1457,
+            "name": "Training Development",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 1997,
+            "name": "Educational Research",
+            "category": {
+              "id": 2,
+              "name": "Writing & Content"
+            }
+          },
+          {
+            "id": 2071,
+            "name": "Instructional Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2789,
+            "name": "Mentimeter",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 600.0,
+          "maximum": 1500.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 2000.0
+        },
+        "time_submitted": 1790488421,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735787,
+        "owner_id": null,
+        "title": "Colorful Elementor Homepage Design -- 2",
+        "status": "active",
+        "seo_url": "website-design/Colorful-Elementor-Homepage-Design",
+        "currency": {
+          "id": 3,
+          "code": "AUD",
+          "sign": "$",
+          "name": "Australian Dollar",
+          "exchange_rate": 0.703284,
+          "country": "AU"
+        },
+        "description": "I’m rebuilding my site in WordPress with Elementor Pro and need a designer-developer who can craft creative, colorful home pages that instantly engage visitors. The layouts must rely primarily on text and images (no video or heavy interactive widgets) and weave in three key sections: About Us, Services, and Testimonials. I already have WordPress and Elementor Pro set up; you’ll be working directly inside my install so there’s no need to migrate anything later.\n\nWhat I’m after is more than a template tweak—I want distinctive, on-brand pages that load fast, look great on mobile, and can be saved as reusable Elementor templates. You’re free to use any of Elementor’s native widgets, custom CSS, ",
+        "preview_description": "I’m rebuilding my site in WordPress with Elementor Pro and need a designer-developer who can craft c",
+        "jobs": [
+          {
+            "id": 17,
+            "name": "Website Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 20,
+            "name": "Graphic Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 69,
+            "name": "WordPress",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 77,
+            "name": "CSS",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 335,
+            "name": "HTML",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 959,
+            "name": "UI / User Interface",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2037,
+            "name": "Elementor",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2701,
+            "name": "Web Design",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 10.0,
+          "maximum": 30.0
+        },
+        "bid_stats": {
+          "bid_count": 29,
+          "bid_avg": 43.89655172413793
+        },
+        "time_submitted": 1790488236,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735783,
+        "owner_id": null,
+        "title": "THE AI CHEAT SHEET FOR SMALL BUSINESS OWNERS & FREELANCERS",
+        "status": "active",
+        "seo_url": "ai-automation/THE-CHEAT-SHEET-FOR-SMALL",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "https://payhip.com/b/70l3J\n\nStop Wasting 15+ Hours a Week on Admin, Content, and Pitching.\nThe zero-dollar blueprint to automate client outreach, generate 30 days of content in 1 hour, and streamline business operations using 100% free AI tools.\nAre you spending more time running your business than actually doing the work that pays you?\nIf you're a freelancer, agency owner, or small business founder, your daily schedule probably looks like this:\n\nSpending hours drafting proposals and cold emails that get ignored.\nStruggling to post consistently on social media while client work piles up.\nDrowning in repetitive customer support emails and late invoice follow-ups.\nPaying monthly subscriptions ",
+        "preview_description": "https://payhip.com/b/70l3J\n\nStop Wasting 15+ Hours a Week on Admin, Content, and Pitching.\nThe zero-",
+        "jobs": [
+          {
+            "id": 64,
+            "name": "Sales",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 1047,
+            "name": "Sales Promotion",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 2919,
+            "name": "AI Model Development",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 2921,
+            "name": "AI Content Creation",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 2986,
+            "name": "AI Development",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 3375,
+            "name": "AI Integration",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 3380,
+            "name": "AI Automation",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 3384,
+            "name": "AI App Development",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 3399,
+            "name": "AI Strategy",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          },
+          {
+            "id": 3400,
+            "name": "AI Training Data",
+            "category": {
+              "id": 104,
+              "name": "Artificial Intelligence"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 12500.0,
+          "maximum": 37500.0
+        },
+        "bid_stats": {
+          "bid_count": 8,
+          "bid_avg": 20938.17875
+        },
+        "time_submitted": 1790488177,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735782,
+        "owner_id": null,
+        "title": "Freelance Pilates Instructor – Plan Creation & Client Support (Remote, 1 hour/week)",
+        "status": "active",
+        "seo_url": "fitness/Freelance-Pilates-Instructor-Plan",
+        "currency": {
+          "id": 4,
+          "code": "GBP",
+          "sign": "£",
+          "name": "British Pounds",
+          "exchange_rate": 1.32505,
+          "country": "UK"
+        },
+        "description": "Overview:\nI’m looking for a freelance Pilates instructor to help create progressive exercise plans and support a small number of clients via short weekly phone calls. This role is ideal for someone who enjoys the written side of teaching and prefers one-to-one communication over live group classes.\n\nResponsibilities:\n• Create or adapt progressive Pilates plans based on client needs\n• Conduct brief weekly phone check-ins (approx. 10 minutes per client)\n• Update plans based on feedback and progress\n• Maintain clear, respectful communication with clients\n• Work independently and deliver on time\n\nRequirements:\n• Pilates certification or relevant experience\n• Strong understanding of alignment, pr",
+        "preview_description": "Overview:\nI’m looking for a freelance Pilates instructor to help create progressive exercise plans a",
+        "jobs": [
+          {
+            "id": 109,
+            "name": "Education & Tutoring",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 217,
+            "name": "Phone Support",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          },
+          {
+            "id": 300,
+            "name": "Health",
+            "category": {
+              "id": 5,
+              "name": "Engineering & Science"
+            }
+          },
+          {
+            "id": 441,
+            "name": "Personal Development",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 1448,
+            "name": "Health Planning",
+            "category": {
+              "id": 7,
+              "name": "Business, Accounting, Human Resources & Legal"
+            }
+          },
+          {
+            "id": 1499,
+            "name": "Lifestyle Coach",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          },
+          {
+            "id": 1591,
+            "name": "Teaching/Lecturing",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          },
+          {
+            "id": 1842,
+            "name": "Fitness",
+            "category": {
+              "id": 103,
+              "name": "Health & Medicine"
+            }
+          },
+          {
+            "id": 2232,
+            "name": "Physical Fitness Training",
+            "category": {
+              "id": 12,
+              "name": "Trades & Services"
+            }
+          },
+          {
+            "id": 2233,
+            "name": "Counseling Psychology",
+            "category": {
+              "id": 103,
+              "name": "Health & Medicine"
+            }
+          }
+        ],
+        "type": "hourly",
+        "budget": {
+          "minimum": 10.0,
+          "maximum": 15.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 13.0
+        },
+        "time_submitted": 1790488171,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735781,
+        "owner_id": null,
+        "title": "Service-Based WordPress Storefront",
+        "status": "active",
+        "seo_url": "woocommerce/Service-Based-WordPress-Storefront",
+        "currency": {
+          "id": 1,
+          "code": "USD",
+          "sign": "$",
+          "name": "US Dollar",
+          "exchange_rate": 1.0,
+          "country": "US"
+        },
+        "description": "I’m launching an e-commerce site on WordPress that will sell professional services rather than physical or downloadable products. I already have hosting arranged; what I need now is a developer who can turn a clean, conversion-focused design into a fully functioning storefront.\n\nCore requirements  \n• Build or customise a modern, responsive WordPress theme that presents each service as a product with clear descriptions, pricing and an “add to cart / book now” flow.  \n• Configure WooCommerce (or another proven plugin you prefer) so clients can choose a service, schedule it if necessary, and pay securely via Stripe, PayPal and credit card.  \n• Set up the essential pages: Home, Services catalogu",
+        "preview_description": "I’m launching an e-commerce site on WordPress that will sell professional services rather than physi",
+        "jobs": [
+          {
+            "id": 17,
+            "name": "Website Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 69,
+            "name": "WordPress",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 137,
+            "name": "eCommerce",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 335,
+            "name": "HTML",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 788,
+            "name": "WooCommerce",
+            "category": {
+              "id": 6,
+              "name": "Sales & Marketing"
+            }
+          },
+          {
+            "id": 1031,
+            "name": "Web Development",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2245,
+            "name": "WordPress Design",
+            "category": {
+              "id": 3,
+              "name": "Design, Media & Architecture"
+            }
+          },
+          {
+            "id": 2723,
+            "name": "WordPress Plugin",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 30.0,
+          "maximum": 250.0
+        },
+        "bid_stats": {
+          "bid_count": 69,
+          "bid_avg": 162.52579710144926
+        },
+        "time_submitted": 1790488155,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      },
+      {
+        "id": 40735780,
+        "owner_id": null,
+        "title": "Restore Synology Data to PowerEdge",
+        "status": "active",
+        "seo_url": "data-backup/Restore-Synology-Data-PowerEdge",
+        "currency": {
+          "id": 11,
+          "code": "INR",
+          "sign": "₹",
+          "name": "Indian Rupee",
+          "exchange_rate": 0.010436,
+          "country": "IN"
+        },
+        "description": "I have a fully-populated Synology NAS and a brand-new Dell PowerEdge running Windows Server. All I need is a clean, reliable restoration of the NAS documents and files onto the server so that everything appears exactly as it does now—same folder tree, same file names, same timestamps wherever possible. No media libraries or databases are involved, just the core work documents and shared files my team relies on every day.\n\nYou are free to choose the method—Hyper Backup, rsync, Robocopy with UNC paths, or another proven solution—as long as it is transparent and auditable. Please account for NTFS permissions and be mindful of user access, but there is no requirement to compress or encrypt durin",
+        "preview_description": "I have a fully-populated Synology NAS and a brand-new Dell PowerEdge running Windows Server. All I n",
+        "jobs": [
+          {
+            "id": 29,
+            "name": "Windows Desktop",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 30,
+            "name": "System Admin",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 106,
+            "name": "C# Programming",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 358,
+            "name": "Windows Server",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 683,
+            "name": "Network Administration",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2326,
+            "name": "Data Backup",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 2689,
+            "name": "System Administration",
+            "category": {
+              "id": 1,
+              "name": "Websites, IT & Software"
+            }
+          },
+          {
+            "id": 3431,
+            "name": "Data Recovery",
+            "category": {
+              "id": 4,
+              "name": "Data Entry & Admin"
+            }
+          }
+        ],
+        "type": "fixed",
+        "budget": {
+          "minimum": 600.0,
+          "maximum": 1500.0
+        },
+        "bid_stats": {
+          "bid_count": 1,
+          "bid_avg": 958.0
+        },
+        "time_submitted": 1790488139,
+        "upgrades": {
+          "featured": false,
+          "sealed": false,
+          "nonpublic": false,
+          "urgent": false,
+          "NDA": false
+        }
+      }
+    ],
+    "users": {},
+    "total_count": 5452
+  },
+  "request_id": "f50852027c282ab5ecbf6f262262c96b"
+}

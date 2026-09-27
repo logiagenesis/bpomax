@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { contentSecurityPolicy, withPolicy } from '../apps/web/csp.js';
+import { FREELANCER_ORIGIN, contentSecurityPolicy, withPolicy } from '../apps/web/csp.js';
 
 /**
  * ARB-501, the owner's audit S-03: the security headers Vercel sends with every page
@@ -45,6 +45,12 @@ describe('the page policy', () => {
   it('calls nothing outside the app in a demo build, and refuses a host that is not a URL', () => {
     expect(contentSecurityPolicy({})).toContain("connect-src 'self';");
     expect(() => contentSecurityPolicy({ apiUrl: 'not a url' })).toThrow(/not a URL/);
+  });
+
+  it('lets the radar page call Freelancer.com and nothing else outside the app', () => {
+    expect(contentSecurityPolicy({ also: [FREELANCER_ORIGIN] })).toContain(
+      "connect-src 'self' https://www.freelancer.com;",
+    );
   });
 
   it('is the first thing in a page head', () => {
