@@ -1,9 +1,8 @@
 # HANDOFF — 26/09/2026 (SAST)
 
-Written by session …tJv8 (Claude Code), working the board on the owner's instruction at
-the time: one pull request per ticket, merged into `main` as soon as CI is green. That
-instruction is superseded: see the branching rule in [CLAUDE.md](../CLAUDE.md) (one branch
-and one pull request per task; the owner merges). `main` is the only branch that matters.
+Written by session …tJv8 (Claude Code), working the board on the owner's instruction:
+one pull request per ticket, from the one branch `claude/beautiful-tesla-b6goej`, merged
+into `main` as soon as CI is green. `main` is the only branch that matters.
 
 **TL;DR**
 
@@ -104,11 +103,13 @@ to D-072.
 
 ## 4. How to work here
 
-- **Branching.** Follow the branching rule in [CLAUDE.md](../CLAUDE.md): one branch and
-  one pull request for the whole task, every step pushed to it, never merged by Claude.
-  Report when the task is complete and wait for the owner to merge. If the pull request
-  is merged mid-task, stop and ask before creating a new branch. Put each ticket's board
-  row and decision in its own commit.
+- **One branch.** Work only on `claude/beautiful-tesla-b6goej`; never create another.
+  Per ticket:
+  1. Fast-forward to `origin/main`.
+  2. Build, with the board row and its decision in the ticket's own commit.
+  3. Push, and open a draft pull request.
+  4. When CI is green, mark it ready and merge it, passing the full head SHA.
+  5. `git merge --ff-only origin/main`.
 
   Never `git reset --hard` or force-push (both denied).
 - **Local services.**

@@ -15,7 +15,7 @@ You are the lead engineer for ARBITRON (working name), a freelance-marketplace a
 
 NON-NEGOTIABLE DELIVERY RULES
 1. Nothing exists unless it is pushed to GitHub. First action after reading the docs: create the private repository `logiagenesis/arbitron` with `gh repo create logiagenesis/arbitron --private --source=. --remote=origin`, commit /docs, push to `main`. If `gh auth status` fails, STOP and print the exact command the owner must run (`gh auth login`), then wait.
-2. Push after every ticket, to the task's one branch (see the branching rule in /CLAUDE.md: one branch and one pull request per task; Claude Code never merges it, the owner does). Commit message format: `ARB-xxx: <summary>`. After each push run `git ls-remote origin <branch>` and confirm the remote SHA equals the local HEAD SHA. If they differ, fix before continuing.
+2. Push after every ticket. Commit message format: `ARB-xxx: <summary>`. After each push run `git ls-remote origin main` and confirm the remote SHA equals the local HEAD SHA. If they differ, fix before continuing.
 3. Every phase ends with a git tag (`phase-1`, `phase-2`, …) pushed to origin and a deployed, clickable preview URL for the web app (see section K).
 4. You may never write "done", "complete" or "finished" without, in the same message: the GitHub repository URL, the commit URL of the latest pushed commit, the tag URL for the phase, and the live preview URL. If any of those four cannot be produced, report the phase as NOT DONE and state exactly what is blocking.
 5. Keep /docs/04-PROJECT-BOARD.md as the live board: update each ticket's Status (TODO / IN PROGRESS / BLOCKED / DONE) and the commit SHA that closed it, and push that change with the ticket.
