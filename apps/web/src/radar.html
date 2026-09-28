@@ -43,8 +43,8 @@
         </div>
         <p>
           Live projects from Freelancer.com's public search, read by this page in your browser.
-          Nothing here signs in to Freelancer.com or bids for you: you submit every bid there
-          yourself. What you save here stays in this browser.
+          Nothing here bids for you: you submit every bid there yourself. What you save here stays
+          in this browser.
         </p>
       </div>
 
@@ -61,6 +61,7 @@
       <p class="alert alert--warning" id="storage-warning" hidden>
         This browser is not keeping what you save here (private window or blocked site data).
       </p>
+      <p class="alert alert--warning" id="token-warning" hidden></p>
 
       <div class="radar-tabs" role="tablist" aria-label="Radar sections">
         <button
@@ -317,6 +318,46 @@
         aria-labelledby="tab-settings"
         hidden
       >
+        <form id="token-form" class="card stack radar-fieldset" novalidate>
+          <h2 class="radar-token__title" id="token-heading">Freelancer token</h2>
+          <p class="field__hint">
+            A Personal Access Token lets this page act as you on Freelancer.com. Generate one at
+            <a
+              href="https://accounts.freelancer.com/settings/develop"
+              target="_blank"
+              rel="noopener"
+              >accounts.freelancer.com/settings/develop</a
+            >
+            and paste it here. It is kept only in this browser: Export leaves it out, and it is sent
+            to Freelancer.com and nowhere else. It lasts 30 days.
+          </p>
+          <p class="radar-token__state" id="token-state">No token saved.</p>
+          <p class="radar-token__state" id="token-account" hidden></p>
+          <div class="field">
+            <label class="field__label" for="token-input">Paste a token</label>
+            <input
+              class="input"
+              id="token-input"
+              name="token"
+              type="password"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-describedby="token-error"
+            />
+            <p class="field__error" id="token-error" hidden></p>
+          </div>
+          <div class="row-actions">
+            <button type="submit" class="btn btn--primary" id="token-save">Save and check</button>
+            <button type="button" class="btn btn--secondary" id="token-check" hidden>
+              Check again
+            </button>
+            <button type="button" class="btn btn--ghost" id="token-remove" hidden>
+              Remove token
+            </button>
+          </div>
+        </form>
+
         <form id="settings" class="stack" novalidate>
           <fieldset class="card stack radar-fieldset">
             <legend>Skills to watch</legend>

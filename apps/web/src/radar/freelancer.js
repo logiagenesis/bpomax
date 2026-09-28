@@ -99,14 +99,20 @@ export function normaliseProject(raw) {
 }
 
 /**
- * GETs a Freelancer.com API URL and returns its `result`.
+ * GETs a Freelancer.com API URL and returns its `result`. With `token`, the call is made as
+ * the token's owner (LI-PROMPT-BPOMAX-AUTOBID-20260928, F3a); the token goes only in the
+ * header, never in a message.
  * @param {string} url
  * @param {typeof fetch} fetchImpl
+ * @param {string} [token] a Personal Access Token
  */
-export async function getResult(url, fetchImpl = fetch) {
+export async function getResult(url, fetchImpl = fetch, token) {
+  /** @type {Record<string, string>} */
+  const headers = { accept: 'application/json' };
+  if (token) headers['freelancer-oauth-v1'] = token;
   let response;
   try {
-    response = await fetchImpl(url, { headers: { accept: 'application/json' } });
+    response = await fetchImpl(url, { headers });
   } catch (error) {
     throw new FreelancerError(
       `Could not reach Freelancer.com (${error instanceof Error ? error.message : String(error)}).`,

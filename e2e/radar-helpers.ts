@@ -50,7 +50,24 @@ interface FreelancerCalls {
   projects: URL[];
   skills: number;
   directory: URL[];
+  /** The token each call to GET /users/0.1/self/ carried. */
+  self: (string | undefined)[];
 }
+
+/**
+ * GET /users/0.1/self/ as it answered on 28/09/2026 (the fields checked then: id,
+ * username, role, limited_account, membership_package), with a made-up user.
+ */
+const SELF = {
+  status: 'success',
+  result: {
+    id: 1234567,
+    username: 'example-user',
+    role: 'freelancer',
+    limited_account: false,
+    membership_package: { name: 'plus', bid_limit: 100, duration_type: 'month' },
+  },
+};
 
 /**
  * Answers the three Freelancer.com calls the page makes. `projects` may replace the
@@ -58,9 +75,9 @@ interface FreelancerCalls {
  */
 export async function serveFreelancer(
   page: Page,
-  options: { projects?: RawProject[] | number; directory?: number } = {},
+  options: { projects?: RawProject[] | number; directory?: number; self?: number } = {},
 ): Promise<FreelancerCalls> {
-  const calls: FreelancerCalls = { projects: [], skills: 0, directory: [] };
+  const calls: FreelancerCalls = { projects: [], skills: 0, directory: [], self: [] };
   // Pages the radar opens in a new tab (a project, a freelancer's profile) land here.
   await page.context().route('https://www.freelancer.com/{projects,u}/**', (route) =>
     route.fulfill({
@@ -107,6 +124,24 @@ export async function serveFreelancer(
         return;
       }
       await route.fulfill({ json: DIRECTORY, headers: { 'access-control-allow-origin': '*' } });
+      return;
+    }
+    if (url.pathname === '/api/users/0.1/self/') {
+      calls.self.push(route.request().headers()['freelancer-oauth-v1']);
+      if (options.self) {
+        // How Freelancer.com refuses a token it does not accept (checked 28/09/2026).
+        await route.fulfill({
+          status: options.self,
+          json: {
+            status: 'error',
+            message: 'You must be logged in to perform this request',
+            error_code: 'RestExceptionCodes.NOT_AUTHENTICATED',
+          },
+          headers: { 'access-control-allow-origin': '*' },
+        });
+        return;
+      }
+      await route.fulfill({ json: SELF, headers: { 'access-control-allow-origin': '*' } });
       return;
     }
     await route.fulfill({ status: 404, json: { status: 'error', message: 'not in the e2e' } });

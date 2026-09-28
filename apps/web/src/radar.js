@@ -1,11 +1,18 @@
 // @ts-check
 import { downloadBlob } from './lib/download.js';
-import { formatDateTime, formatMoney, formatPercent, formatTime } from './lib/format.js';
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatPercent,
+  formatTime,
+} from './lib/format.js';
 import { confirmAction } from './lib/ui.js';
+import { TOKEN_KEY, fetchSelf, maskToken, tokenProblem, tokenState } from './radar/account.js';
 import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
-import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
 import {
@@ -40,6 +47,7 @@ import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from '.
  * @typedef {import('./radar/tracker.js').Rate} Rate
  * @typedef {import('./radar/developers.js').Developer} Developer
  * @typedef {import('./radar/developers.js').Shortlisted} Shortlisted
+ * @typedef {import('./radar/account.js').StoredToken} StoredToken
  */
 
 /** @param {string} id */
@@ -164,6 +172,7 @@ async function refresh() {
     updated.textContent = `Last updated ${formatTime(Date.now())} SAST`;
     say('success', `Read ${String(projects.length)} projects from Freelancer.com.`);
     render();
+    drawToken();
     notifyNew();
   } catch (error) {
     failures += 1;
@@ -1623,6 +1632,144 @@ function notifyNew() {
   }
 }
 
+// ------------------------------------------------------------------ Freelancer token
+
+const tokenForm = /** @type {HTMLFormElement} */ (byId('token-form'));
+const tokenInput = /** @type {HTMLInputElement} */ (byId('token-input'));
+const tokenError = byId('token-error');
+const tokenStateLine = byId('token-state');
+const tokenAccount = byId('token-account');
+const tokenSave = /** @type {HTMLButtonElement} */ (byId('token-save'));
+const tokenCheck = /** @type {HTMLButtonElement} */ (byId('token-check'));
+const tokenRemove = /** @type {HTMLButtonElement} */ (byId('token-remove'));
+const tokenWarning = byId('token-warning');
+const DEVELOP = 'accounts.freelancer.com/settings/develop';
+
+/** @type {StoredToken | null} */
+let stored = readJson(TOKEN_KEY, /** @type {StoredToken | null} */ (null));
+
+/** @param {string} text */
+function showTokenError(text) {
+  tokenError.textContent = text;
+  tokenError.hidden = !text;
+  tokenInput.setAttribute('aria-invalid', String(Boolean(text)));
+}
+
+/** Why Freelancer.com would not take the token, in a line Dennis can act on. */
+function refusal(/** @type {unknown} */ error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof FreelancerError && (error.status === 401 || error.status === 403)) {
+    return `Token rejected (${message.replace(/^Freelancer\.com answered /, '').replace(/\.$/, '')}). Generate a new one at ${DEVELOP}.`;
+  }
+  return message;
+}
+
+function drawToken() {
+  const state = tokenState(stored, Date.now());
+  tokenCheck.hidden = !stored;
+  tokenRemove.hidden = !stored;
+  tokenSave.textContent = stored ? 'Replace and check' : 'Save and check';
+  if (!stored || state.expiresAt === null) {
+    tokenStateLine.textContent = 'No token saved.';
+    tokenAccount.hidden = true;
+    tokenWarning.hidden = true;
+    return;
+  }
+  const until = formatDate(state.expiresAt);
+  tokenStateLine.textContent = `Token ${maskToken(stored.token)}, pasted ${formatDate(stored.savedAt)}, ${
+    state.kind === 'expired' ? `ran out on ${until}` : `lasts until ${until}`
+  }.`;
+  const a = stored.account;
+  tokenAccount.hidden = false;
+  if (stored.problem) {
+    tokenAccount.textContent = stored.problem;
+  } else if (a) {
+    const plan = a.membership
+      ? `, ${a.membership} membership${a.bidLimit === null ? '' : `, ${String(a.bidLimit)} bids a ${a.bidPeriod ?? 'period'}`}`
+      : '';
+    const checked = stored.checkedAt ? ` Checked ${formatDateTime(stored.checkedAt)} SAST.` : '';
+    tokenAccount.textContent = `Freelancer.com says this is ${a.username} (user ${String(a.id)})${plan}${a.limited ? ', a limited account' : ''}.${checked}`;
+  } else {
+    tokenAccount.hidden = true;
+  }
+  tokenWarning.hidden = state.kind !== 'soon' && state.kind !== 'expired';
+  tokenWarning.textContent =
+    state.kind === 'expired'
+      ? `Your Freelancer token ran out on ${until}. Generate a new one at ${DEVELOP} and paste it in Settings.`
+      : `Your Freelancer token runs out on ${until}, in ${String(state.daysLeft)} ${state.daysLeft === 1 ? 'day' : 'days'}. Generate a new one at ${DEVELOP} and paste it in Settings.`;
+}
+
+/**
+ * Asks Freelancer.com whose `token` it is. A new token is kept only once it is accepted.
+ * @param {string} token
+ * @param {boolean} fresh true for a pasted token, false to recheck the saved one
+ */
+async function checkToken(token, fresh) {
+  for (const b of [tokenSave, tokenCheck, tokenRemove]) b.disabled = true;
+  tokenSave.setAttribute('aria-busy', 'true');
+  say('info', 'Asking Freelancer.com whose token this is…');
+  try {
+    const account = await fetchSelf(token);
+    const now = Date.now();
+    stored = {
+      token,
+      savedAt: fresh || !stored ? now : stored.savedAt,
+      account,
+      checkedAt: now,
+      problem: null,
+    };
+    keep(TOKEN_KEY, stored);
+    tokenInput.value = '';
+    showTokenError('');
+    say(
+      'success',
+      `Freelancer.com accepted the token: you are ${account.username} (user ${String(account.id)}).`,
+    );
+  } catch (error) {
+    const line = refusal(error);
+    if (fresh) {
+      showTokenError(line);
+    } else if (stored) {
+      stored = { ...stored, checkedAt: Date.now(), problem: line };
+      keep(TOKEN_KEY, stored);
+    }
+    say('error', line);
+  } finally {
+    for (const b of [tokenSave, tokenCheck, tokenRemove]) b.disabled = false;
+    tokenSave.removeAttribute('aria-busy');
+    drawToken();
+  }
+}
+
+tokenForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const token = tokenInput.value.trim();
+  const problem = tokenProblem(token);
+  showTokenError(problem ?? '');
+  if (problem) return;
+  void checkToken(token, true);
+});
+tokenCheck.addEventListener('click', () => {
+  if (stored) void checkToken(stored.token, false);
+});
+tokenRemove.addEventListener('click', async () => {
+  const ok = await confirmAction({
+    title: 'Remove the Freelancer token?',
+    body: 'This browser forgets it. The token itself still works on Freelancer.com until it runs out; revoke it there to stop it.',
+    confirmLabel: 'Remove',
+    danger: true,
+  });
+  if (!ok) return;
+  stored = null;
+  try {
+    localStorage.removeItem(`radar.${TOKEN_KEY}`);
+  } catch {
+    // Nothing kept, nothing to remove.
+  }
+  drawToken();
+  say('info', 'The token is removed from this browser.');
+});
+
 // ------------------------------------------------------------------ settings
 
 const WEIGHTS = /** @type {const} */ (['skill', 'budget', 'fresh', 'competition']);
@@ -1744,6 +1891,7 @@ settingsError.hidden = true;
 
 fillFilters();
 fillSettings();
+drawToken();
 drawTemplates();
 storageWarning.hidden = writeJson('probe', Date.now());
 render();

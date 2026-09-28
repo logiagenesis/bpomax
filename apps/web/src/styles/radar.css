@@ -69,6 +69,16 @@
   padding: 0 var(--space-2);
 }
 
+/* Freelancer token */
+.radar-token__title {
+  font-size: inherit;
+  margin: 0;
+}
+.radar-token__state {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 /* Skill pickers */
 .radar-chips,
 .radar-matches {
