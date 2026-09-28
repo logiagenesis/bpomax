@@ -6,7 +6,8 @@
   "description": "Freelancer.com API client (OAuth, users) and an in-process stand-in of it for tests and local development",
   "exports": {
     ".": "./src/index.ts",
-    "./fake": "./src/fake.ts"
+    "./fake": "./src/fake.ts",
+    "./bidding": "./src/bidding.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
