@@ -22,6 +22,47 @@ into `main` as soon as CI is green. `main` is the only branch that matters.
 - **Next.** The owner's items in section 5, then each unblocked ticket's own clause
   (section 6).
 
+## Radar Auto-bid — 28/09/2026 (LI-PROMPT-BPOMAX-AUTOBID-20260928)
+
+Not done yet: the brief's proof (a real bid placed by the software) needs Dennis's token on
+the live page. Where things stand:
+
+1. https://bpomax.vercel.app/radar.html. Auto-bid runs in the open browser tab (option C).
+   A, a Vercel cron, needs the Pro plan: Hobby allows one run a day, Pro one a minute
+   ([Vercel](https://vercel.com/docs/cron-jobs/usage-and-pricing)); the team's plan could
+   not be read from the build. It would also need the token as a secret variable on the
+   project. B needs a host for `apps/workers`, which does not exist yet (B-12).
+2. First automatic bid: not yet. Auto-bid is off by default; the owner switches it on.
+3. Token field and Place now: `main` at 9dddad0 (PR #56). Auto-bid: the PR after it.
+4. U1–U6 (Freelancer's docs read 28/09/2026 through a remote browser; live calls where
+   noted):
+   - U1, U2 (a Personal Access Token may bid; the real POST works from the browser):
+     proved only by the first Place now bid. The preflight passes (F3b).
+   - U3: an expired or wrong token gets HTTP 401 "You must be logged in to perform this
+     request" (`RestExceptionCodes.NOT_AUTHENTICATED`); seen live with no token and a
+     wrong one. The docs name no code for expiry.
+   - U5: a bid under the project's minimum gets 400 `BID_AMOUNT_INVALID`; a description of
+     the wrong length gets 400 `BID_DESCRIPTION_INVALID_LENGTH`, lengths not published.
+   - U6: per-endpoint limits, 429 `RATE_LIMITED` when hit. Live answers carry
+     `ratelimit-limit: 5000, 5000;window=60`; the docs' only figure is an example (50 a
+     minute, 1 000 an hour). Auto-bid reads every 90 seconds.
+5. Differs from section 1: Freelancer's docs list "Automatic Bidder" among prohibited
+   integrations, with exceptions "sometimes made for internal tools made by an agency for
+   use by themselves"
+   ([types of integrations](https://developers.freelancer.com/docs/api-overview/types-of-integrations)).
+   Ask api-support@freelancer.com before switching Auto-bid on. Also:
+   `milestone_percentage` must be 20–100 (100 is sent); a second bid gets 409
+   `DUPLICATE_BID`.
+
+What Dennis does:
+
+1. Generate a token at https://accounts.freelancer.com/settings/develop and paste it in
+   Radar → Settings → Freelancer token. Never in a chat.
+2. Place one bid with Place now on a project he chooses; check it on freelancer.com.
+3. When he decides to, set the Auto-bid rules in Settings and press Switch Auto-bid on.
+   Stop Auto-bid, at the top of the page, turns it off. It runs only while the tab is open.
+4. Every 30 days, a new token. The page warns 5 days before.
+
 ## Radar — 27/09/2026 (LI-PROMPT-BPOMAX-RADAR-20260927)
 
 1. https://bpomax.vercel.app/radar.html

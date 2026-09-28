@@ -10,9 +10,10 @@ import {
 import { confirmAction } from './lib/ui.js';
 import { TOKEN_KEY, fetchSelf, maskToken, tokenProblem, tokenState } from './radar/account.js';
 import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
+import { DEFAULT_AUTOBID, autoBidsToday, decide, switchOnProblems } from './radar/autobid.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
-import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import { fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
 import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
@@ -49,6 +50,15 @@ import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from '.
  * @typedef {import('./radar/developers.js').Developer} Developer
  * @typedef {import('./radar/developers.js').Shortlisted} Shortlisted
  * @typedef {import('./radar/account.js').StoredToken} StoredToken
+ * @typedef {import('./radar/autobid.js').AutoBid} AutoBid
+ * @typedef {object} AutoEvent one line of Auto-bid's activity
+ * @property {string} at ISO time
+ * @property {number} projectId
+ * @property {string} title
+ * @property {string} url
+ * @property {'placed' | 'already' | 'error'} outcome
+ * @property {string} detail
+ * @property {number | null} status the HTTP status Freelancer.com answered with
  */
 
 /** @param {string} id */
@@ -89,6 +99,10 @@ let shortlist = readJson('shortlist', /** @type {Shortlisted[]} */ ([]));
 let notified = readJson('notified', /** @type {number[]} */ ([]));
 /** @type {{ project: Project, score: Score }[]} */
 let ranked = [];
+/** @type {AutoBid} Off unless the owner switched it on in this browser. */
+let auto = { ...DEFAULT_AUTOBID, ...readJson('autobid', {}) };
+/** @type {AutoEvent[]} */
+let activity = readJson('autolog', /** @type {AutoEvent[]} */ ([]));
 let failures = 0;
 let loading = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */
@@ -109,6 +123,7 @@ function keep(key, value) {
 
 function keepSettings() {
   storageWarning.hidden = saveSettings(settings);
+  drawAuto();
 }
 
 // ------------------------------------------------------------------ messages
@@ -129,6 +144,7 @@ const tabs = /** @type {HTMLButtonElement[]} */ ([...document.querySelectorAll('
 /** @param {HTMLButtonElement} tab */
 function selectTab(tab) {
   if (tab.id === 'tab-bids') drawBids();
+  if (tab.id === 'tab-settings') drawAuto();
   for (const other of tabs) {
     const selected = other === tab;
     other.setAttribute('aria-selected', String(selected));
@@ -153,9 +169,12 @@ for (const [index, tab] of tabs.entries()) {
 
 // ------------------------------------------------------------------ reading the feed
 
+/** Auto-bid reads every 90 seconds (step 4: every 60–120 s); otherwise the owner's interval. */
+const AUTO_REFRESH_MINUTES = 1.5;
+
 function schedule() {
   clearTimeout(timer);
-  const delay = nextDelayMs(failures, settings.refreshMinutes);
+  const delay = nextDelayMs(failures, auto.on ? AUTO_REFRESH_MINUTES : settings.refreshMinutes);
   if (delay !== null) timer = setTimeout(() => void refresh(), delay);
   return delay;
 }
@@ -175,10 +194,11 @@ async function refresh() {
     render();
     drawToken();
     notifyNew();
+    await runAutoBid();
   } catch (error) {
     failures += 1;
     const message = error instanceof Error ? error.message : String(error);
-    const delay = nextDelayMs(failures, settings.refreshMinutes);
+    const delay = nextDelayMs(failures, auto.on ? AUTO_REFRESH_MINUTES : settings.refreshMinutes);
     say(
       'error',
       delay === null
@@ -743,6 +763,7 @@ byId('placeholders').replaceChildren(
 
 function keepTemplates() {
   keep('templates', templates);
+  drawAuto();
 }
 
 function drawTemplates() {
@@ -1364,6 +1385,7 @@ function bidItem(entry) {
   link.textContent = entry.title;
   title.append(link);
   head.append(title, badge(STATUS_WORDS[entry.status], STATUS_KIND[entry.status]));
+  if (entry.placedBy === 'auto') head.append(badge('Placed automatically', 'live'));
 
   const meta = document.createElement('p');
   meta.className = 'radar-row__meta';
@@ -1405,11 +1427,17 @@ function bidItem(entry) {
   return item;
 }
 
+const bidsShow = /** @type {HTMLSelectElement} */ (byId('bids-show'));
+
 function drawBids() {
   drawTotals();
+  const autoOnly = bidsShow.value === 'auto';
+  const listed = autoOnly ? log.filter((e) => e.placedBy === 'auto') : log;
   byId('bids-empty').hidden = log.length > 0;
-  byId('bid-list').replaceChildren(...log.map(bidItem));
+  byId('bids-auto-empty').hidden = !autoOnly || listed.length > 0 || log.length === 0;
+  byId('bid-list').replaceChildren(...listed.map(bidItem));
 }
+bidsShow.addEventListener('change', drawBids);
 
 // ------------------------------------------------------------------ developers
 
@@ -1752,8 +1780,10 @@ function showTokenError(text) {
 /** Why Freelancer.com would not take the token, in a line Dennis can act on. */
 function refusal(/** @type {unknown} */ error) {
   const message = error instanceof Error ? error.message : String(error);
-  if (error instanceof FreelancerError && (error.status === 401 || error.status === 403)) {
-    return `Token rejected (${message.replace(/^Freelancer\.com answered /, '').replace(/\.$/, '')}). Generate a new one at ${DEVELOP}.`;
+  const status = statusOf(error);
+  if (status === 401 || status === 403) {
+    const answer = /HTTP \d{3}(?:: [^)]+)?/.exec(message)?.[0] ?? message;
+    return `Token rejected (${answer.replace(/\.$/, '')}). Generate a new one at ${DEVELOP}.`;
   }
   return message;
 }
@@ -1815,9 +1845,24 @@ async function checkToken(token, fresh) {
     keep(TOKEN_KEY, stored);
     tokenInput.value = '';
     showTokenError('');
+    // The membership's monthly bids fill the allowance Auto-bid keeps to, if it is not set.
+    const allowance =
+      settings.monthlyLimit === null && account.bidLimit && account.bidPeriod === 'month'
+        ? account.bidLimit
+        : null;
+    if (allowance !== null) {
+      settings = { ...settings, monthlyLimit: allowance };
+      keepSettings();
+      fillSettings();
+      render();
+    }
     say(
       'success',
-      `Freelancer.com accepted the token: you are ${account.username} (user ${String(account.id)}).`,
+      `Freelancer.com accepted the token: you are ${account.username} (user ${String(account.id)}).${
+        allowance === null
+          ? ''
+          : ` Bids your membership allows a month is set to ${String(allowance)}, from Freelancer.com.`
+      }`,
     );
   } catch (error) {
     const line = refusal(error);
@@ -1832,6 +1877,7 @@ async function checkToken(token, fresh) {
     for (const b of [tokenSave, tokenCheck, tokenRemove]) b.disabled = false;
     tokenSave.removeAttribute('aria-busy');
     drawToken();
+    drawAuto();
   }
 }
 
@@ -1861,8 +1907,306 @@ tokenRemove.addEventListener('click', async () => {
     // Nothing kept, nothing to remove.
   }
   drawToken();
+  if (auto.on) {
+    stopAuto('info', 'The token is removed from this browser, so Auto-bid is off.');
+    return;
+  }
+  drawAuto();
   say('info', 'The token is removed from this browser.');
 });
+
+// ------------------------------------------------------------------ Auto-bid
+
+const autoForm = /** @type {HTMLFormElement} */ (byId('autobid-form'));
+const autoOnButton = /** @type {HTMLButtonElement} */ (byId('autobid-on'));
+const autoError = byId('autobid-error');
+/** How long the loop waits after Freelancer.com answers 429 (constraint 6). */
+const BACK_OFF_MS = 15 * 60_000;
+/** Auto-bid's activity lines kept. */
+const ACTIVITY_KEPT = 100;
+/** The loop stands still until then, after a 429. */
+let pausedUntil = 0;
+let autoRunning = false;
+/** @type {{ at: number, note: string, lines: string[] } | null} */
+let lastCheck = null;
+
+/** The three number boxes: the setting, its lowest and highest value. */
+const AUTO_NUMBERS = /** @type {const} */ ([
+  ['dailyCap', 1, 100],
+  ['minScore', 0, 100],
+  ['maxAgeMinutes', 1, 1440],
+]);
+
+function keepAuto() {
+  keep('autobid', auto);
+}
+
+/** @param {Omit<AutoEvent, 'at'>} event */
+function record(event) {
+  activity = [{ at: new Date().toISOString(), ...event }, ...activity].slice(0, ACTIVITY_KEPT);
+  keep('autolog', activity);
+}
+
+function fillAuto() {
+  for (const [name] of AUTO_NUMBERS) field(autoForm, name).value = String(auto[name]);
+}
+
+function autoProblems() {
+  return switchOnProblems({ auto, settings, templates, tokenOk: tokenReady() !== null });
+}
+
+/** @param {string} text */
+function listItem(text) {
+  const li = document.createElement('li');
+  li.textContent = text;
+  return li;
+}
+
+function drawAuto() {
+  const now = Date.now();
+  const today = autoBidsToday(log, now);
+  const checked = lastCheck ? `last check ${formatTime(lastCheck.at)} SAST` : 'not checked yet';
+  const paused = now < pausedUntil ? ` · paused until ${formatTime(pausedUntil)} SAST` : '';
+  byId('autobid-bar').hidden = !auto.on;
+  byId('autobid-line').textContent =
+    `Auto-bid on · ${checked} · ${String(today)} placed today / cap ${String(auto.dailyCap)}${paused}`;
+  const problems = auto.on ? [] : autoProblems();
+  byId('autobid-needs').hidden = problems.length === 0;
+  byId('autobid-problems').replaceChildren(...problems.map(listItem));
+  autoOnButton.hidden = auto.on;
+  autoOnButton.disabled = problems.length > 0;
+  byId('autobid-state').textContent = auto.on
+    ? 'Auto-bid is on. Stop it with Stop Auto-bid at the top of the page.'
+    : 'Auto-bid is off.';
+  byId('autobid-checked-note').textContent = lastCheck
+    ? `${formatDateTime(lastCheck.at)} SAST: ${lastCheck.note}`
+    : 'Not checked yet.';
+  byId('autobid-checked').replaceChildren(...(lastCheck?.lines ?? []).map(listItem));
+  byId('autobid-activity-empty').hidden = activity.length > 0;
+  byId('autobid-activity').replaceChildren(
+    ...activity.map((event) => {
+      const li = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = event.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = event.title;
+      li.append(`${formatDateTime(event.at)} SAST · `, link, ` · ${event.detail}`);
+      return li;
+    }),
+  );
+}
+
+/**
+ * Switches Auto-bid off and says why.
+ * @param {'info' | 'warning' | 'error'} kind
+ * @param {string} text
+ */
+function stopAuto(kind, text) {
+  auto = { ...auto, on: false };
+  keepAuto();
+  drawAuto();
+  say(kind, text);
+  schedule();
+}
+
+byId('autobid-stop').addEventListener('click', () => {
+  stopAuto('info', 'Auto-bid is off. Nothing more is bid on by itself.');
+});
+
+autoForm.addEventListener('input', (event) => {
+  if (!(event.target instanceof HTMLInputElement)) return;
+  const next = { ...auto };
+  const bad = [];
+  for (const [name, min, max] of AUTO_NUMBERS) {
+    const input = /** @type {HTMLInputElement} */ (field(autoForm, name));
+    const value = wholeIn(input, min, max);
+    if (value === null) {
+      bad.push(
+        `${input.labels?.[0]?.textContent ?? name}: a whole number from ${String(min)} to ${String(max)}.`,
+      );
+    } else next[name] = value;
+  }
+  autoError.hidden = bad.length === 0;
+  autoError.textContent = bad.join(' ');
+  auto = next;
+  keepAuto();
+  drawAuto();
+});
+
+autoForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const ready = tokenReady();
+  if (!ready || autoProblems().length || !autoError.hidden) {
+    drawAuto();
+    return;
+  }
+  const ok = await confirmAction({
+    title: 'Switch Auto-bid on?',
+    body: `This page will place real bids on Freelancer.com as ${ready.account.username} by itself: up to ${String(auto.dailyCap)} a day, on projects under ${String(auto.maxAgeMinutes)} minutes old scoring ${String(auto.minScore)} or more, while it stays open. Stop Auto-bid at the top of the page turns it off.`,
+    confirmLabel: 'Switch on',
+  });
+  if (!ok) return;
+  auto = { ...auto, on: true };
+  keepAuto();
+  drawAuto();
+  say('success', 'Auto-bid is on.');
+  void refresh();
+});
+
+/**
+ * @param {number} looked projects under the age limit
+ * @param {number} placed
+ */
+function checkNote(looked, placed) {
+  const limit = `${String(auto.maxAgeMinutes)} minutes old`;
+  if (!looked) return `no project in the feed is under ${limit}.`;
+  return `${String(looked)} ${looked === 1 ? 'project' : 'projects'} under ${limit}; ${String(placed)} bid on.`;
+}
+
+/**
+ * Auto-bid's pass over the ranked feed after each read (step 4): each project under the
+ * age limit is decided by the rules, and each one to bid on is placed, one at a time, and
+ * logged. A refusal is logged and shown; a project refused twice is not tried again; a
+ * 401 or 403 stops Auto-bid; a 429 makes it wait 15 minutes (constraint 6).
+ */
+async function runAutoBid() {
+  if (!auto.on || autoRunning) return;
+  const ready = tokenReady();
+  if (!ready) {
+    stopAuto(
+      'warning',
+      'Auto-bid stopped: the Freelancer token is missing, refused or has run out. Paste a new one in Settings.',
+    );
+    return;
+  }
+  const started = Date.now();
+  if (started < pausedUntil) {
+    lastCheck = {
+      at: started,
+      note: `waiting until ${formatTime(pausedUntil)} SAST: Freelancer.com asked to slow down.`,
+      lines: [],
+    };
+    drawAuto();
+    return;
+  }
+  autoRunning = true;
+  /** @type {string[]} */
+  const lines = [];
+  let placed = 0;
+  const young = ranked.filter(
+    ({ project }) => started - project.submitted <= auto.maxAgeMinutes * 60_000,
+  );
+  try {
+    for (const { project, score } of young) {
+      const decision = decide(project, score, {
+        auto,
+        settings,
+        templates,
+        log,
+        dismissed,
+        now: Date.now(),
+      });
+      const name = `“${project.title}” (${String(score.total)})`;
+      if (!decision.place) {
+        lines.push(`${name}: ${decision.reason}`);
+        continue;
+      }
+      const refused = activity.filter(
+        (e) => e.projectId === project.id && e.outcome === 'error',
+      ).length;
+      if (refused >= 2) {
+        lines.push(`${name}: Refused twice by Freelancer.com; not tried again.`);
+        continue;
+      }
+      try {
+        const result = await placeBid(ready.token, {
+          projectId: project.id,
+          bidderId: ready.account.id,
+          price: decision.price,
+          days: decision.days,
+          description: decision.proposal,
+        });
+        const entry = {
+          ...logEntry(
+            project,
+            score,
+            {
+              id: crypto.randomUUID(),
+              price: decision.price,
+              days: decision.days,
+              proposal: decision.proposal,
+              template: { id: decision.template.id, name: decision.template.name },
+            },
+            Date.now(),
+          ),
+          // A bid Freelancer.com already had was not placed by this page.
+          placedBy: /** @type {'auto' | 'manual'} */ (
+            result.outcome === 'placed' ? 'auto' : 'manual'
+          ),
+          freelancerBidId: result.bidId,
+          apiStatus: result.status,
+        };
+        log = [entry, ...log];
+        keep('log', log);
+        const priceText = formatPrice(decision.price, project.currency);
+        const detail =
+          result.outcome === 'placed'
+            ? `Placed automatically: ${priceText}, ${String(decision.days)} days, bid ${result.bidId} (HTTP ${String(result.status)}).`
+            : `Freelancer.com already had your bid ${result.bidId}; nothing new was sent.`;
+        record({
+          projectId: project.id,
+          title: project.title,
+          url: project.url,
+          outcome: result.outcome,
+          detail,
+          status: result.status,
+        });
+        lines.push(`${name}: ${detail}`);
+        if (result.outcome === 'placed') placed += 1;
+      } catch (error) {
+        const status = statusOf(error);
+        const message = error instanceof Error ? error.message : String(error);
+        record({
+          projectId: project.id,
+          title: project.title,
+          url: project.url,
+          outcome: 'error',
+          detail: message,
+          status,
+        });
+        lines.push(`${name}: ${message}`);
+        if (status === 401 || status === 403) {
+          if (stored) {
+            stored = { ...stored, checkedAt: Date.now(), problem: refusal(error) };
+            keep(TOKEN_KEY, stored);
+            drawToken();
+          }
+          stopAuto('error', `Auto-bid stopped: ${refusal(error)}`);
+          break;
+        }
+        if (status === 429) {
+          pausedUntil = Date.now() + BACK_OFF_MS;
+          say(
+            'warning',
+            `Freelancer.com asked Auto-bid to slow down (HTTP 429). It waits until ${formatTime(pausedUntil)} SAST.`,
+          );
+          break;
+        }
+        say('error', `Auto-bid could not bid on “${project.title}”: ${message}`);
+      }
+    }
+  } finally {
+    autoRunning = false;
+  }
+  lastCheck = { at: started, note: checkNote(young.length, placed), lines };
+  if (placed) {
+    say('success', `Auto-bid placed ${String(placed)} ${placed === 1 ? 'bid' : 'bids'}. See Bids.`);
+    render();
+    drawBids();
+  }
+  drawAuto();
+}
 
 // ------------------------------------------------------------------ settings
 
@@ -1985,7 +2329,9 @@ settingsError.hidden = true;
 
 fillFilters();
 fillSettings();
+fillAuto();
 drawToken();
+drawAuto();
 drawTemplates();
 storageWarning.hidden = writeJson('probe', Date.now());
 render();
