@@ -127,6 +127,9 @@ importers:
       '@arbitron/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@arbitron/freelancer':
+        specifier: workspace:*
+        version: link:../../packages/freelancer
       '@fontsource/inter':
         specifier: ^5.3.0
         version: 5.3.0

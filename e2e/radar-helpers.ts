@@ -52,6 +52,17 @@ interface FreelancerCalls {
   directory: URL[];
   /** The token each call to GET /users/0.1/self/ carried. */
   self: (string | undefined)[];
+  /** Each look for an earlier bid (GET /projects/0.1/bids/), with its token. */
+  bidLookups: { url: URL; token: string | undefined }[];
+  /** Each bid sent (POST /projects/0.1/bids/): its JSON body and token. */
+  bidsSent: { body: Record<string, unknown>; token: string | undefined }[];
+}
+
+interface BidOptions {
+  /** A bid of the bidder's already on Freelancer.com, as the bid list gives it. */
+  existing?: { id: number; bidder_id: number; project_id: number; amount: number };
+  /** Refuse the POST with this status. */
+  refuse?: number;
 }
 
 /**
@@ -75,9 +86,22 @@ const SELF = {
  */
 export async function serveFreelancer(
   page: Page,
-  options: { projects?: RawProject[] | number; directory?: number; self?: number } = {},
+  options: {
+    projects?: RawProject[] | number;
+    directory?: number;
+    self?: number;
+    bids?: BidOptions;
+  } = {},
 ): Promise<FreelancerCalls> {
-  const calls: FreelancerCalls = { projects: [], skills: 0, directory: [], self: [] };
+  const calls: FreelancerCalls = {
+    projects: [],
+    skills: 0,
+    directory: [],
+    self: [],
+    bidLookups: [],
+    bidsSent: [],
+  };
+  let nextBidId = 900_000_001;
   // Pages the radar opens in a new tab (a project, a freelancer's profile) land here.
   await page.context().route('https://www.freelancer.com/{projects,u}/**', (route) =>
     route.fulfill({
@@ -142,6 +166,39 @@ export async function serveFreelancer(
         return;
       }
       await route.fulfill({ json: SELF, headers: { 'access-control-allow-origin': '*' } });
+      return;
+    }
+    if (url.pathname === '/api/projects/0.1/bids/') {
+      const request = route.request();
+      const token = request.headers()['freelancer-oauth-v1'];
+      const cors = { 'access-control-allow-origin': '*' };
+      if (request.method() === 'GET') {
+        calls.bidLookups.push({ url, token });
+        const existing = options.bids?.existing;
+        await route.fulfill({
+          json: { status: 'success', result: { bids: existing ? [existing] : [], users: {} } },
+          headers: cors,
+        });
+        return;
+      }
+      const body = request.postDataJSON() as Record<string, unknown>;
+      calls.bidsSent.push({ body, token });
+      if (options.bids?.refuse) {
+        await route.fulfill({
+          status: options.bids.refuse,
+          json: {
+            status: 'error',
+            message: 'Refused in the e2e',
+            error_code: 'E2E',
+          },
+          headers: cors,
+        });
+        return;
+      }
+      await route.fulfill({
+        json: { status: 'success', result: { id: nextBidId++, ...body } },
+        headers: cors,
+      });
       return;
     }
     await route.fulfill({ status: 404, json: { status: 'error', message: 'not in the e2e' } });

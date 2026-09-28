@@ -42,9 +42,9 @@
           <p class="radar-counter" id="bid-counter"></p>
         </div>
         <p>
-          Live projects from Freelancer.com's public search, read by this page in your browser.
-          Nothing here bids for you: you submit every bid there yourself. What you save here stays
-          in this browser.
+          Live projects from Freelancer.com's public search, read by this page in your browser. It
+          bids on Freelancer.com only when you press Place now with your token saved in Settings;
+          otherwise you submit every bid there yourself. What you save here stays in this browser.
         </p>
       </div>
 
@@ -608,7 +608,13 @@
             <p class="field__error" id="p-error" hidden></p>
             <div class="row-actions">
               <button type="button" class="btn btn--primary" id="p-bid">Bid on Freelancer</button>
+              <button type="button" class="btn btn--secondary" id="p-place" hidden>
+                Place now
+              </button>
             </div>
+            <p class="field__hint" id="p-place-hint" hidden>
+              Place now sends this bid to Freelancer.com with your token, straight from this page.
+            </p>
             <div class="alert alert--info stack" id="bid-panel" hidden>
               <p id="bid-price-line"></p>
               <p>

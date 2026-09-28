@@ -13,6 +13,7 @@ import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
 import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import { placeBid, statusOf } from './radar/placing.js';
 import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
 import {
@@ -461,6 +462,9 @@ function drawBid(project) {
   sayInDetail('info', '');
   pEmpty.hidden = templates.length > 0;
   pForm.hidden = templates.length === 0;
+  const canPlace = tokenReady() !== null && placed.length === 0;
+  byId('p-place').hidden = !canPlace;
+  byId('p-place-hint').hidden = !canPlace;
   if (!templates.length) return;
 
   const current = defaultTemplate();
@@ -595,6 +599,84 @@ byId('bid-placed-button').addEventListener('click', () => {
   detail.close();
   render();
   say('success', `Logged your bid on “${project.title}”.`);
+});
+
+const placeButton = /** @type {HTMLButtonElement} */ (byId('p-place'));
+placeButton.addEventListener('click', async () => {
+  const project = shown;
+  const ready = tokenReady();
+  if (!project || !ready) return;
+  const price = readPrice();
+  const days = readDays();
+  const text = pText.value.trim();
+  const problems = [];
+  if (price === null) problems.push('Enter your price, a number above 0.');
+  if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
+  if (!text) problems.push('The proposal is empty.');
+  pError.hidden = problems.length === 0;
+  pError.textContent = problems.join(' ');
+  if (price === null || days === null || problems.length) return;
+  const priceText = `${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''}`;
+  const ok = await confirmAction({
+    title: 'Place this bid on Freelancer.com now?',
+    body: `A real bid on “${project.title}” as ${ready.account.username}: ${priceText}, ${String(days)} days, with the proposal as it is here. It counts against your bids for the month.`,
+    confirmLabel: 'Place the bid',
+  });
+  if (!ok) return;
+  placeButton.disabled = true;
+  placeButton.setAttribute('aria-busy', 'true');
+  sayInDetail('info', 'Placing the bid on Freelancer.com…');
+  const template = chosenTemplate();
+  try {
+    const result = await placeBid(ready.token, {
+      projectId: project.id,
+      bidderId: ready.account.id,
+      price,
+      days,
+      description: text,
+    });
+    const now = Date.now();
+    const entry = {
+      ...logEntry(
+        project,
+        scoreProject(project, settings, now),
+        {
+          id: crypto.randomUUID(),
+          price,
+          days,
+          proposal: text,
+          template: template ? { id: template.id, name: template.name } : null,
+        },
+        now,
+      ),
+      placedBy: /** @type {const} */ ('manual'),
+      freelancerBidId: result.bidId,
+      apiStatus: result.status,
+    };
+    log = [entry, ...log];
+    keep('log', log);
+    drawBids();
+    detail.close();
+    render();
+    say(
+      'success',
+      result.outcome === 'already'
+        ? `Freelancer.com already has your bid ${result.bidId} on “${project.title}”, so nothing new was sent. It is logged.`
+        : `Placed your bid on “${project.title}” on Freelancer.com (bid ${result.bidId}). It is logged.`,
+    );
+  } catch (error) {
+    const status = statusOf(error);
+    const message = error instanceof Error ? error.message : String(error);
+    sayInDetail(
+      'error',
+      status === 401 || status === 403
+        ? `${message}. Check the token in Settings.`
+        : `${message}.`.replace(/\.\.$/, '.'),
+    );
+  } finally {
+    placeButton.disabled = false;
+    placeButton.removeAttribute('aria-busy');
+  }
 });
 
 const PART_NAMES = /** @type {const} */ ([
@@ -1292,6 +1374,7 @@ function bidItem(entry) {
     entry.templateName ? `template ${entry.templateName}` : 'no template',
     `score ${String(entry.score)}`,
     entry.replied ? 'the client replied' : 'no reply yet',
+    ...(entry.freelancerBidId ? [`Freelancer.com bid ${entry.freelancerBidId}`] : []),
   ].join(' · ');
 
   const actions = document.createElement('div');
@@ -1647,6 +1730,17 @@ const DEVELOP = 'accounts.freelancer.com/settings/develop';
 
 /** @type {StoredToken | null} */
 let stored = readJson(TOKEN_KEY, /** @type {StoredToken | null} */ (null));
+
+/**
+ * The saved token and its account, when Freelancer.com accepted it at the last check and
+ * its 30 days are not over; else null.
+ * @returns {{ token: string, account: import('./radar/account.js').Account } | null}
+ */
+function tokenReady() {
+  if (!stored?.account || stored.problem) return null;
+  if (tokenState(stored, Date.now()).kind === 'expired') return null;
+  return { token: stored.token, account: stored.account };
+}
 
 /** @param {string} text */
 function showTokenError(text) {

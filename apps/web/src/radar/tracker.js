@@ -38,6 +38,10 @@ import { band } from './score.js';
  * @property {BidStatus} status
  * @property {boolean} replied
  * @property {Award | null} award
+ * @property {'auto' | 'manual'} [placedBy] `auto` when Auto-bid placed it; absent or `manual`
+ *   when the owner did (LI-PROMPT-BPOMAX-AUTOBID-20260928, constraint 5)
+ * @property {string | null} [freelancerBidId] the bid's id on Freelancer.com, when placed there by this page
+ * @property {number | null} [apiStatus] the HTTP status Freelancer.com answered the bid with
  */
 
 const SAST_OFFSET_MS = 2 * 60 * 60 * 1000;
