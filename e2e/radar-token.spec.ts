@@ -34,8 +34,10 @@ test('a pasted token is checked with Freelancer.com, masked and kept in this bro
   await input(page).fill(`  ${TOKEN}\n`);
   await page.getByRole('button', { name: 'Save and check' }).click();
   await expect(page.locator('#status')).toHaveText(
-    'Freelancer.com accepted the token: you are example-user (user 1234567).',
+    'Freelancer.com accepted the token: you are example-user (user 1234567). Bids your membership allows a month is set to 100, from Freelancer.com.',
   );
+  // The membership's monthly bids fill the empty allowance setting.
+  await expect(page.getByLabel('Bids your membership allows a month')).toHaveValue('100');
   expect(calls.self).toEqual([TOKEN]);
   await expect(input(page)).toHaveValue('');
   await expect(page.locator('#token-state')).toHaveText(

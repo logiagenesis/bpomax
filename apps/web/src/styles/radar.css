@@ -69,6 +69,28 @@
   padding: 0 var(--space-2);
 }
 
+/* Auto-bid */
+.radar-autobar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.radar-autobar p {
+  margin: 0;
+}
+.radar-needs {
+  margin: 0;
+  padding-left: var(--space-6);
+}
+.radar-needs li + li {
+  margin-top: var(--space-1);
+}
+.radar-bids-show {
+  max-width: 16rem;
+}
+
 /* Freelancer token */
 .radar-token__title {
   font-size: inherit;

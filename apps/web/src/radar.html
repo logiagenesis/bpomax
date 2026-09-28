@@ -43,8 +43,9 @@
         </div>
         <p>
           Live projects from Freelancer.com's public search, read by this page in your browser. It
-          bids on Freelancer.com only when you press Place now with your token saved in Settings;
-          otherwise you submit every bid there yourself. What you save here stays in this browser.
+          bids on Freelancer.com only when you press Place now, or when you switch Auto-bid on, with
+          your token saved in Settings; otherwise you submit every bid there yourself. What you save
+          here stays in this browser.
         </p>
       </div>
 
@@ -62,6 +63,10 @@
         This browser is not keeping what you save here (private window or blocked site data).
       </p>
       <p class="alert alert--warning" id="token-warning" hidden></p>
+      <div class="alert alert--info radar-autobar" id="autobid-bar" hidden>
+        <p id="autobid-line"></p>
+        <button type="button" class="btn btn--danger" id="autobid-stop">Stop Auto-bid</button>
+      </div>
 
       <div class="radar-tabs" role="tablist" aria-label="Radar sections">
         <button
@@ -212,6 +217,14 @@
           <div class="stack" id="splits-all-body"></div>
         </details>
         <h2>Logged bids</h2>
+        <div class="field radar-bids-show">
+          <label class="field__label" for="bids-show">Show</label>
+          <select class="select" id="bids-show">
+            <option value="all">All bids</option>
+            <option value="auto">Placed automatically</option>
+          </select>
+        </div>
+        <p class="empty" id="bids-auto-empty" hidden>Auto-bid has placed no bids yet.</p>
         <div class="empty" id="bids-empty" hidden>
           <p>No bids logged yet. After you bid on Freelancer.com, press I placed the bid.</p>
         </div>
@@ -356,6 +369,58 @@
               Remove token
             </button>
           </div>
+        </form>
+
+        <form id="autobid-form" class="card stack radar-fieldset" novalidate>
+          <h2 class="radar-token__title">Auto-bid</h2>
+          <p class="field__hint">
+            When on, this page bids by itself on new projects that meet every rule here, reading
+            Freelancer.com every 90 seconds. It works only while this page is open in a browser tab:
+            closing the tab, or the computer sleeping, stops it.
+          </p>
+          <div class="radar-form">
+            <div class="field">
+              <label class="field__label" for="a-dailyCap">Most automatic bids a day</label>
+              <input class="input" id="a-dailyCap" name="dailyCap" inputmode="numeric" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="a-minScore">Lowest rank score to bid on</label>
+              <input class="input" id="a-minScore" name="minScore" inputmode="numeric" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="a-maxAgeMinutes"
+                >Oldest project to bid on, minutes</label
+              >
+              <input class="input" id="a-maxAgeMinutes" name="maxAgeMinutes" inputmode="numeric" />
+            </div>
+          </div>
+          <p class="field__hint">
+            It also keeps to the rest of your settings: a project needs at least one skill you
+            deliver in-house; it is priced and timed as under Bidding; the proposal is your default
+            template; and it stops at the bids your membership allows a month. It never bids twice
+            on a project, nor on one you dismissed, and asks Freelancer.com before each bid.
+          </p>
+          <p class="field__error" id="autobid-error" hidden></p>
+          <div class="stack" id="autobid-needs" hidden>
+            <p>Before Auto-bid can be switched on:</p>
+            <ul class="radar-needs" id="autobid-problems"></ul>
+          </div>
+          <p class="radar-token__state" id="autobid-state">Auto-bid is off.</p>
+          <div class="row-actions">
+            <button type="submit" class="btn btn--primary" id="autobid-on">
+              Switch Auto-bid on
+            </button>
+          </div>
+          <details class="radar-autolog">
+            <summary class="radar-summary">Last check</summary>
+            <p class="field__hint" id="autobid-checked-note">Not checked yet.</p>
+            <ul class="radar-needs" id="autobid-checked"></ul>
+          </details>
+          <details class="radar-autolog">
+            <summary class="radar-summary">Auto-bid’s bids and errors</summary>
+            <p class="field__hint" id="autobid-activity-empty">Nothing yet.</p>
+            <ul class="radar-needs" id="autobid-activity"></ul>
+          </details>
         </form>
 
         <form id="settings" class="stack" novalidate>
