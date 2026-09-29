@@ -25,7 +25,7 @@ into `main` as soon as CI is green. `main` is the only branch that matters.
 ## Radar — 27/09/2026 (LI-PROMPT-BPOMAX-RADAR-20260927)
 
 1. https://bpomax.vercel.app/radar.html
-2. Dennis can read live Freelancer.com projects ranked 0–100, open one, get a proposal from his own template and a price, press **Bid on Freelancer**, paste and submit on Freelancer.com, log the bid, then track replies, awards and margin, shortlist developers and get alerts, with nothing to sign in to or set up.
+2. Dennis can read live Freelancer.com projects ranked 0–100, open one, get a proposal from his own template and a price, press **Bid on Freelancer**, paste and submit on Freelancer.com, log the bid, then track replies, awards and margin, shortlist developers and get alerts, after the owner sets skills, in-house skills and one template in Radar's Settings and Templates tabs.
 3. `main` at 90ccd26 (PR #53), CI green: https://github.com/logiagenesis/bpomax/actions/runs/36304653414
 4. [docs/audit/radar-live-27-09-2026.png](audit/radar-live-27-09-2026.png): the live page at 10:01 SAST, 297 projects read, the top 20 shown with scores.
 5. F7: `users` comes back as an empty `{}` rather than absent (still no client data). F1: a `limit=100` page holds 98–99 projects, so the feed reads on to 300 regardless. F6: there is no `jobs` field; jobs are `reputation.entire_history.all`, and `hourly_rate` is in USD. The live check ran in a remote browser because this build environment cannot reach bpomax.vercel.app.
@@ -37,6 +37,13 @@ What Dennis does once it is live:
 3. Templates: add one proposal template.
 4. Tap the top project, check the text and price, press **Bid on Freelancer**, paste, submit, press **I placed the bid**.
 5. Mark replies and awards in **Bids**. Press **Export** once a week.
+
+## Radar bid safety — 29/09/2026
+
+1. What changed (B-01 to B-07, B-09 to B-11): text in curly braces stops a bid; `{first_line}` is cut at a word; Place now is off for hourly projects and at the monthly limit (Settings' or Freelancer.com's own, counted from bids logged in this browser, a bid Freelancer.com already had included); the USD 20 minimum balance is stated; a 401 marks the token refused and hides Place now; Freelancer.com gets 15 seconds to answer; a refusal is announced; `placeBid` has unit tests.
+2. Any text in curly braces in a proposal is blocked, by design: take the braces out or fill them in.
+3. Place now is for fixed-price projects only; hourly work goes through Bid on Freelancer.
+4. The automatic bidding loop stays on draft PR #57 until Freelancer.com answers in writing about automatic bidding.
 
 ## 1. State of `main`
 
