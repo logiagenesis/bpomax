@@ -20,21 +20,55 @@ Phase 0 is complete. Phase 1 is in progress: the data model, its tenancy, the ro
 split, the audit log, the retention job, the scoring, estimating, margin, drafting and
 submit workers, the Telegram bot and the web pages (login, dashboard, feed, approvals,
 settings, audit log) are built and tested. The web app is deployed to Vercel in demo mode
-(<https://bpomax.vercel.app>); the API, workers and bot are not deployed, and no marketplace
-call is live. `LIVE_MODE` defaults to `false`, which blocks every outbound marketplace call and
-logs what would have been sent.
+(<https://bpomax.vercel.app>); the API, workers and bot are not deployed. In the Arbitron
+pipeline no marketplace call is live: `LIVE_MODE` defaults to `false`, which blocks every
+outbound marketplace call and logs what would have been sent. The one exception is Radar (next
+section), a separate page that reads Freelancer.com from the browser and is not part of that
+pipeline.
 
 `docs/04-PROJECT-BOARD.md` is the live board — status and closing SHA per ticket, and
 the reason for every one that is blocked.
 
+## Radar
+
+Radar is an operator tool for finding and bidding on Freelancer.com projects:
+<https://bpomax.vercel.app/radar.html> (source: `apps/web/src/radar.html`, `radar.js`,
+`apps/web/src/radar/` and `styles/radar.css`). It is the only part of the web app that works
+against live data. Every other page is the Arbitron pipeline and, as deployed, shows sample data
+(see Deploy). Radar shows no demo banner, and its header does not link to the demo pages.
+
+- **What it does.** It reads Freelancer.com's public project search from the browser, ranks each
+  project from 0 to 100 against the skills and settings you enter, and fills your own proposal
+  template for the project you pick. No template, skill, price or wording is supplied with it.
+- **Where its state lives.** In the browser's storage, on the device you use. Export saves it as a
+  file and Import restores it. The Freelancer.com token is kept in the browser as `radar.token`
+  and is left out of Export. It is sent to Freelancer.com only.
+- **Two ways to bid.** **Bid on Freelancer** copies the proposal and opens the project; you submit
+  the bid on Freelancer.com and press **I placed the bid** to log it. **Place now** appears once
+  you have saved a Personal Access Token in Settings (generated at
+  <https://accounts.freelancer.com/settings/develop>). After a confirm, it checks Freelancer.com
+  for an earlier bid on the project and, if there is none, sends the bid with that token.
+- **What it refuses.** Neither path runs while the proposal still contains an unfilled
+  `{placeholder}`. Place now also refuses when the bids logged this month have reached the
+  monthly limit set in Settings; a blank limit means no check.
+- **No automatic bidding.** Every bid needs your own press. An automatic bidding loop is held in
+  draft pull request #57, which is not merged and stays unmerged until Freelancer.com's
+  api-support answers in writing.
+- **Not the pipeline.** Radar is not wired to the API, Supabase or the workers, and does not use
+  `LIVE_MODE`. Its log is not the pipeline's bid records.
+- **Nothing earned yet.** No income has been earned through the software (R0), and no live bid is
+  known to have been placed with Place now.
+
+Every control, its test and its limits are in [`docs/audit/radar.md`](docs/audit/radar.md).
+
 ## Prerequisites
 
-| Tool         | Version             | Notes                                                       |
-| ------------ | ------------------- | ----------------------------------------------------------- |
-| Node         | 20 or newer         | CI runs 20; `engines.node` is `>=20` (`DECISIONS.md` D-005) |
-| pnpm         | 10 or newer         | `corepack enable` is the easiest route                      |
-| Docker       | any current version | For Redis and Postgres via `docker-compose.yml`             |
-| Supabase CLI | latest              | Only needed for the full local Supabase stack               |
+| Tool         | Version             | Notes                                                                              |
+| ------------ | ------------------- | ---------------------------------------------------------------------------------- |
+| Node         | 22 or newer         | CI runs 24; `engines.node` is `>=22`; Node 20 is out (`DECISIONS.md` D-005, D-084) |
+| pnpm         | 10 or newer         | `corepack enable` is the easiest route                                             |
+| Docker       | any current version | For Redis and Postgres via `docker-compose.yml`                                    |
+| Supabase CLI | latest              | Only needed for the full local Supabase stack                                      |
 
 ## Setup
 
@@ -191,7 +225,8 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome pnpm test:e2e
 ## Layout
 
 ```
-apps/web            Vite static multi-page front end, vanilla JS ES modules (22 pages);
+apps/web            Vite static multi-page front end, vanilla JS ES modules (23 HTML pages in
+                    src/, Radar among them);
                     src/demo/ is the in-browser stand-in of a demo build (D-043)
 apps/api            Fastify API
 apps/mcp            MCP server: the operator's tools over the API (ARB-330)
@@ -218,9 +253,10 @@ Vercel project.
 - **Build.** `vercel.json` runs `scripts/build-web-vercel.sh`. With `SUPABASE_URL`,
   `SUPABASE_ANON_KEY` and `API_URL` set in the Vercel project's environment, it builds the
   real app. With any of them missing, it builds **demo mode** (DECISIONS.md D-043). Every
-  page is then viewable with sample data answered inside the browser, and a banner on
-  every page says so. Nothing is saved or sent. To switch to the real app, add the three
-  variables in Vercel and redeploy.
+  page except `radar.html` is then viewable with sample data answered inside the browser, and a
+  banner on each of those pages says so. Nothing is saved or sent from them. `radar.html` has no
+  banner and no sample data: it reads Freelancer.com in every build. To switch to the real app,
+  add the three variables in Vercel and redeploy.
 - **Branches.** Pushes to `claude/*` branches are not deployed. They are proven by CI and
   reach Vercel only once merged into `main` (D-042).
 - **Back end.** The API, workers and Telegram bot are not deployed yet. They need a host
@@ -237,6 +273,7 @@ never an acceptable substitute.
 | CI          | https://github.com/logiagenesis/bpomax/actions |
 | Phase 1 tag | NOT DONE — Phase 1 is not complete             |
 | Web app     | https://bpomax.vercel.app (demo mode, D-043)   |
+| Radar       | https://bpomax.vercel.app/radar.html           |
 | API health  | NOT DONE — blocked on B-12                     |
 
 ## How tenancy works
