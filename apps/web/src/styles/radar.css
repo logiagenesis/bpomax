@@ -17,28 +17,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* Setup line: what is set and what is not; text says it, colour only backs it up */
-.radar-setup-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  margin-top: var(--space-3);
-}
-.radar-setup-line p {
-  margin: 0;
-  font-weight: var(--font-weight-bold);
-}
-.radar-setup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: var(--font-size-sm);
-}
-
 /* Tabs */
 .radar-tabs {
   display: flex;

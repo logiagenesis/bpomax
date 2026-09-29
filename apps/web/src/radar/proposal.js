@@ -21,77 +21,19 @@ export const PLACEHOLDERS = /** @type {const} */ ([
   ['{budget}', 'the client’s budget, for example USD 250–750'],
   ['{price}', 'your price, for example USD 450'],
   ['{timeline_days}', 'your delivery time in days'],
-  [
-    '{first_line}',
-    'the first sentence of the client’s description; over 160 characters it is cut at a whole word and ends with …',
-  ],
+  ['{first_line}', 'the first sentence of the client’s description, at most 160 characters'],
 ]);
-
-/** The most characters of the client's first sentence that `{first_line}` carries. */
-const FIRST_LINE_MAX = 160;
 
 /**
  * The first sentence of the client's description (up to the first `.`, `!` or `?` that
- * ends a sentence, or the first line break). Over 160 characters it is cut at the last
- * word boundary at or before the 160th and ends with `…`, so it is never more than 161
- * characters and never stops in the middle of a word. A single word longer than 160
- * characters has no boundary to cut at and is cut at 160.
+ * ends a sentence, or the first line break), cut at 160 characters.
  * @param {string} description
  */
 export function firstLine(description) {
   const text = description.trim();
   const end = /[.!?](?=\s|$)|\n/.exec(text);
-  const sentence = (end ? text.slice(0, end.index + (end[0] === '\n' ? 0 : 1)) : text).trim();
-  if (sentence.length <= FIRST_LINE_MAX) return sentence;
-
-  // The cut falls between words when the character just after it is a space.
-  let cut = sentence.slice(0, FIRST_LINE_MAX);
-  if (!/\s/.test(sentence.charAt(FIRST_LINE_MAX))) {
-    const boundary = cut.search(/\s\S*$/);
-    if (boundary > 0) cut = cut.slice(0, boundary);
-  }
-  // Never end on half of a surrogate pair, or on a space.
-  cut = cut.replace(/[\uD800-\uDBFF]$/, '').trimEnd();
-  return `${cut}…`;
-}
-
-/**
- * A `{...}` that reads as a placeholder rather than as code: a short label of letters (any
- * script), digits, spaces and `_ . - ' ’ ? !`. Code and data have punctuation this leaves
- * out (`{ color: red; }`, `{"a": 1}`), so they pass.
- */
-const PLACEHOLDER = /\{([\p{L}\p{N}\s_.'’?!-]{1,80})\}/gu;
-
-/**
- * The placeholders still in a text, as written and once each, in the order they first
- * appear: `{skills}`, but also a mistyped `{Title}`, `{first line}` (a space for the `_`),
- * `{ price }` or `{project.title}`, which `buildProposal` leaves as it found them. A label
- * needs a letter in it and must sit on one line. A bid that still has one must not reach a
- * client.
- * @param {string} text
- * @returns {string[]}
- */
-export function unfilledPlaceholders(text) {
-  const found = new Set();
-  for (const match of text.matchAll(PLACEHOLDER)) {
-    const label = String(match[1]);
-    if (/\p{L}/u.test(label) && !/[\r\n]/.test(label)) found.add(match[0]);
-  }
-  return [...found];
-}
-
-/**
- * The line to show when a bid still has placeholders in it, or null when it has none.
- * @param {string[]} left from `unfilledPlaceholders`
- * @returns {string | null}
- */
-export function unfilledMessage(left) {
-  if (!left.length) return null;
-  const list =
-    left.length === 1
-      ? String(left[0])
-      : `${left.slice(0, -1).join(', ')} and ${String(left.at(-1))}`;
-  return `Fill or remove ${list} before bidding.`;
+  const sentence = end ? text.slice(0, end.index + (end[0] === '\n' ? 0 : 1)) : text;
+  return sentence.trim().slice(0, 160).trim();
 }
 
 /**

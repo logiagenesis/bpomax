@@ -75,17 +75,11 @@ export function scoreProject(project, settings, now) {
     why,
   });
 
-  // With nothing ticked under "Delivered in-house", no project can score here; say which
-  // setting is empty rather than leave the owner to guess why every skill fit is 0.
-  const skillWhy = `${String(matched)} of ${String(project.skills.length)} skills delivered in-house`;
-
   const parts = {
     skill: part(
       w.skill,
       skillShare,
-      settings.inHouse.length === 0
-        ? `${skillWhy}: nothing is ticked under Delivered in-house in Settings`
-        : skillWhy,
+      `${String(matched)} of ${String(project.skills.length)} skills delivered in-house`,
     ),
     budget: part(
       w.budget,

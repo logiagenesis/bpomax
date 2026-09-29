@@ -164,28 +164,6 @@ describe('scoreProject, hand-worked', () => {
       scoreProject(project({ type: 'hourly', budgetMax: 25 }), settings, NOW).parts.budget.why,
     ).toBe('up to USD 25 an hour (full at USD 50)');
   });
-
-  it('names the setting when skill fit is 0 because nothing is ticked as in-house (U-03)', () => {
-    const p = project({ skills: skills(3, 99) });
-    const { parts } = scoreProject(p, { ...settings, inHouse: [] }, NOW);
-    expect(parts.skill.points).toBe(0);
-    expect(parts.skill.why).toBe(
-      '0 of 2 skills delivered in-house: nothing is ticked under Delivered in-house in Settings',
-    );
-  });
-
-  it('does not blame the setting when it is filled and simply nothing on the project matches', () => {
-    const { parts } = scoreProject(project({ skills: skills(98, 99) }), settings, NOW);
-    expect(parts.skill.points).toBe(0);
-    expect(parts.skill.why).toBe('0 of 2 skills delivered in-house');
-  });
-
-  it('gives only the skill part a reason of this kind: the other three are not settings', () => {
-    const { parts } = scoreProject(project({}), { ...settings, inHouse: [] }, NOW);
-    expect(parts.budget.why).toBe('no budget given');
-    expect(parts.fresh.why).toBe('posted 0 min ago');
-    expect(parts.competition.why).toBe('0 bids so far (none at 50)');
-  });
 });
 
 describe('the owner’s weights', () => {

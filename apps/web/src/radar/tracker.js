@@ -66,22 +66,6 @@ export function bidsThisMonth(log, now) {
 }
 
 /**
- * Why Place now must not send another bid: the bids logged in the SAST month `now` falls
- * in have reached the monthly limit set in Settings. Null when there is room, or when no
- * limit is set (a blank limit means no check).
- * @param {LogEntry[]} log
- * @param {number | null} limit
- * @param {number} now
- * @returns {string | null}
- */
-export function monthlyLimitProblem(log, limit, now) {
-  if (limit === null) return null;
-  const count = bidsThisMonth(log, now);
-  if (count < limit) return null;
-  return `The monthly limit in Settings is reached (${String(count)} of ${String(limit)} bids logged this month), so Place now is off.`;
-}
-
-/**
  * @param {Project} project
  * @param {Score} score
  * @param {{ price: number, days: number, template: { id: string, name: string } | null, proposal: string, id: string }} bid

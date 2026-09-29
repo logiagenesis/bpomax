@@ -14,15 +14,8 @@ import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers
 import { applyFilters } from './radar/filter.js';
 import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
-import {
-  PLACEHOLDERS,
-  buildProposal,
-  openingPrice,
-  unfilledMessage,
-  unfilledPlaceholders,
-} from './radar/proposal.js';
+import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
-import { exportNote, readLastExport, setupItems } from './radar/setup.js';
 import {
   backupFilename,
   backupOf,
@@ -33,13 +26,7 @@ import {
   saveSettings,
   writeJson,
 } from './radar/store.js';
-import {
-  bidsThisMonth,
-  computeTotals,
-  logEntry,
-  monthlyLimitProblem,
-  withStatus,
-} from './radar/tracker.js';
+import { bidsThisMonth, computeTotals, logEntry, withStatus } from './radar/tracker.js';
 import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from './radar/text.js';
 
 /**
@@ -100,8 +87,6 @@ let log = readJson('log', /** @type {LogEntry[]} */ ([]));
 let shortlist = readJson('shortlist', /** @type {Shortlisted[]} */ ([]));
 /** @type {number[]} */
 let notified = readJson('notified', /** @type {number[]} */ ([]));
-/** Epoch milliseconds of the last Export, kept in this browser but not in the backup. */
-let lastExport = readLastExport(readJson('lastExport', /** @type {unknown} */ (null)));
 /** @type {{ project: Project, score: Score }[]} */
 let ranked = [];
 let failures = 0;
@@ -327,49 +312,8 @@ function drawCounter() {
       : `Bids this month: ${count} / ${String(settings.monthlyLimit)}`;
 }
 
-/** Says so above the feed while the rank has no skills or in-house ticks to work from. */
-function drawRankNote() {
-  byId('rank-note').hidden = settings.skills.length > 0 && settings.inHouse.length > 0;
-}
-
-const setupList = byId('setup');
-const exportNoteText = byId('export-note');
-const exportWarning = byId('export-warning');
-
-/** Whether this browser holds anything worth a copy: a template or a logged bid. */
-const hasData = () => templates.length > 0 || log.length > 0;
-
-/** The setup line under the title: each item set or not set. It never blocks anything. */
-function drawSetup() {
-  const items = setupItems(
-    { settings, templates, stored, lastExport, hasData: hasData() },
-    Date.now(),
-  );
-  setupList.replaceChildren(
-    ...items.map((item) => {
-      const li = document.createElement('li');
-      li.dataset['item'] = item.key;
-      li.dataset['state'] = item.state;
-      const kind = item.state === 'set' ? 'go' : item.state === 'warn' ? 'caution' : 'neutral';
-      li.append(`${item.label}: `, badge(item.text, kind));
-      return li;
-    }),
-  );
-}
-
-/** The last-export note beside the Export button, its warning after 7 days, and the setup line. */
-function drawExport() {
-  const note = exportNote(lastExport, Date.now(), hasData());
-  exportNoteText.textContent = note.text;
-  exportWarning.hidden = note.warning === null;
-  exportWarning.textContent = note.warning ?? '';
-  drawSetup();
-}
-
 function render() {
   drawCounter();
-  drawRankNote();
-  drawExport();
   const now = Date.now();
   const shown = byRank(
     applyFilters(projects, settings.filters, { acted: acted(), now }).map((project) => ({
@@ -599,17 +543,12 @@ byId('p-bid').addEventListener('click', async () => {
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
   if (!pText.value.trim()) problems.push('The proposal is empty.');
-  const unfilled = unfilledMessage(unfilledPlaceholders(pText.value));
-  if (unfilled) problems.push(unfilled);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
 
   // 1. The proposal to the clipboard, 2. the project in a new tab, 3. the price to enter.
-  // The text checked above is the text copied and, later, the text logged, even if the box
-  // is edited while the browser asks leave to write to the clipboard.
-  const text = pText.value;
-  if (await copy(text)) {
+  if (await copy(pText.value)) {
     sayInDetail('success', 'Proposal copied. Paste it into your bid on Freelancer.com.');
   } else {
     pText.focus();
@@ -617,7 +556,7 @@ byId('p-bid').addEventListener('click', async () => {
     sayInDetail('warning', 'Copy failed — press Ctrl+C');
   }
   openTab(project.url);
-  pending = { project, price, days, text, template: chosenTemplate() };
+  pending = { project, price, days, text: pText.value, template: chosenTemplate() };
   byId('bid-price-line').textContent =
     `Price to enter: ${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''} · Days: ${String(days)}`;
   /** @type {HTMLAnchorElement} */ (byId('bid-open-again')).href = project.url;
@@ -674,10 +613,6 @@ placeButton.addEventListener('click', async () => {
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
   if (!text) problems.push('The proposal is empty.');
-  const unfilled = unfilledMessage(unfilledPlaceholders(text));
-  if (unfilled) problems.push(unfilled);
-  const overLimit = monthlyLimitProblem(log, settings.monthlyLimit, Date.now());
-  if (overLimit) problems.push(overLimit);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
@@ -811,7 +746,6 @@ function keepTemplates() {
 }
 
 function drawTemplates() {
-  drawExport();
   byId('templates-empty').hidden = templates.length > 0;
   byId('template-list').replaceChildren(
     ...templates.map((template) => {
@@ -1118,8 +1052,6 @@ function skillPicker(key, prefix, onChange) {
 let reread;
 skillPicker('inHouse', 'inhouse', () => render());
 skillPicker('skills', 'watch', () => {
-  drawRankNote();
-  drawSetup();
   // A new set of skills is a new search: read again once the picking pauses.
   clearTimeout(reread);
   reread = setTimeout(() => void refresh(), 1500);
@@ -1688,9 +1620,6 @@ byId('export').addEventListener('click', () => {
   );
   const name = backupFilename(now);
   downloadBlob(name, new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-  lastExport = now;
-  keep('lastExport', now);
-  drawExport();
   say('success', `Exported everything to ${name}. Keep it somewhere safe.`);
 });
 
@@ -1830,7 +1759,6 @@ function refusal(/** @type {unknown} */ error) {
 }
 
 function drawToken() {
-  drawSetup();
   const state = tokenState(stored, Date.now());
   tokenCheck.hidden = !stored;
   tokenRemove.hidden = !stored;
