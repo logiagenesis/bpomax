@@ -34,7 +34,7 @@ the reason for every one that is blocked.
 Radar is an operator tool for finding and bidding on Freelancer.com projects:
 <https://bpomax.vercel.app/radar.html> (source: `apps/web/src/radar.html`, `radar.js`,
 `apps/web/src/radar/` and `styles/radar.css`). It is the only part of the web app that works
-against live data. Every other page is the Arbitron pipeline and, as deployed, shows sample data
+against live data. Every other page belongs to the Arbitron web app and, as deployed, shows sample data
 (see Deploy). Radar shows no demo banner, and its header does not link to the demo pages.
 
 - **What it does.** It reads Freelancer.com's public project search from the browser, ranks each
@@ -46,7 +46,8 @@ against live data. Every other page is the Arbitron pipeline and, as deployed, s
 - **Two ways to bid.** **Bid on Freelancer** copies the proposal and opens the project; you submit
   the bid on Freelancer.com and press **I placed the bid** to log it. **Place now** appears once
   you have saved a Personal Access Token in Settings (generated at
-  <https://accounts.freelancer.com/settings/develop>). After a confirm, it checks Freelancer.com
+  <https://accounts.freelancer.com/settings/develop>) that Freelancer.com accepted, and only for a
+  project with no bid of yours in the log. After a confirm, it checks Freelancer.com
   for an earlier bid on the project and, if there is none, sends the bid with that token.
 - **What it refuses.** Neither path runs while the proposal still contains an unfilled
   `{placeholder}`. Place now also refuses when the bids logged this month have reached the

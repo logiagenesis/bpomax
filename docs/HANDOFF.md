@@ -25,18 +25,32 @@ into `main` as soon as CI is green. `main` is the only branch that matters.
 ## Radar — 27/09/2026 (LI-PROMPT-BPOMAX-RADAR-20260927)
 
 1. https://bpomax.vercel.app/radar.html
-2. Dennis can read live Freelancer.com projects ranked 0–100, open one, get a proposal from his own template and a price, press **Bid on Freelancer**, paste and submit on Freelancer.com, log the bid, then track replies, awards and margin, shortlist developers and get alerts, with nothing to sign in to or set up.
+2. Dennis can read live Freelancer.com projects ranked 0–100, open one, get a proposal from his own template and a price, press **Bid on Freelancer**, paste and submit on Freelancer.com, log the bid, then track replies, awards and margin, shortlist developers and get alerts, once he has done the setup in the steps below. (Corrected 29/09/2026: the 27/09/2026 text said “with nothing to sign in to or set up”. Radar has no account to sign in to, but it does need setting up; the steps are below.)
 3. `main` at 90ccd26 (PR #53), CI green: https://github.com/logiagenesis/bpomax/actions/runs/36304653414
 4. [docs/audit/radar-live-27-09-2026.png](audit/radar-live-27-09-2026.png): the live page at 10:01 SAST, 297 projects read, the top 20 shown with scores.
 5. F7: `users` comes back as an empty `{}` rather than absent (still no client data). F1: a `limit=100` page holds 98–99 projects, so the feed reads on to 300 regardless. F6: there is no `jobs` field; jobs are `reputation.entire_history.all`, and `hourly_rate` is in USD. The live check ran in a remote browser because this build environment cannot reach bpomax.vercel.app.
 
-What Dennis does once it is live:
+What Dennis does once it is live (steps 2 to 7 and the paragraphs after them corrected and extended 29/09/2026; the 27/09/2026 list had five steps and no token or Place now):
 
 1. Open https://bpomax.vercel.app/radar.html.
-2. Settings: pick your skills, tick the ones Logi-Ink delivers in-house, set the price %, default days and your monthly bid limit.
-3. Templates: add one proposal template.
-4. Tap the top project, check the text and price, press **Bid on Freelancer**, paste, submit, press **I placed the bid**.
-5. Mark replies and awards in **Bids**. Press **Export** once a week.
+2. Settings: pick your skills, tick the ones Logi-Ink delivers in-house, and set the opening price %, the default days and your monthly bid limit. Set Freelancer.com's fee % and the rand for one US dollar too if you want rand figures; left blank, Radar shows no rand figures, and the margin says the fee is not set.
+3. Settings, Freelancer token: generate a Personal Access Token at https://accounts.freelancer.com/settings/develop, paste it into Radar only, never into a chat or Claude Code, and press **Save and check**. It lasts 30 days.
+4. Templates: add one proposal template, in your own words. Radar ships none. Use `{skills}` only after the in-house ticks are set: a proposal with an unfilled `{placeholder}` can be neither copied nor placed.
+5. Place one bid with **Place now** on a job you actually want. Tap the project, check the text and price, press **Place now** and confirm. Then check that the bid shows in your bids on Freelancer.com.
+6. Or tap the top project, check the text and price, press **Bid on Freelancer**, paste, submit on Freelancer.com, press **I placed the bid**.
+7. Mark replies and awards in **Bids**. Press **Export** once a week; the setup line and the note beside Export show the date of the last one, and Radar warns after 7 days.
+
+**Place now and the token (added 29/09/2026).** Place now checks Freelancer.com for an earlier bid on the project and otherwise posts the bid to `/projects/0.1/bids/` with your token, after a confirm and only on your press. Place now refuses when the bids logged this month have reached the monthly limit in Settings. The token is kept in the browser's `localStorage` as `radar.token`, is left out of Export, and is sent only to Freelancer.com. No live bid is known to have been placed with Place now, and nothing has been earned through the software yet (R0).
+
+**Automatic bidding is not on `main`.** An automatic bidding loop is on draft PR #57 (commit `7a94239`, branch `claude/bold-fermi-c4ftez`). It is not merged and stays unmerged until Freelancer.com's api-support (api-support@freelancer.com) answers in writing whether it is allowed; Freelancer.com's page on types of integrations is https://developers.freelancer.com/docs/api-overview/types-of-integrations. Radar on `main` bids only when you press a button.
+
+### Outstanding 29/09
+
+1. Live Radar: https://bpomax.vercel.app/radar.html (it shows the changes of pull request #58 only once that pull request is merged).
+2. What changed: Radar no longer lets a proposal with an unfilled `{placeholder}` be copied or placed, stops Place now at the monthly limit, cuts `{first_line}` at a whole word, says on the page when its ranking has no skills to work from, drops the header links to the demo pages, and adds a setup line, a last-export note with a warning after 7 days, and a Skill fit reason that names an empty setting.
+3. Merge and CI: pull request #58 (https://github.com/logiagenesis/bpomax/pull/58), branch `claude/new-session-ca8mqi`. A commit cannot hold the SHA of its own merge, and the CI run for the final head cannot be known before that head exists, so this file records neither: the merge commit and its checks are listed on that page.
+4. Status, checked in the tree at c81a3db: R-01 FIXED (`unfilledPlaceholders` in `apps/web/src/radar/proposal.js`, called by both handlers in `radar.js` and by `placeBid`; `proposal.test.ts`, `placing.test.ts`, `e2e/radar-safety.spec.ts`). R-02 FIXED (`firstLine` in `proposal.js`; `proposal.test.ts`, "the first line of the client’s description"). R-03 FIXED (`#rank-note` in `radar.html`; `e2e/radar-safety.spec.ts`, "R-03"). R-05 FIXED (the header holds the name only, no links; `e2e/radar-setup.spec.ts`, "R-05"). R-06 FIXED (`monthlyLimitProblem` in `tracker.js`; `tracker.test.ts`, "the monthly limit on Place now (R-06)", and `e2e/radar-safety.spec.ts`, "R-06"). U-01 FIXED (`setup.js`; `setup.test.ts`, `e2e/radar-setup.spec.ts`). U-02 FIXED (same files). U-03 FIXED (`score.js`; `score.test.ts`, `e2e/radar-setup.spec.ts`). The unit tests were run at c81a3db (`pnpm exec vitest run apps/web/src/radar`: 9 files, 142 tests, all passed); the Playwright specs were listed, not run, for this entry, and run in CI on pull request #58.
+5. Differed from `9dddad0`: None. `origin/main` was `9dddad0` when checked on 29/09/2026, and Radar on it has no automatic bidding.
 
 ## 1. State of `main`
 
