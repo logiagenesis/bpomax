@@ -22,7 +22,7 @@ import {
   unfilledPlaceholders,
 } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
-import { exportNote, setupItems } from './radar/setup.js';
+import { exportNote, readLastExport, setupItems } from './radar/setup.js';
 import {
   backupFilename,
   backupOf,
@@ -101,10 +101,7 @@ let shortlist = readJson('shortlist', /** @type {Shortlisted[]} */ ([]));
 /** @type {number[]} */
 let notified = readJson('notified', /** @type {number[]} */ ([]));
 /** Epoch milliseconds of the last Export, kept in this browser but not in the backup. */
-let lastExport = (() => {
-  const saved = readJson('lastExport', /** @type {unknown} */ (null));
-  return typeof saved === 'number' && Number.isFinite(saved) ? saved : null;
-})();
+let lastExport = readLastExport(readJson('lastExport', /** @type {unknown} */ (null)));
 /** @type {{ project: Project, score: Score }[]} */
 let ranked = [];
 let failures = 0;

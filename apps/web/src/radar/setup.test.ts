@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StoredToken } from './account.js';
-import { exportNote, setupItems } from './setup.js';
+import { exportNote, readLastExport, setupItems } from './setup.js';
 import { DEFAULT_SETTINGS, type Settings } from './store.js';
 
 /**
@@ -90,7 +90,7 @@ describe('the setup line (U-01)', () => {
       ['Fee %', 'unset', 'not set'],
       ['USD→ZAR', 'unset', 'not set'],
       ['Token', 'unset', 'not saved'],
-      ['Last export', 'unset', 'never'],
+      ['Last export', 'unset', 'not set'],
     ]);
   });
 
@@ -163,11 +163,12 @@ describe('the setup line (U-01)', () => {
       });
     });
 
-    it('is refused when Freelancer.com refused it at the last check', () => {
-      expect(tokenOf(token({ problem: 'Token rejected (HTTP 401).' }))).toMatchObject({
-        state: 'warn',
-        text: 'refused',
-      });
+    it('shows check failed when the last check did not pass: refused, or not reached', () => {
+      // The page stores the message of any failed check as the problem, so a token that
+      // Freelancer.com never got to look at (offline, a 500) reads the same as a refusal.
+      for (const problem of ['Token rejected (HTTP 401).', 'Failed to fetch']) {
+        expect(tokenOf(token({ problem }))).toMatchObject({ state: 'warn', text: 'check failed' });
+      }
     });
 
     it('is not checked when there is no account behind it', () => {
@@ -185,6 +186,59 @@ describe('the setup line (U-01)', () => {
         NOW,
       ).find((item) => item.key === 'export');
     expect(at(NOW - 7 * DAY)).toMatchObject({ state: 'set', text: '22/09/2026' });
-    expect(at(NOW - 8 * DAY)).toMatchObject({ state: 'warn', text: '21/09/2026' });
+    // Said in words as well as shown in amber.
+    expect(at(NOW - 8 * DAY)).toMatchObject({
+      state: 'warn',
+      text: '21/09/2026, over 7 days ago',
+    });
+  });
+});
+
+describe('the saved last-export time', () => {
+  it('is kept when it is a time after 1970 and before 2100', () => {
+    expect(readLastExport(NOW)).toBe(NOW);
+    expect(readLastExport(1)).toBe(1);
+    // A little in the future (a clock set back since) is still a time.
+    expect(readLastExport(NOW + DAY)).toBe(NOW + DAY);
+  });
+
+  it('is dropped when it is not a usable time, so the page still starts', () => {
+    // The last three cannot be written as a date at all: formatDate throws or prints NaN.
+    const junk: unknown[] = [
+      null,
+      undefined,
+      '',
+      '1790000000000',
+      {},
+      [],
+      true,
+      0,
+      -1,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      1e20,
+      8_640_000_000_000_001,
+      4_102_444_800_000,
+    ];
+    for (const value of junk) expect(readLastExport(value)).toBeNull();
+  });
+
+  it('never leaves setupItems or exportNote a time they cannot write', () => {
+    for (const value of [1e20, -1, Number.NaN, '18/09/2026', 8_640_000_000_000_001]) {
+      const kept = readLastExport(value);
+      expect(() => exportNote(kept, NOW, true)).not.toThrow();
+      expect(() =>
+        setupItems(
+          {
+            settings: settings(),
+            templates: [],
+            stored: null,
+            lastExport: kept,
+            hasData: true,
+          },
+          NOW,
+        ),
+      ).not.toThrow();
+    }
   });
 });

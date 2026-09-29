@@ -11,6 +11,22 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** A last Export older than this many days earns a warning. */
 const EXPORT_WARN_AFTER_DAYS = 7;
 
+/** 01/01/2100 00:00 UTC: no real Export is later, and every date below it can be written. */
+const YEAR_2100 = 4_102_444_800_000;
+
+/**
+ * The last-export time as it was saved, or null when what is saved is not a usable time.
+ * Anything under `radar.*` can be edited or corrupted by hand, and a time that cannot be
+ * written as a date would stop the page starting.
+ * @param {unknown} saved
+ * @returns {number | null} epoch milliseconds, after 1970 and before 2100
+ */
+export function readLastExport(saved) {
+  return typeof saved === 'number' && Number.isFinite(saved) && saved > 0 && saved < YEAR_2100
+    ? saved
+    : null;
+}
+
 /**
  * @typedef {'set' | 'unset' | 'warn'} SetupState `warn`: set, but needs the owner's attention
  * @typedef {object} SetupItem
@@ -70,7 +86,7 @@ function tokenItem(stored, now) {
   const { kind } = tokenState(stored, now);
   if (kind === 'none') return item('unset', 'not saved');
   if (kind === 'expired') return item('warn', 'expired');
-  if (stored?.problem) return item('warn', 'refused');
+  if (stored?.problem) return item('warn', 'check failed');
   if (!stored?.account) return item('warn', 'not checked');
   return kind === 'soon' ? item('warn', 'expiring') : item('set', 'saved');
 }
@@ -100,7 +116,12 @@ export function setupItems({ settings, templates, stored, lastExport, hasData },
       key: 'export',
       label: 'Last export',
       state: lastExport === null ? 'unset' : note.stale ? 'warn' : 'set',
-      text: lastExport === null ? 'never' : formatDate(lastExport),
+      text:
+        lastExport === null
+          ? 'not set'
+          : note.stale
+            ? `${formatDate(lastExport)}, over ${String(EXPORT_WARN_AFTER_DAYS)} days ago`
+            : formatDate(lastExport),
     },
   ];
 }

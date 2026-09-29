@@ -26,9 +26,38 @@ const ACCOUNT = {
 interface Seed {
   templates?: unknown[];
   settings?: Record<string, unknown>;
+  log?: unknown[];
   lastExport?: number;
+  /** Stored as it is written here, for values that are not a number. */
+  lastExportRaw?: string;
   token?: { savedAt: number; problem?: string | null };
 }
+
+/** A logged bid, as the Bids tab keeps it. */
+const LOGGED = {
+  id: 'bid-1',
+  projectId: 901,
+  title: 'Logged project 1',
+  url: 'https://www.freelancer.com/projects/logged/p1',
+  skills: ['PHP'],
+  budget: { min: 100, max: 1000 },
+  type: 'fixed',
+  currency: 'USD',
+  usdRate: 1,
+  price: 450,
+  days: 7,
+  templateId: null,
+  templateName: null,
+  proposal: 'Hello.',
+  score: 75,
+  scoreParts: { skill: 35, budget: 10, fresh: 20, competition: 10 },
+  bidCount: 3,
+  ageMinutes: 12,
+  placedAt: '2026-09-20T08:00:00.000Z',
+  status: 'sent',
+  replied: false,
+  award: null,
+};
 
 /** Puts the owner's state in the browser before the page loads, once per tab. */
 async function open(page: Page, seed: Seed = {}) {
@@ -42,15 +71,24 @@ async function open(page: Page, seed: Seed = {}) {
       }
     : null;
   await page.addInitScript(
-    ([templates, settings, lastExport, token]) => {
+    ([templates, settings, log, lastExport, raw, token]) => {
       if (sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       if (templates) localStorage.setItem('radar.templates', JSON.stringify(templates));
       if (settings) localStorage.setItem('radar.settings', JSON.stringify(settings));
+      if (log) localStorage.setItem('radar.log', JSON.stringify(log));
       if (lastExport !== null) localStorage.setItem('radar.lastExport', JSON.stringify(lastExport));
+      if (raw !== null) localStorage.setItem('radar.lastExport', raw);
       if (token) localStorage.setItem('radar.token', JSON.stringify(token));
     },
-    [seed.templates ?? null, seed.settings ?? null, seed.lastExport ?? null, stored] as const,
+    [
+      seed.templates ?? null,
+      seed.settings ?? null,
+      seed.log ?? null,
+      seed.lastExport ?? null,
+      seed.lastExportRaw ?? null,
+      stored,
+    ] as const,
   );
   await page.clock.install({ time: NOW });
   await serveFreelancer(page);
@@ -103,7 +141,7 @@ test.describe('U-01: the setup line', () => {
       'Fee %: not set',
       'USD→ZAR: not set',
       'Token: not saved',
-      'Last export: never',
+      'Last export: not set',
     ]);
     for (const li of await setup(page).all())
       await expect(li).toHaveAttribute('data-state', 'unset');
@@ -146,7 +184,7 @@ test.describe('U-01: the setup line', () => {
       'Fee %: set',
       'USD→ZAR: set',
       'Token: not saved',
-      'Last export: never',
+      'Last export: not set',
     ];
     await expect(setup(page)).toHaveText(expected);
     await expect(item(page, 'token')).toHaveAttribute('data-state', 'unset');
@@ -159,6 +197,24 @@ test.describe('U-01: the setup line', () => {
     await page.getByRole('tab', { name: 'Settings' }).click();
     await page.getByLabel('Bids your membership allows a month').fill('');
     await expect(item(page, 'limit')).toHaveText('Monthly limit: not set');
+  });
+
+  test('picking a watch skill turns Skills to set at once, not when the next read comes round', async ({
+    page,
+  }) => {
+    await open(page);
+    const skill = ALL.find((p) => p.jobs.length >= 2)!.jobs[0]!.name;
+    // Freeze the page's timers. A new watch skill schedules a re-read 1,5 s later, and that
+    // read redraws the line anyway; frozen, the line has to change on its own.
+    await page.clock.pauseAt(NOW + 60_000);
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByLabel('Find a skill', { exact: true }).fill(skill);
+    await page
+      .locator('#watch-matches')
+      .getByRole('checkbox', { name: skill, exact: true })
+      .check();
+    await expect(item(page, 'skills')).toHaveText('Skills: set');
+    await expect(item(page, 'skills')).toHaveAttribute('data-state', 'set');
   });
 
   test('saving the token in Settings turns Token to saved at once, and removing it turns it back', async ({
@@ -189,9 +245,9 @@ test.describe('U-01: the setup line', () => {
   for (const [days, problem, text, state] of [
     [26, null, 'Token: expiring', 'warn'],
     [31, null, 'Token: expired', 'warn'],
-    [2, 'Token rejected (HTTP 401).', 'Token: refused', 'warn'],
+    [2, 'Token rejected (HTTP 401).', 'Token: check failed', 'warn'],
   ] as const) {
-    test(`a token saved ${String(days)} days ago${problem ? ', refused at its last check,' : ''} shows as “${text}”`, async ({
+    test(`a token saved ${String(days)} days ago${problem ? ', failing its last check,' : ''} shows as “${text}”`, async ({
       page,
     }) => {
       await open(page, { token: { savedAt: NOW - days * DAY, problem } });
@@ -229,6 +285,63 @@ test.describe('U-02: the export reminder', () => {
     await expect(page.locator('#export-warning')).toHaveText(`You have not exported yet. ${KEEP}`);
   });
 
+  test('a browser holding only a logged bid warns too', async ({ page }) => {
+    await open(page, { log: [LOGGED] });
+    await expect(page.locator('#export-warning')).toHaveText(`You have not exported yet. ${KEEP}`);
+  });
+
+  test('adding the first template raises the warning at once, and deleting it lifts it', async ({
+    page,
+  }) => {
+    await open(page);
+    await expect(page.locator('#export-warning')).toBeHidden();
+    await page.getByRole('tab', { name: 'Templates' }).click();
+    await page.getByLabel('Name').fill('Short');
+    await page.getByLabel('Text', { exact: true }).fill('Hello about {title}.');
+    await page.getByRole('button', { name: 'Add the template' }).click();
+    await expect(page.locator('#export-warning')).toBeVisible();
+    await expect(page.locator('#export-warning')).toHaveText(`You have not exported yet. ${KEEP}`);
+
+    await page.getByRole('button', { name: 'Delete: Short' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(page.locator('#export-warning')).toBeHidden();
+  });
+
+  test('Import leaves the last-export time alone', async ({ page }) => {
+    await open(page, { templates: [TEMPLATE], lastExport: NOW - 2 * DAY });
+    await expect(page.locator('#export-note')).toHaveText('Last export: 25/09/2026');
+    await page.locator('#import-file').setInputFiles({
+      name: 'backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          format: 'radar-backup',
+          version: 1,
+          exportedAt: '2026-09-01T08:00:00.000Z',
+          settings: {},
+          templates: [],
+          log: [],
+          dismissed: [],
+          shortlist: [],
+        }),
+      ),
+    });
+    await page.getByRole('dialog').getByRole('button', { name: 'Replace' }).click();
+    await expect(page.locator('#status')).toHaveText(/^Imported backup\.json/);
+    await expect(page.locator('#export-note')).toHaveText('Last export: 25/09/2026');
+  });
+
+  for (const raw of ['1e20', '-5', '"18/09/2026"', '{"a":1}', 'not json at all']) {
+    test(`a saved last-export value of ${raw} is ignored, and the page still starts`, async ({
+      page,
+    }) => {
+      // open() waits for the first read, which a page that failed to start would never make.
+      await open(page, { lastExportRaw: raw });
+      await expect(page.locator('#export-note')).toHaveText('Never exported');
+      await expect(item(page, 'export')).toHaveText('Last export: not set');
+    });
+  }
+
   test('up to 7 days ago there is no warning; after, there is', async ({ page, browser }) => {
     // Just under 7 days before NOW, which is still 20/09/2026 in SAST. (The clock keeps
     // running once installed, so exactly 7 days would tip over; setup.test.ts pins the exact
@@ -246,6 +359,8 @@ test.describe('U-02: the export reminder', () => {
       `Your last export was 8 days ago (19/09/2026). ${KEEP}`,
     );
     await expect(item(late, 'export')).toHaveAttribute('data-state', 'warn');
+    // Said in words on the setup line, not only shown in amber.
+    await expect(item(late, 'export')).toHaveText('Last export: 19/09/2026, over 7 days ago');
   });
 
   test('Export records the time, clears the warning, and still leaves the token out', async ({
