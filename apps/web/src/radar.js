@@ -454,6 +454,24 @@ function writeProposal() {
   countText();
 }
 
+/** Said where Place now sits when the project is hourly, and in the handler that refuses it. */
+const HOURLY_TEXT = 'Place now is off for hourly projects. Bid on Freelancer instead.';
+
+/**
+ * Where Place now sits: the button and its hint for a fixed-price project the token can bid
+ * on, and a line saying why not for an hourly one. Bid on Freelancer is always there.
+ * @param {Project} project
+ */
+function drawPlace(project) {
+  const offered = tokenReady() !== null && !log.some((entry) => entry.projectId === project.id);
+  const fixed = project.type === 'fixed';
+  byId('p-place').hidden = !(offered && fixed);
+  byId('p-place-hint').hidden = !(offered && fixed);
+  const off = byId('p-place-off');
+  off.hidden = !(offered && !fixed);
+  off.textContent = off.hidden ? '' : HOURLY_TEXT;
+}
+
 /** @param {Project} project */
 function drawBid(project) {
   const placed = log.filter((entry) => entry.projectId === project.id);
@@ -468,9 +486,7 @@ function drawBid(project) {
   sayInDetail('info', '');
   pEmpty.hidden = templates.length > 0;
   pForm.hidden = templates.length === 0;
-  const canPlace = tokenReady() !== null && placed.length === 0;
-  byId('p-place').hidden = !canPlace;
-  byId('p-place-hint').hidden = !canPlace;
+  drawPlace(project);
   if (!templates.length) return;
 
   const current = defaultTemplate();
@@ -616,6 +632,12 @@ placeButton.addEventListener('click', async () => {
   const project = shown;
   const ready = tokenReady();
   if (!project || !ready) return;
+  if (project.type !== 'fixed') {
+    // The button is not shown for an hourly project; this is the second guard behind that.
+    pError.hidden = false;
+    pError.textContent = HOURLY_TEXT;
+    return;
+  }
   const price = readPrice();
   const days = readDays();
   const text = pText.value.trim();
@@ -628,7 +650,7 @@ placeButton.addEventListener('click', async () => {
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
-  const priceText = `${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''}`;
+  const priceText = formatPrice(price, project.currency);
   const ok = await confirmAction({
     title: 'Place this bid on Freelancer.com now?',
     body: `A real bid on “${project.title}” as ${ready.account.username}: ${priceText}, ${String(days)} days, with the proposal as it is here. It counts against your bids for the month.`,

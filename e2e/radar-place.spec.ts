@@ -318,3 +318,56 @@ test.describe('B-01: text in curly braces never reaches a client', () => {
     expect(calls.bidsSent[0]!.body['description']).toBe(proposal.trim());
   });
 });
+
+// ------------------------------------------------------------------ B-03
+// Place now sends a fixed-price request, so it is not offered for an hourly project.
+
+const PINS = ALL.find((p) => p.title === 'Vibrant Product Pinterest Pins')!; // USD 15–25/h
+const HOURLY_LINE = 'Place now is off for hourly projects. Bid on Freelancer instead.';
+
+test.describe('B-03: Place now is for fixed-price projects only', () => {
+  test('an hourly project shows no Place now, the line in its place, and sends no request', async ({
+    page,
+  }) => {
+    const calls = await open(page);
+    const dialog = await detailOf(page, PINS.title);
+    await expect(dialog.getByRole('button', { name: 'Bid on Freelancer' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeHidden();
+    await expect(dialog.locator('#p-place-hint')).toBeHidden();
+    await expect(dialog.locator('#p-place-off')).toBeVisible();
+    await expect(dialog.locator('#p-place-off')).toHaveText(HOURLY_LINE);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+
+    // A fixed-price project still has Place now, and not the line.
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    const fixed = await detailOf(page, RECRUITER.title);
+    await expect(fixed.getByRole('button', { name: 'Place now' })).toBeVisible();
+    await expect(fixed.locator('#p-place-off')).toBeHidden();
+  });
+
+  test('without a token there is no line either: Place now is not on offer at all', async ({
+    page,
+  }) => {
+    await open(page, { token: false });
+    const dialog = await detailOf(page, PINS.title);
+    await expect(dialog.locator('#p-place-off')).toBeHidden();
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeHidden();
+  });
+
+  test('the handler refuses an hourly project too, if the button is forced into view', async ({
+    page,
+  }) => {
+    const calls = await open(page);
+    const dialog = await detailOf(page, PINS.title);
+    await page.evaluate(() => {
+      (document.getElementById('p-place') as HTMLButtonElement).hidden = false;
+    });
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
+    await expect(dialog.locator('#p-error')).toHaveText(HOURLY_LINE);
+    await expect(confirmDialog(page)).toHaveCount(0);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+});
