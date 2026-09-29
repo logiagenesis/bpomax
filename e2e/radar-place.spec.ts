@@ -741,3 +741,29 @@ test.describe('B-10: no answer from Freelancer.com', () => {
     expect(await page.evaluate(() => localStorage.getItem('radar.token'))).toBeNull();
   });
 });
+
+// ------------------------------------------------------------------ B-11
+// Why a bid was refused is announced to a screen reader as it appears.
+
+test.describe('B-11: #p-error is announced', () => {
+  test('it has role alert', async ({ page }) => {
+    await open(page);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.locator('#p-error')).toHaveAttribute('role', 'alert');
+  });
+
+  test('a refusal is found by its role once it shows, for a bid to copy and for Place now', async ({
+    page,
+  }) => {
+    await open(page, { templates: [WITH_SKILLS] });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.getByRole('alert')).toHaveCount(0); // hidden until there is something to say
+    await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText(BRACES_MESSAGE);
+    await dialog.getByLabel('Proposal').fill('Hello, no braces here.');
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(confirmDialog(page)).toBeVisible();
+    await confirmDialog(page).getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+  });
+});
