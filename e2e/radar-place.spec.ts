@@ -525,3 +525,36 @@ test.describe('B-05: a bid Freelancer already had still counts', () => {
     expect(calls.bidsSent).toHaveLength(0);
   });
 });
+
+// ------------------------------------------------------------------ B-06
+// Freelancer.com's fees page lists a minimum account balance of USD 20 before any bid
+// (captured 29/09/2026). Radar only says so: it cannot check the balance.
+
+test.describe('B-06: the USD 20 balance line', () => {
+  const LINE =
+    'Freelancer.com accepts bids only while your account balance is at least USD 20. Radar cannot check your balance.';
+
+  test('shows in the bid panel under the buttons, for a fixed-price project', async ({ page }) => {
+    const calls = await open(page);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.locator('#p-balance-note')).toBeVisible();
+    await expect(dialog.locator('#p-balance-note')).toHaveText(LINE);
+    // Under the two buttons: after the row that holds them.
+    const below = await dialog.evaluate((root) => {
+      const row = root.querySelector('#p-bid')!.parentElement!;
+      const note = root.querySelector('#p-balance-note')!;
+      return Boolean(row.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(below).toBe(true);
+    // Text only: it asks Freelancer.com for nothing.
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('shows for an hourly project, and with no token saved', async ({ page }) => {
+    await open(page, { token: false });
+    const hourly = await detailOf(page, PINS.title);
+    await expect(hourly.locator('#p-balance-note')).toBeVisible();
+    await expect(hourly.locator('#p-balance-note')).toHaveText(LINE);
+  });
+});
