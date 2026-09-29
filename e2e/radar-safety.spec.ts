@@ -327,6 +327,9 @@ test.describe('R-03: the feed says when the rank has no skills to work from', ()
     // In-house alone is not enough: the note is still on screen.
     await expect(page.locator('#rank-note')).toBeVisible();
 
+    // Freeze the page's timers. A new watch skill schedules a re-read 1,5 s later, which
+    // redraws the note anyway; frozen, the note has to hide at once on its own.
+    await page.clock.pauseAt(NOW + 60_000);
     await page.getByRole('tab', { name: 'Settings' }).click();
     await page.getByLabel('Find a skill', { exact: true }).fill(skill);
     await page
