@@ -50,23 +50,32 @@ export function firstLine(description) {
     const boundary = cut.search(/\s\S*$/);
     if (boundary > 0) cut = cut.slice(0, boundary);
   }
-  // Never end on half of a surrogate pair, or on punctuation that leads into the ellipsis.
-  cut = cut.replace(/[\uD800-\uDBFF]$/, '').replace(/[\s,;:–—-]+$/, '');
+  // Never end on half of a surrogate pair, or on a space.
+  cut = cut.replace(/[\uD800-\uDBFF]$/, '').trimEnd();
   return `${cut}…`;
 }
 
 /**
- * The placeholders still in a text: every `{name}` (letters, digits, `_` and `-`, so a
- * mistyped `{Title}` or `{first-line}` counts too), as written, once each, in the order
- * they first appear. `buildProposal` leaves a placeholder it cannot fill as it found it;
- * a bid that still has one must not reach a client.
+ * A `{...}` that reads as a placeholder rather than as code: a short label of letters (any
+ * script), digits, spaces and `_ . - ' ’ ? !`. Code and data have punctuation this leaves
+ * out (`{ color: red; }`, `{"a": 1}`), so they pass.
+ */
+const PLACEHOLDER = /\{([\p{L}\p{N}\s_.'’?!-]{1,80})\}/gu;
+
+/**
+ * The placeholders still in a text, as written and once each, in the order they first
+ * appear: `{skills}`, but also a mistyped `{Title}`, `{first line}` (a space for the `_`),
+ * `{ price }` or `{project.title}`, which `buildProposal` leaves as it found them. A label
+ * needs a letter in it and must sit on one line. A bid that still has one must not reach a
+ * client.
  * @param {string} text
  * @returns {string[]}
  */
 export function unfilledPlaceholders(text) {
   const found = new Set();
-  for (const match of text.matchAll(/\{\s*([A-Za-z_][A-Za-z0-9_-]*)\s*\}/g)) {
-    found.add(`{${String(match[1])}}`);
+  for (const match of text.matchAll(PLACEHOLDER)) {
+    const label = String(match[1]);
+    if (/\p{L}/u.test(label) && !/[\r\n]/.test(label)) found.add(match[0]);
   }
   return [...found];
 }

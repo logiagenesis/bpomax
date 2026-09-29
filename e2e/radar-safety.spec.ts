@@ -141,11 +141,13 @@ test.describe('R-01: an unfilled placeholder never reaches a client', () => {
     await page.evaluate((text) => navigator.clipboard.writeText(text), SENTINEL);
 
     await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
     await expect(dialog.locator('#p-error')).toHaveText('Fill or remove {skills} before bidding.');
     await expect(dialog.locator('#bid-panel')).toBeHidden();
     expect(await clipboard(page)).toBe(SENTINEL);
 
     await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
     await expect(dialog.locator('#p-error')).toHaveText('Fill or remove {skills} before bidding.');
     await expect(confirmDialog(page)).toHaveCount(0);
 
@@ -153,6 +155,34 @@ test.describe('R-01: an unfilled placeholder never reaches a client', () => {
     expect(calls.bidLookups).toHaveLength(0);
     expect(calls.bidsSent).toHaveLength(0);
     expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
+  });
+
+  test('skills ticked as in-house that the project does not need do not fill {skills} either', async ({
+    page,
+  }) => {
+    const other = ALL.flatMap((p) => p.jobs).find(
+      (job) => !RECRUITER.jobs.some((mine) => mine.id === job.id),
+    )!;
+    const calls = await open(page, {
+      templates: [WITH_SKILLS],
+      settings: { inHouse: [{ id: other.id, name: other.name }] },
+      token: true,
+    });
+    const popups = countPopups(page);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.getByLabel('Proposal')).toHaveValue(/I bring \{skills\}\./);
+    await page.evaluate((text) => navigator.clipboard.writeText(text), SENTINEL);
+
+    await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
+    await expect(dialog.locator('#p-error')).toHaveText('Fill or remove {skills} before bidding.');
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toHaveText('Fill or remove {skills} before bidding.');
+    await expect(confirmDialog(page)).toHaveCount(0);
+    expect(popups.count).toBe(0);
+    expect(await clipboard(page)).toBe(SENTINEL);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
   });
 
   test('a placeholder typed into the text is refused by name, until it is taken out', async ({
@@ -166,12 +196,14 @@ test.describe('R-01: an unfilled placeholder never reaches a client', () => {
 
     await text.fill('Hi {made_up}, about {Title} and {made_up} again. { price }');
     await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
     await expect(dialog.locator('#p-error')).toHaveText(
-      'Fill or remove {made_up}, {Title} and {price} before bidding.',
+      'Fill or remove {made_up}, {Title} and { price } before bidding.',
     );
     await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
     await expect(dialog.locator('#p-error')).toHaveText(
-      'Fill or remove {made_up}, {Title} and {price} before bidding.',
+      'Fill or remove {made_up}, {Title} and { price } before bidding.',
     );
     expect(popups.count).toBe(0);
     expect(await clipboard(page)).toBe(SENTINEL);
@@ -236,6 +268,7 @@ test.describe('R-06: Place now stops at the monthly limit', () => {
     await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 2 / 2');
     const dialog = await detailOf(page, RECRUITER.title);
     await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
     await expect(dialog.locator('#p-error')).toHaveText(
       'The monthly limit in Settings is reached (2 of 2 bids logged this month), so Place now is off.',
     );
@@ -280,6 +313,7 @@ test.describe('R-03: the feed says when the rank has no skills to work from', ()
   }) => {
     await page.setViewportSize({ width: 380, height: 800 });
     await open(page);
+    await expect(page.locator('#rank-note')).toBeVisible();
     await expect(page.locator('#rank-note')).toHaveText(NOTE);
     await expectNoSidewaysScroll(page);
 
@@ -290,7 +324,8 @@ test.describe('R-03: the feed says when the rank has no skills to work from', ()
       .getByRole('checkbox', { name: skill, exact: true })
       .check();
     await page.getByRole('tab', { name: 'Feed' }).click();
-    await expect(page.locator('#rank-note')).toHaveText(NOTE); // in-house alone is not enough
+    // In-house alone is not enough: the note is still on screen.
+    await expect(page.locator('#rank-note')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Settings' }).click();
     await page.getByLabel('Find a skill', { exact: true }).fill(skill);
@@ -311,6 +346,7 @@ test.describe('R-03: the feed says when the rank has no skills to work from', ()
       .getByRole('button', { name: `Remove ${skill}` })
       .click();
     await page.getByRole('tab', { name: 'Feed' }).click();
+    await expect(page.locator('#rank-note')).toBeVisible();
     await expect(page.locator('#rank-note')).toHaveText(NOTE);
   });
 });

@@ -120,10 +120,18 @@ describe('the first line of the client’s description', () => {
     expect(cut).toHaveLength(161);
   });
 
-  it('never keeps a comma or dash in front of the …', () => {
+  it('cuts a sentence of 161 characters, the shortest that must be cut', () => {
+    // 150 characters of words, then "abcdefghij." (indices 150–160): 161 in all. Index 160 is
+    // the full stop, not a space, so the last word is cut off whole and "…" added.
+    const long = `${'abcdefghi '.repeat(15)}abcdefghij.`;
+    expect(long).toHaveLength(161);
+    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+  });
+
+  it('keeps a comma the cut lands after: it cuts at the word boundary and nothing more', () => {
     // "abcdefghi " × 14 (140), "abcdefghi," (140–149), a space at 150, then 18 z's.
     const long = `${'abcdefghi '.repeat(14)}abcdefghi, ${'z'.repeat(18)} end.`;
-    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi,…`);
   });
 
   it('cuts a single word longer than 160 characters at 160, since it has no boundary', () => {
@@ -153,17 +161,50 @@ describe('placeholders left in a text (R-01)', () => {
     expect(unfilledPlaceholders('')).toEqual([]);
   });
 
-  it('counts a mistyped placeholder too: another case, a hyphen, spaces inside', () => {
+  it('counts a mistyped placeholder too, and names it as it is written', () => {
+    // Another case, a hyphen, spaces inside: buildProposal fills none of these.
     expect(unfilledPlaceholders('{Title} {first-line} { price } {timeline_days}')).toEqual([
       '{Title}',
       '{first-line}',
-      '{price}',
+      '{ price }',
       '{timeline_days}',
     ]);
   });
 
-  it('leaves braces that are not a name alone: empty, code, numbers', () => {
-    expect(unfilledPlaceholders('{} { } a { color: red; } {1} {"a": 1}')).toEqual([]);
+  it('counts a label of several words, a dot or an apostrophe: the likely typos', () => {
+    const typos = [
+      '{first line}', // a space where the _ belongs
+      '{client name}',
+      '{Client Name}',
+      '{Skills List}',
+      '{project.title}',
+      '{client’s name}',
+      "{client's name}",
+      '{name?}',
+      '{2nd option}',
+      '{prénom}',
+    ];
+    for (const typo of typos) {
+      expect(unfilledPlaceholders(`Hi ${typo}, hello.`)).toEqual([typo]);
+    }
+    expect(
+      unfilledPlaceholders('Hi {client name}, I can do {project.title} in {timeline days}.'),
+    ).toEqual(['{client name}', '{project.title}', '{timeline days}']);
+  });
+
+  it('finds the placeholder inside doubled braces', () => {
+    expect(unfilledPlaceholders('Hello {{skills}}')).toEqual(['{skills}']);
+  });
+
+  it('leaves braces that read as code or data, or hold no word, alone', () => {
+    // Empty, only spaces, only a number, CSS, JSON, a sum.
+    expect(
+      unfilledPlaceholders('{} { } {1} a { color: red; } {"a": 1} {x=1} {a+b} {(a)} {[1]}'),
+    ).toEqual([]);
+  });
+
+  it('leaves a label spread over lines alone: a placeholder is on one line', () => {
+    expect(unfilledPlaceholders('{\nskills\n}')).toEqual([]);
   });
 
   it('finds what buildProposal could not fill: {skills} with no in-house overlap', () => {

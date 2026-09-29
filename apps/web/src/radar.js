@@ -609,7 +609,10 @@ byId('p-bid').addEventListener('click', async () => {
   if (price === null || days === null || problems.length) return;
 
   // 1. The proposal to the clipboard, 2. the project in a new tab, 3. the price to enter.
-  if (await copy(pText.value)) {
+  // The text checked above is the text copied and, later, the text logged, even if the box
+  // is edited while the browser asks leave to write to the clipboard.
+  const text = pText.value;
+  if (await copy(text)) {
     sayInDetail('success', 'Proposal copied. Paste it into your bid on Freelancer.com.');
   } else {
     pText.focus();
@@ -617,7 +620,7 @@ byId('p-bid').addEventListener('click', async () => {
     sayInDetail('warning', 'Copy failed — press Ctrl+C');
   }
   openTab(project.url);
-  pending = { project, price, days, text: pText.value, template: chosenTemplate() };
+  pending = { project, price, days, text, template: chosenTemplate() };
   byId('bid-price-line').textContent =
     `Price to enter: ${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''} · Days: ${String(days)}`;
   /** @type {HTMLAnchorElement} */ (byId('bid-open-again')).href = project.url;
