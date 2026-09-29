@@ -15,23 +15,7 @@
   <body>
     <header class="app-header">
       <div class="container app-header__inner">
-        <a class="app-header__brand" href="./dashboard.html">Arbitron</a>
-        <nav aria-label="Primary">
-          <ul class="nav">
-            <li><a href="./dashboard.html">Dashboard</a></li>
-            <li><a href="./feed.html">Feed</a></li>
-            <li><a href="./approvals.html">Approvals</a></li>
-            <li><a href="./conversations.html">Conversations</a></li>
-            <li><a href="./suppliers.html">Suppliers</a></li>
-            <li><a href="./sourcing.html">Sourcing</a></li>
-            <li><a href="./pipeline.html">Pipeline</a></li>
-            <li><a href="./templates.html">Templates</a></li>
-            <li><a href="./analytics.html">Analytics</a></li>
-            <li><a href="./settings.html">Settings</a></li>
-            <li><a href="./audit-log.html">Audit log</a></li>
-            <li><a href="./radar.html" aria-current="page">Radar</a></li>
-          </ul>
-        </nav>
+        <span class="app-header__brand">Arbitron</span>
       </div>
     </header>
 
@@ -46,11 +30,16 @@
           bids on Freelancer.com only when you press Place now with your token saved in Settings;
           otherwise you submit every bid there yourself. What you save here stays in this browser.
         </p>
+        <div class="radar-setup-line">
+          <p id="setup-title">Setup</p>
+          <ul class="radar-setup" id="setup" aria-labelledby="setup-title"></ul>
+        </div>
       </div>
 
       <div class="card radar-bar">
         <button type="button" class="btn btn--secondary" id="refresh">Refresh now</button>
         <p class="radar-bar__note" id="updated">Not updated yet</p>
+        <p class="radar-bar__note" id="export-note"></p>
         <div class="radar-bar__end">
           <button type="button" class="btn btn--ghost" id="export">Export</button>
           <button type="button" class="btn btn--ghost" id="import">Import</button>
@@ -62,6 +51,7 @@
         This browser is not keeping what you save here (private window or blocked site data).
       </p>
       <p class="alert alert--warning" id="token-warning" hidden></p>
+      <p class="alert alert--warning" id="export-warning" hidden></p>
 
       <div class="radar-tabs" role="tablist" aria-label="Radar sections">
         <button

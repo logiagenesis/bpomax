@@ -22,6 +22,7 @@ import {
   unfilledPlaceholders,
 } from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
+import { exportNote, setupItems } from './radar/setup.js';
 import {
   backupFilename,
   backupOf,
@@ -99,6 +100,11 @@ let log = readJson('log', /** @type {LogEntry[]} */ ([]));
 let shortlist = readJson('shortlist', /** @type {Shortlisted[]} */ ([]));
 /** @type {number[]} */
 let notified = readJson('notified', /** @type {number[]} */ ([]));
+/** Epoch milliseconds of the last Export, kept in this browser but not in the backup. */
+let lastExport = (() => {
+  const saved = readJson('lastExport', /** @type {unknown} */ (null));
+  return typeof saved === 'number' && Number.isFinite(saved) ? saved : null;
+})();
 /** @type {{ project: Project, score: Score }[]} */
 let ranked = [];
 let failures = 0;
@@ -329,9 +335,44 @@ function drawRankNote() {
   byId('rank-note').hidden = settings.skills.length > 0 && settings.inHouse.length > 0;
 }
 
+const setupList = byId('setup');
+const exportNoteText = byId('export-note');
+const exportWarning = byId('export-warning');
+
+/** Whether this browser holds anything worth a copy: a template or a logged bid. */
+const hasData = () => templates.length > 0 || log.length > 0;
+
+/** The setup line under the title: each item set or not set. It never blocks anything. */
+function drawSetup() {
+  const items = setupItems(
+    { settings, templates, stored, lastExport, hasData: hasData() },
+    Date.now(),
+  );
+  setupList.replaceChildren(
+    ...items.map((item) => {
+      const li = document.createElement('li');
+      li.dataset['item'] = item.key;
+      li.dataset['state'] = item.state;
+      const kind = item.state === 'set' ? 'go' : item.state === 'warn' ? 'caution' : 'neutral';
+      li.append(`${item.label}: `, badge(item.text, kind));
+      return li;
+    }),
+  );
+}
+
+/** The last-export note beside the Export button, its warning after 7 days, and the setup line. */
+function drawExport() {
+  const note = exportNote(lastExport, Date.now(), hasData());
+  exportNoteText.textContent = note.text;
+  exportWarning.hidden = note.warning === null;
+  exportWarning.textContent = note.warning ?? '';
+  drawSetup();
+}
+
 function render() {
   drawCounter();
   drawRankNote();
+  drawExport();
   const now = Date.now();
   const shown = byRank(
     applyFilters(projects, settings.filters, { acted: acted(), now }).map((project) => ({
@@ -770,6 +811,7 @@ function keepTemplates() {
 }
 
 function drawTemplates() {
+  drawExport();
   byId('templates-empty').hidden = templates.length > 0;
   byId('template-list').replaceChildren(
     ...templates.map((template) => {
@@ -1077,6 +1119,7 @@ let reread;
 skillPicker('inHouse', 'inhouse', () => render());
 skillPicker('skills', 'watch', () => {
   drawRankNote();
+  drawSetup();
   // A new set of skills is a new search: read again once the picking pauses.
   clearTimeout(reread);
   reread = setTimeout(() => void refresh(), 1500);
@@ -1645,6 +1688,9 @@ byId('export').addEventListener('click', () => {
   );
   const name = backupFilename(now);
   downloadBlob(name, new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+  lastExport = now;
+  keep('lastExport', now);
+  drawExport();
   say('success', `Exported everything to ${name}. Keep it somewhere safe.`);
 });
 
@@ -1784,6 +1830,7 @@ function refusal(/** @type {unknown} */ error) {
 }
 
 function drawToken() {
+  drawSetup();
   const state = tokenState(stored, Date.now());
   tokenCheck.hidden = !stored;
   tokenRemove.hidden = !stored;
