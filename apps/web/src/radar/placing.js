@@ -9,6 +9,7 @@
  */
 import { createBid, findBid } from '@arbitron/freelancer/bidding';
 import { FREELANCER } from './links.js';
+import { findPlaceholders, placeholderProblem } from './proposal.js';
 
 /**
  * @typedef {Parameters<typeof createBid>[0]} FreelancerConfig
@@ -47,13 +48,17 @@ const MILESTONE_PERCENTAGE = 100;
 
 /**
  * Places the bid unless Freelancer.com already has one of his on the project. Throws the
- * package's FreelancerError (with `status`, 0 when nothing came back) when refused.
+ * package's FreelancerError (with `status`, 0 when nothing came back) when refused. Throws
+ * a plain Error, before any call, when the proposal still has text in curly braces: the
+ * page checks that first, and this is the last stop behind it.
  * @param {string} token
  * @param {BidToPlace} bid
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<Placed>}
  */
 export async function placeBid(token, bid, fetchImpl = fetch) {
+  const blocked = placeholderProblem(findPlaceholders(bid.description));
+  if (blocked) throw new Error(blocked);
   /** @type {number | null} */
   let status = null;
   /** @type {typeof fetch} */

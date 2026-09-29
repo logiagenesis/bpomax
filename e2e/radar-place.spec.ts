@@ -8,6 +8,8 @@ import { NEWEST, PROJECTS, serveFreelancer } from './radar-helpers.js';
  * (constraint 4), then POSTs the bid as F2 describes, and logs it with Freelancer's bid
  * id and the answer's status (constraint 5). Every call is answered here.
  */
+test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
 const NOW = NEWEST + 5 * 60_000;
 const ALL = PROJECTS.result.projects;
 const RECRUITER = ALL.find((p) => p.title === 'IT Recruiter for Interviews')!; // USD 250–750
@@ -33,6 +35,9 @@ async function open(
   options: {
     token?: boolean;
     bids?: NonNullable<Parameters<typeof serveFreelancer>[1]>['bids'];
+    templates?: unknown[];
+    settings?: Record<string, unknown>;
+    log?: unknown[];
   } = {},
 ) {
   const token =
@@ -46,13 +51,20 @@ async function open(
           problem: null,
         };
   await page.addInitScript(
-    ([templates, stored]) => {
+    ([templates, stored, settings, log]) => {
       if (sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('radar.templates', JSON.stringify(templates));
       if (stored) localStorage.setItem('radar.token', JSON.stringify(stored));
+      if (settings) localStorage.setItem('radar.settings', JSON.stringify(settings));
+      if (log) localStorage.setItem('radar.log', JSON.stringify(log));
     },
-    [[TEMPLATE], token] as const,
+    [
+      options.templates ?? [TEMPLATE],
+      token,
+      options.settings ?? null,
+      options.log ?? null,
+    ] as const,
   );
   await page.clock.install({ time: NOW });
   const calls = await serveFreelancer(page, { bids: options.bids });
@@ -178,4 +190,131 @@ test('a refused bid is shown on the page and not logged', async ({ page }) => {
   expect(calls.bidsSent).toHaveLength(1);
   expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
   await expect(dialog.getByRole('button', { name: 'Place now' })).toBeEnabled();
+});
+
+// ------------------------------------------------------------------ B-01
+// Any text in curly braces is blocked (LI-PROMPT-BPOMAX-BIDSAFETY-20260929, B-01): neither
+// bid path copies, confirms or sends it, and the message names what to fix.
+
+const WITH_SKILLS = {
+  id: 'tpl-skills',
+  name: 'With skills',
+  body: 'Hello. About {title}: I bring {skills}. My price is {price}, in {timeline_days} days.',
+  isDefault: true,
+};
+const SENTINEL = 'nothing was copied';
+const clipboard = (page: Page) => page.evaluate(() => navigator.clipboard.readText());
+const BRACES_MESSAGE =
+  'Fill or remove {skills} before bidding. Any text in curly braces is blocked.';
+
+/** Counts the tabs the page opens. */
+function countPopups(page: Page) {
+  const seen = { count: 0 };
+  page.on('popup', () => {
+    seen.count += 1;
+  });
+  return seen;
+}
+
+test.describe('B-01: text in curly braces never reaches a client', () => {
+  test('{skills} on a project with no in-house overlap: not copied, not placed, and named', async ({
+    page,
+  }) => {
+    const calls = await open(page, { templates: [WITH_SKILLS] });
+    const popups = countPopups(page);
+    const dialog = await detailOf(page, RECRUITER.title);
+    // Nothing is ticked as in-house, so the template's {skills} is left as written.
+    await expect(dialog.getByLabel('Proposal')).toHaveValue(/I bring \{skills\}\./);
+    await page.evaluate((text) => navigator.clipboard.writeText(text), SENTINEL);
+
+    await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
+    await expect(dialog.locator('#p-error')).toHaveText(BRACES_MESSAGE);
+    await expect(dialog.locator('#bid-panel')).toBeHidden();
+    expect(await clipboard(page)).toBe(SENTINEL);
+
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
+    await expect(dialog.locator('#p-error')).toHaveText(BRACES_MESSAGE);
+    await expect(confirmDialog(page)).toHaveCount(0);
+
+    expect(popups.count).toBe(0);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+    expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
+  });
+
+  test('skills ticked that the project does not need do not fill {skills} either', async ({
+    page,
+  }) => {
+    const other = ALL.flatMap((p) => p.jobs).find(
+      (job) => !RECRUITER.jobs.some((mine) => mine.id === job.id),
+    )!;
+    const calls = await open(page, {
+      templates: [WITH_SKILLS],
+      settings: { inHouse: [{ id: other.id, name: other.name }] },
+    });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.getByLabel('Proposal')).toHaveValue(/I bring \{skills\}\./);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toHaveText(BRACES_MESSAGE);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('braces typed into the box are read as it is at the click: every one is listed, then it goes', async ({
+    page,
+  }) => {
+    const calls = await open(page);
+    const popups = countPopups(page);
+    const dialog = await detailOf(page, RECRUITER.title);
+    const text = dialog.getByLabel('Proposal');
+    await page.evaluate((value) => navigator.clipboard.writeText(value), SENTINEL);
+
+    await text.fill('Hi { name }, about {Client_Name}. It is {made-up} and {skills}.');
+    const message =
+      'Fill or remove { name }, {Client_Name}, {made-up}, {skills} before bidding. Any text in curly braces is blocked.';
+    await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
+    await expect(dialog.locator('#p-error')).toHaveText(message);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toHaveText(message);
+    expect(popups.count).toBe(0);
+    expect(await clipboard(page)).toBe(SENTINEL);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+
+    // Take the braces out: the paste path copies what is in the box, and Place now reaches
+    // its confirm.
+    const clean = 'Hi, I can do this in 7 days for USD 450.';
+    await text.fill(clean);
+    const popup = page.waitForEvent('popup');
+    await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await popup;
+    await expect(dialog.locator('#p-error')).toBeHidden();
+    expect(await clipboard(page)).toBe(clean);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(confirmDialog(page)).toBeVisible();
+    await confirmDialog(page).getByRole('button', { name: 'Cancel' }).click();
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('with the skill ticked as in-house, {skills} is filled and Place now sends it', async ({
+    page,
+  }) => {
+    const skill = RECRUITER.jobs[0]!;
+    const calls = await open(page, {
+      templates: [WITH_SKILLS],
+      settings: { inHouse: [{ id: skill.id, name: skill.name }] },
+    });
+    const dialog = await detailOf(page, RECRUITER.title);
+    const proposal = await dialog.getByLabel('Proposal').inputValue();
+    expect(proposal).toContain(`I bring ${skill.name}.`);
+    expect(proposal).not.toMatch(/[{}]/);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await confirmDialog(page).getByRole('button', { name: 'Place the bid' }).click();
+    await expect(page.locator('#status')).toContainText('Placed your bid on');
+    expect(calls.bidsSent).toHaveLength(1);
+    expect(calls.bidsSent[0]!.body['description']).toBe(proposal.trim());
+  });
 });

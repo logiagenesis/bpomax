@@ -14,7 +14,13 @@ import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers
 import { applyFilters } from './radar/filter.js';
 import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
-import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
+import {
+  PLACEHOLDERS,
+  buildProposal,
+  findPlaceholders,
+  openingPrice,
+  placeholderProblem,
+} from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
 import {
   backupFilename,
@@ -542,13 +548,17 @@ byId('p-bid').addEventListener('click', async () => {
   const problems = [];
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
-  if (!pText.value.trim()) problems.push('The proposal is empty.');
+  // The text as it is at this click: checked, and then copied and logged as this same string.
+  const text = pText.value;
+  if (!text.trim()) problems.push('The proposal is empty.');
+  const braces = placeholderProblem(findPlaceholders(text));
+  if (braces) problems.push(braces);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
 
   // 1. The proposal to the clipboard, 2. the project in a new tab, 3. the price to enter.
-  if (await copy(pText.value)) {
+  if (await copy(text)) {
     sayInDetail('success', 'Proposal copied. Paste it into your bid on Freelancer.com.');
   } else {
     pText.focus();
@@ -556,7 +566,7 @@ byId('p-bid').addEventListener('click', async () => {
     sayInDetail('warning', 'Copy failed — press Ctrl+C');
   }
   openTab(project.url);
-  pending = { project, price, days, text: pText.value, template: chosenTemplate() };
+  pending = { project, price, days, text, template: chosenTemplate() };
   byId('bid-price-line').textContent =
     `Price to enter: ${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''} · Days: ${String(days)}`;
   /** @type {HTMLAnchorElement} */ (byId('bid-open-again')).href = project.url;
@@ -613,6 +623,8 @@ placeButton.addEventListener('click', async () => {
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
   if (!text) problems.push('The proposal is empty.');
+  const braces = placeholderProblem(findPlaceholders(text));
+  if (braces) problems.push(braces);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
