@@ -281,7 +281,9 @@ test('Export downloads everything; Import puts it back after a confirm', async (
   await fresh.getByRole('tab', { name: 'Bids' }).click();
   await expect(fresh.locator('#bid-list > li')).toHaveCount(3);
   await expect(fresh.locator('#bid-list > li').first().locator('.badge')).toHaveText('Replied');
-  await expect(fresh.locator('#bid-counter')).toHaveText('Bids this month: 2');
+  await expect(fresh.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 2',
+  );
 });
 
 test('the Bids tab works at 380 px wide', async ({ page }) => {

@@ -8,7 +8,9 @@
  * project, and sends nothing if there is one (constraint 4: never twice).
  */
 import { createBid, findBid } from '@arbitron/freelancer/bidding';
+import { timeLimited } from './freelancer.js';
 import { FREELANCER } from './links.js';
+import { findPlaceholders, placeholderProblem } from './proposal.js';
 
 /**
  * @typedef {Parameters<typeof createBid>[0]} FreelancerConfig
@@ -47,43 +49,57 @@ const MILESTONE_PERCENTAGE = 100;
 
 /**
  * Places the bid unless Freelancer.com already has one of his on the project. Throws the
- * package's FreelancerError (with `status`, 0 when nothing came back) when refused.
+ * package's FreelancerError (with `status`, 0 when nothing came back) when refused. Throws
+ * a plain Error, before any call, when the proposal still has text in curly braces: the
+ * page checks that first, and this is the last stop behind it. Throws a `RequestTimeout`
+ * when Freelancer.com does not answer a request within 15 seconds: the bid may or may not
+ * have gone through, and nothing is retried.
  * @param {string} token
  * @param {BidToPlace} bid
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<Placed>}
  */
 export async function placeBid(token, bid, fetchImpl = fetch) {
+  const blocked = placeholderProblem(findPlaceholders(bid.description));
+  if (blocked) throw new Error(blocked);
+  const limited = timeLimited(fetchImpl);
   /** @type {number | null} */
   let status = null;
   /** @type {typeof fetch} */
   const watched = async (input, init) => {
-    const response = await fetchImpl(input, init);
+    const response = await limited.fetch(input, init);
     status = response.status;
     return response;
   };
   const deps = { fetch: /** @type {any} */ (watched) };
-  const earlier = await findBid(
-    CONFIG,
-    token,
-    { projectId: bid.projectId, bidderId: bid.bidderId },
-    deps,
-  );
-  if (earlier) return { outcome: 'already', bidId: earlier.id, status };
-  const placed = await createBid(
-    CONFIG,
-    token,
-    {
-      projectId: bid.projectId,
-      bidderId: bid.bidderId,
-      amount: bid.price,
-      period: bid.days,
-      milestonePercentage: MILESTONE_PERCENTAGE,
-      description: bid.description,
-    },
-    deps,
-  );
-  return { outcome: 'placed', bidId: placed.id, status };
+  try {
+    const earlier = await findBid(
+      CONFIG,
+      token,
+      { projectId: bid.projectId, bidderId: bid.bidderId },
+      deps,
+    );
+    if (earlier) return { outcome: 'already', bidId: earlier.id, status };
+    const placed = await createBid(
+      CONFIG,
+      token,
+      {
+        projectId: bid.projectId,
+        bidderId: bid.bidderId,
+        amount: bid.price,
+        period: bid.days,
+        milestonePercentage: MILESTONE_PERCENTAGE,
+        description: bid.description,
+      },
+      deps,
+    );
+    return { outcome: 'placed', bidId: placed.id, status };
+  } catch (error) {
+    // The package wraps what fetch throws; a time-out is still a time-out to the page.
+    throw limited.blame(error);
+  } finally {
+    limited.done();
+  }
 }
 
 /**

@@ -44,6 +44,75 @@ export class FreelancerError extends Error {
   }
 }
 
+/** How long a call that acts as the owner waits for Freelancer.com before it gives up. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+/** Freelancer.com did not answer in time. What was asked may or may not have been done. */
+export class RequestTimeout extends Error {
+  constructor() {
+    super('No answer from Freelancer after 15 seconds.');
+    this.name = 'RequestTimeout';
+  }
+}
+
+/**
+ * `response`, with the reading of its body (`json()`, `text()`) given up on when `timeout`
+ * rejects, so that an answer whose body never arrives is a time-out too.
+ * @param {Response} response
+ * @param {Promise<never>} timeout
+ * @returns {Response}
+ */
+function boundedBody(response, timeout) {
+  return new Proxy(response, {
+    get(target, name) {
+      const value = Reflect.get(target, name, target);
+      if (name === 'json' || name === 'text') {
+        return () => Promise.race([value.call(target), timeout]);
+      }
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
+ * `fetchImpl`, but each request has 15 seconds to be answered and its body read, then it is
+ * aborted (its `signal`) and given up on, even by a `fetch` that ignores the signal. A
+ * request's 15 seconds run until the next request starts or `done()` is called, so call
+ * `done()` when the calls are over. Calls made through a package wrap what `fetch` throws,
+ * so `blame(error)` says what to throw instead: the `RequestTimeout`, when one of these
+ * requests timed out, else `error` as it is.
+ * @param {typeof fetch} fetchImpl
+ * @returns {{ fetch: typeof fetch, blame: (error: unknown) => unknown, done: () => void }}
+ */
+export function timeLimited(fetchImpl) {
+  let timedOut = false;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
+  /** @type {typeof fetch} */
+  const limited = async (input, init) => {
+    clearTimeout(timer);
+    const controller = new AbortController();
+    /** @type {Promise<never>} */
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+        reject(new RequestTimeout());
+      }, REQUEST_TIMEOUT_MS);
+    });
+    const response = await Promise.race([
+      fetchImpl(input, { ...init, signal: controller.signal }),
+      timeout,
+    ]);
+    return boundedBody(response, timeout);
+  };
+  return {
+    fetch: limited,
+    blame: (error) => (timedOut ? new RequestTimeout() : error),
+    done: () => clearTimeout(timer),
+  };
+}
+
 /**
  * The active-project search, newest first, one page of it (F1, F3).
  * @param {number[]} skillIds one `jobs[]` each; none reads every project

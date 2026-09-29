@@ -12,9 +12,15 @@ import { TOKEN_KEY, fetchSelf, maskToken, tokenProblem, tokenState } from './rad
 import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
-import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import { RequestTimeout, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
-import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
+import {
+  PLACEHOLDERS,
+  buildProposal,
+  findPlaceholders,
+  openingPrice,
+  placeholderProblem,
+} from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
 import {
   backupFilename,
@@ -26,7 +32,14 @@ import {
   saveSettings,
   writeJson,
 } from './radar/store.js';
-import { bidsThisMonth, computeTotals, logEntry, withStatus } from './radar/tracker.js';
+import {
+  bidsThisMonth,
+  computeTotals,
+  logEntry,
+  monthlyLimit,
+  monthlyLimitProblem,
+  withStatus,
+} from './radar/tracker.js';
 import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from './radar/text.js';
 
 /**
@@ -304,12 +317,18 @@ function acted() {
   return ids;
 }
 
+/**
+ * Radar's own count: the bids logged in this browser this month, against the lower of the
+ * limit in Settings and Freelancer.com's for the membership. It knows nothing of bids placed
+ * anywhere else.
+ */
 function drawCounter() {
   const count = String(bidsThisMonth(log, Date.now()));
+  const limit = monthlyLimit(settings.monthlyLimit, stored?.account ?? null);
   byId('bid-counter').textContent =
-    settings.monthlyLimit === null
-      ? `Bids this month: ${count}`
-      : `Bids this month: ${count} / ${String(settings.monthlyLimit)}`;
+    limit === null
+      ? `Bids logged in this browser this month: ${count}`
+      : `Bids logged in this browser this month: ${count} / ${String(limit)}`;
 }
 
 function render() {
@@ -448,6 +467,49 @@ function writeProposal() {
   countText();
 }
 
+/** Said when Freelancer.com does not answer a bid in 15 seconds. Nothing is logged or retried. */
+const BID_TIMEOUT_TEXT =
+  'No answer from Freelancer after 15 seconds. The bid may or may not have gone through. Check the project on Freelancer before trying again.';
+
+/** Said when it does not answer the token check in 15 seconds. The token is left as it was. */
+const CHECK_TIMEOUT_TEXT =
+  'No answer from Freelancer after 15 seconds. The token was not checked. Try again.';
+
+/** Said where Place now sits when the project is hourly, and in the handler that refuses it. */
+const HOURLY_TEXT = 'Place now is off for hourly projects. Bid on Freelancer instead.';
+/** How the line about a token Freelancer.com refused (HTTP 401 or 403) begins. */
+const REFUSED = 'Token rejected';
+
+/**
+ * Where Place now sits, for a project with no bid of the owner's in the log: the button and
+ * its hint for a fixed-price project the token can bid on; a line saying why not for an
+ * hourly one; and, when Freelancer.com refused the token, that and the way to check it
+ * again. Bid on Freelancer is always there. Only this is redrawn, so the proposal the owner
+ * is editing stays as it is.
+ * @param {Project} project
+ */
+function drawPlace(project) {
+  const free = !log.some((entry) => entry.projectId === project.id);
+  const offered = tokenReady() !== null && free;
+  const fixed = project.type === 'fixed';
+  byId('p-place').hidden = !(offered && fixed);
+  byId('p-place-hint').hidden = !(offered && fixed);
+  const off = byId('p-place-off');
+  off.hidden = !(offered && !fixed);
+  off.textContent = off.hidden ? '' : HOURLY_TEXT;
+  // A token that ran out has its own warning at the top; this is for one that failed its
+  // last check. Only a refusal (401 or 403) is said to be one: a check that got no answer,
+  // or a 5xx, is not Freelancer.com refusing the token.
+  const failed =
+    free && stored?.problem && tokenState(stored, Date.now()).kind !== 'expired'
+      ? stored.problem
+      : null;
+  byId('p-token-refused').hidden = failed === null;
+  byId('p-token-refused-text').textContent = failed?.startsWith(REFUSED)
+    ? 'Freelancer refused your token.'
+    : 'The last check of your token did not succeed.';
+}
+
 /** @param {Project} project */
 function drawBid(project) {
   const placed = log.filter((entry) => entry.projectId === project.id);
@@ -462,9 +524,7 @@ function drawBid(project) {
   sayInDetail('info', '');
   pEmpty.hidden = templates.length > 0;
   pForm.hidden = templates.length === 0;
-  const canPlace = tokenReady() !== null && placed.length === 0;
-  byId('p-place').hidden = !canPlace;
-  byId('p-place-hint').hidden = !canPlace;
+  drawPlace(project);
   if (!templates.length) return;
 
   const current = defaultTemplate();
@@ -501,6 +561,12 @@ pDays.addEventListener('input', () => {
   writeProposal();
 });
 pText.addEventListener('input', countText);
+
+byId('p-token-recheck').addEventListener('click', () => {
+  detail.close();
+  selectTab(/** @type {HTMLButtonElement} */ (byId('tab-settings')));
+  byId('token-check').focus();
+});
 
 byId('p-go-templates').addEventListener('click', () => {
   detail.close();
@@ -542,13 +608,17 @@ byId('p-bid').addEventListener('click', async () => {
   const problems = [];
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
-  if (!pText.value.trim()) problems.push('The proposal is empty.');
+  // The text as it is at this click: checked, and then copied and logged as this same string.
+  const text = pText.value;
+  if (!text.trim()) problems.push('The proposal is empty.');
+  const braces = placeholderProblem(findPlaceholders(text));
+  if (braces) problems.push(braces);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
 
   // 1. The proposal to the clipboard, 2. the project in a new tab, 3. the price to enter.
-  if (await copy(pText.value)) {
+  if (await copy(text)) {
     sayInDetail('success', 'Proposal copied. Paste it into your bid on Freelancer.com.');
   } else {
     pText.focus();
@@ -556,7 +626,7 @@ byId('p-bid').addEventListener('click', async () => {
     sayInDetail('warning', 'Copy failed — press Ctrl+C');
   }
   openTab(project.url);
-  pending = { project, price, days, text: pText.value, template: chosenTemplate() };
+  pending = { project, price, days, text, template: chosenTemplate() };
   byId('bid-price-line').textContent =
     `Price to enter: ${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''} · Days: ${String(days)}`;
   /** @type {HTMLAnchorElement} */ (byId('bid-open-again')).href = project.url;
@@ -606,6 +676,12 @@ placeButton.addEventListener('click', async () => {
   const project = shown;
   const ready = tokenReady();
   if (!project || !ready) return;
+  if (project.type !== 'fixed') {
+    // The button is not shown for an hourly project; this is the second guard behind that.
+    pError.hidden = false;
+    pError.textContent = HOURLY_TEXT;
+    return;
+  }
   const price = readPrice();
   const days = readDays();
   const text = pText.value.trim();
@@ -613,10 +689,18 @@ placeButton.addEventListener('click', async () => {
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
   if (!text) problems.push('The proposal is empty.');
+  const braces = placeholderProblem(findPlaceholders(text));
+  if (braces) problems.push(braces);
+  const atLimit = monthlyLimitProblem(
+    log,
+    monthlyLimit(settings.monthlyLimit, ready.account),
+    Date.now(),
+  );
+  if (atLimit) problems.push(atLimit);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
-  const priceText = `${formatPrice(price, project.currency)}${project.type === 'hourly' ? ' per hour' : ''}`;
+  const priceText = formatPrice(price, project.currency);
   const ok = await confirmAction({
     title: 'Place this bid on Freelancer.com now?',
     body: `A real bid on “${project.title}” as ${ready.account.username}: ${priceText}, ${String(days)} days, with the proposal as it is here. It counts against your bids for the month.`,
@@ -652,6 +736,7 @@ placeButton.addEventListener('click', async () => {
       placedBy: /** @type {const} */ ('manual'),
       freelancerBidId: result.bidId,
       apiStatus: result.status,
+      outcome: result.outcome,
     };
     log = [entry, ...log];
     keep('log', log);
@@ -665,14 +750,26 @@ placeButton.addEventListener('click', async () => {
         : `Placed your bid on “${project.title}” on Freelancer.com (bid ${result.bidId}). It is logged.`,
     );
   } catch (error) {
-    const status = statusOf(error);
     const message = error instanceof Error ? error.message : String(error);
-    sayInDetail(
-      'error',
-      status === 401 || status === 403
-        ? `${message}. Check the token in Settings.`
-        : `${message}.`.replace(/\.\.$/, '.'),
-    );
+    if (error instanceof RequestTimeout) {
+      // The bid may or may not have gone through: log nothing, and do not try again by
+      // ourselves. Pressing Place now again looks for the bid first, so it is never sent twice.
+      sayInDetail('error', BID_TIMEOUT_TEXT);
+    } else if (statusOf(error) === 401 && stored) {
+      // Freelancer.com does not accept the token. Record it as the token check does, so
+      // Place now stays off until the token passes a check again.
+      stored = { ...stored, problem: refusal(error) };
+      keep(TOKEN_KEY, stored);
+      drawToken();
+      drawPlace(project);
+      sayInDetail('info', '');
+      // Place now, which had the focus, is gone: the way on is the button in its place.
+      byId('p-token-recheck').focus();
+    } else {
+      // Any other refusal, a 403 included, is Freelancer.com's own message and nothing more:
+      // what a 403 on a bid means is not known, so the token is not blamed for it.
+      sayInDetail('error', `${message}.`.replace(/\.\.$/, '.'));
+    }
   } finally {
     placeButton.disabled = false;
     placeButton.removeAttribute('aria-busy');
@@ -1749,16 +1846,26 @@ function showTokenError(text) {
   tokenInput.setAttribute('aria-invalid', String(Boolean(text)));
 }
 
-/** Why Freelancer.com would not take the token, in a line Dennis can act on. */
+/**
+ * Why Freelancer.com would not take the token, in a line Dennis can act on. The page's
+ * errors and the bid placer's both carry a `status`; they word their messages differently:
+ * "answered HTTP 401: …." and "refused placing the bid (HTTP 401: …)".
+ */
 function refusal(/** @type {unknown} */ error) {
   const message = error instanceof Error ? error.message : String(error);
-  if (error instanceof FreelancerError && (error.status === 401 || error.status === 403)) {
-    return `Token rejected (${message.replace(/^Freelancer\.com answered /, '').replace(/\.$/, '')}). Generate a new one at ${DEVELOP}.`;
+  const status = statusOf(error);
+  if (status === 401 || status === 403) {
+    const said = message
+      .replace(/^Freelancer\.com answered /, '')
+      .replace(/^Freelancer\.com refused [^(]*\((.*)\)$/, '$1')
+      .replace(/\.$/, '');
+    return `${REFUSED} (${said}). Generate a new one at ${DEVELOP}.`;
   }
   return message;
 }
 
 function drawToken() {
+  drawCounter();
   const state = tokenState(stored, Date.now());
   tokenCheck.hidden = !stored;
   tokenRemove.hidden = !stored;
@@ -1820,10 +1927,12 @@ async function checkToken(token, fresh) {
       `Freelancer.com accepted the token: you are ${account.username} (user ${String(account.id)}).`,
     );
   } catch (error) {
-    const line = refusal(error);
+    // No answer is not a refusal: the token is neither kept nor marked, as it was.
+    const timedOut = error instanceof RequestTimeout;
+    const line = timedOut ? CHECK_TIMEOUT_TEXT : refusal(error);
     if (fresh) {
       showTokenError(line);
-    } else if (stored) {
+    } else if (stored && !timedOut) {
       stored = { ...stored, checkedAt: Date.now(), problem: line };
       keep(TOKEN_KEY, stored);
     }

@@ -24,16 +24,50 @@ export const PLACEHOLDERS = /** @type {const} */ ([
   ['{first_line}', 'the first sentence of the client’s description, at most 160 characters'],
 ]);
 
+/** The most characters `{first_line}` carries, the ellipsis included. */
+const FIRST_LINE_MAX = 160;
+
 /**
  * The first sentence of the client's description (up to the first `.`, `!` or `?` that
- * ends a sentence, or the first line break), cut at 160 characters.
+ * ends a sentence, or the first line break). Longer than 160 characters, it is cut at the
+ * last space so that it and the `…` after it come to at most 160 characters. With no space
+ * in the first 159 characters it is cut at 159. A shorter one is returned as it is.
  * @param {string} description
  */
 export function firstLine(description) {
   const text = description.trim();
   const end = /[.!?](?=\s|$)|\n/.exec(text);
-  const sentence = end ? text.slice(0, end.index + (end[0] === '\n' ? 0 : 1)) : text;
-  return sentence.trim().slice(0, 160).trim();
+  const sentence = (end ? text.slice(0, end.index + (end[0] === '\n' ? 0 : 1)) : text).trim();
+  if (sentence.length <= FIRST_LINE_MAX) return sentence;
+
+  // The last space at or before the 160th character leaves at most 159 to keep.
+  const space = sentence.slice(0, FIRST_LINE_MAX).search(/\s\S*$/);
+  const kept = space > 0 ? sentence.slice(0, space) : sentence.slice(0, FIRST_LINE_MAX - 1);
+  // Never end on half of a surrogate pair, or on a space.
+  return `${kept.replace(/[\uD800-\uDBFF]$/, '').trimEnd()}…`;
+}
+
+/**
+ * Every distinct `{…}` in a text, as written, in the order it first appears: `{skills}`,
+ * `{Client_Name}`, `{ name }`, `{made-up}`. `buildProposal` fills only the lower-case names
+ * it knows and leaves any other as it found it, so a bid that still has one must not reach
+ * a client. Any text in curly braces counts: the owner can take the braces out.
+ * @param {string} text
+ * @returns {string[]}
+ */
+export function findPlaceholders(text) {
+  return [...new Set(text.match(/\{[^{}\n]{1,40}\}/g) ?? [])];
+}
+
+/**
+ * The line for `#p-error` when a bid still has braces in it, or null when it has none.
+ * @param {string[]} found from `findPlaceholders`
+ * @returns {string | null}
+ */
+export function placeholderProblem(found) {
+  return found.length
+    ? `Fill or remove ${found.join(', ')} before bidding. Any text in curly braces is blocked.`
+    : null;
 }
 
 /**

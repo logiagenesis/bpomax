@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   SELF_URL,
   fetchSelf,
@@ -8,6 +8,7 @@ import {
   tokenState,
   type StoredToken,
 } from './account.js';
+import { RequestTimeout } from './freelancer.js';
 import { DEFAULT_SETTINGS, backupOf } from './store.js';
 
 /**
@@ -91,6 +92,75 @@ describe('who the token belongs to', () => {
     await expect(fetchSelf(TOKEN, fake as unknown as typeof fetch)).rejects.toThrow(
       'without a user id and username',
     );
+  });
+});
+
+describe('when Freelancer.com does not answer the token check (B-10)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('gives up after 15 seconds with a time-out: not a refusal, so the token is not marked', async () => {
+    vi.useFakeTimers();
+    const never = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    let settled = false;
+    const outcome = fetchSelf(TOKEN, never).catch((e: unknown) => e);
+    void outcome.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const error = await outcome;
+
+    expect(error).toBeInstanceOf(RequestTimeout);
+    expect((error as Error).message).toBe('No answer from Freelancer after 15 seconds.');
+    // Nothing a refusal carries: no HTTP status, and the token is nowhere in it.
+    expect(error).not.toHaveProperty('status');
+    expect(String((error as Error).message)).not.toContain(TOKEN);
+    expect(never).toHaveBeenCalledTimes(1);
+    expect(never.mock.calls[0]![1]?.signal?.aborted).toBe(true);
+  });
+
+  it('gives up on an answer whose body never arrives, after 15 seconds', async () => {
+    vi.useFakeTimers();
+    // The headers come; the body does not. This stand-in ignores the abort signal, as a
+    // `fetch` may, so only the page's own time limit ends the wait.
+    const stalled = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(new ReadableStream({ start() {} }), { status: 200 })),
+    );
+    let settled = false;
+    const outcome = fetchSelf(TOKEN, stalled).catch((e: unknown) => e);
+    void outcome.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const error = await outcome;
+
+    expect(error).toBeInstanceOf(RequestTimeout);
+    expect(error).not.toHaveProperty('status');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('leaves no timer running when the answer comes in time', async () => {
+    vi.useFakeTimers();
+    const fake = vi.fn<typeof fetch>(() => Promise.resolve(new Response(JSON.stringify(SELF))));
+    await expect(fetchSelf(TOKEN, fake)).resolves.toMatchObject({ username: 'example-user' });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('a refusal that arrives in time is still a refusal, with its status', async () => {
+    vi.useFakeTimers();
+    const fake = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(JSON.stringify(REFUSED), { status: 401 })),
+    );
+    const error = await fetchSelf(TOKEN, fake).catch((e: unknown) => e);
+    expect(error).not.toBeInstanceOf(RequestTimeout);
+    expect(error).toMatchObject({ status: 401 });
   });
 });
 

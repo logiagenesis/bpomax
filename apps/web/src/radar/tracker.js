@@ -42,6 +42,9 @@ import { band } from './score.js';
  *   when the owner did (LI-PROMPT-BPOMAX-AUTOBID-20260928, constraint 5)
  * @property {string | null} [freelancerBidId] the bid's id on Freelancer.com, when placed there by this page
  * @property {number | null} [apiStatus] the HTTP status Freelancer.com answered the bid with
+ * @property {'placed' | 'already'} [outcome] what Place now found: `placed`, or `already` when
+ *   Freelancer.com held a bid of the owner's on the project that this browser never logged. That
+ *   entry is the only record of a real bid, so it counts like any other. Older entries have none.
  */
 
 const SAST_OFFSET_MS = 2 * 60 * 60 * 1000;
@@ -63,6 +66,43 @@ export function sastMonth(when) {
 export function bidsThisMonth(log, now) {
   const month = sastMonth(now);
   return log.filter((entry) => sastMonth(entry.placedAt) === month).length;
+}
+
+/**
+ * The most bids a month Place now may add to: the lower of the limit set in Settings (when
+ * there is one) and Freelancer.com's own for the membership (when the token check found one
+ * and its period is a month; a week or a year is not this month's limit). Null when neither
+ * applies. A limit of 0 from Freelancer.com is not taken as a limit: whether 0 means no bids
+ * or no limit is not known, and Freelancer.com refuses a bid it will not take anyway.
+ * @param {number | null} settingsLimit
+ * @param {{ bidLimit: number | null, bidPeriod: string | null } | null} account
+ * @returns {number | null}
+ */
+export function monthlyLimit(settingsLimit, account) {
+  const theirs =
+    account !== null &&
+    account.bidPeriod === 'month' &&
+    account.bidLimit !== null &&
+    account.bidLimit > 0
+      ? account.bidLimit
+      : null;
+  if (settingsLimit === null) return theirs;
+  return theirs === null ? settingsLimit : Math.min(settingsLimit, theirs);
+}
+
+/**
+ * Why Place now must not send another bid: the bids logged in this browser in the SAST month
+ * `now` falls in have reached `limit`. Null when there is room or no limit.
+ * @param {LogEntry[]} log
+ * @param {number | null} limit from `monthlyLimit`
+ * @param {number} now
+ * @returns {string | null}
+ */
+export function monthlyLimitProblem(log, limit, now) {
+  if (limit === null) return null;
+  const count = bidsThisMonth(log, now);
+  if (count < limit) return null;
+  return `You have logged ${String(count)} ${count === 1 ? 'bid' : 'bids'} this month and your limit is ${String(limit)}. Place now is off until next month.`;
 }
 
 /**

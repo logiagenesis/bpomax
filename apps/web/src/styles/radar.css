@@ -278,3 +278,18 @@
   border-color: var(--color-primary);
   color: var(--color-text);
 }
+
+/* Where Place now sits, when it is not offered: a short line in its place */
+.radar-place-note {
+  margin: 0;
+  align-self: center;
+}
+.radar-place-refused {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.radar-place-refused p {
+  margin: 0;
+}

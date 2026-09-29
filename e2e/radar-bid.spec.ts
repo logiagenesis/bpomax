@@ -24,6 +24,17 @@ const TEMPLATE = {
   isDefault: true,
 };
 
+/**
+ * Every skill of the three projects these specs bid on, ticked as delivered in-house, so the
+ * template's `{skills}` has something to fill it. Without one the page refuses to copy or
+ * place the bid (radar-place.spec.ts).
+ */
+const IN_HOUSE = [
+  ...new Map(
+    [RECRUITER, BOAT, PINS].flatMap((p) => p.jobs.map((j) => [j.id, { id: j.id, name: j.name }])),
+  ).values(),
+];
+
 /** Puts templates and settings in the browser before the page loads, once per tab. */
 async function seed(page: Page, templates: unknown[], settings: Record<string, unknown> = {}) {
   await page.addInitScript(
@@ -140,7 +151,9 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
     monthlyLimit: 300,
   });
   await open(page);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0 / 300');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0 / 300',
+  );
   const dialog = await detailOf(page, RECRUITER.title);
 
   // 60 % of USD 750 is USD 450, within 250–750.
@@ -148,11 +161,13 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
   await expect(dialog.locator('#p-price-hint')).toHaveText('The client’s budget: USD 250–750.');
   await expect(dialog.getByLabel('Delivery days')).toHaveValue('7');
   await expect(dialog.getByLabel('Template')).toHaveValue('tpl-1');
-  const firstSentence = RECRUITER.description
-    .trim()
-    .split(/(?<=[.!?])\s|\n/)[0]!
-    .slice(0, 160)
-    .trim();
+  // This description's first sentence runs past 160 characters, so `{first_line}` is cut at
+  // the last space before the 160th character and ends with …: the next word, "needs",
+  // starts at the 157th, so it goes whole.
+  const firstSentence =
+    'Our growing IT services company is expanding headcount across engineering, product, sales, and operations, and the interview stage of the hiring funnel now…';
+  expect(RECRUITER.description).toContain(`${firstSentence.slice(0, -1)} need`);
+  expect(firstSentence.length).toBeLessThanOrEqual(160);
   const expected = `Hello. About ${RECRUITER.title}: ${firstSentence}\nI can do this for USD 450 in 7 days (USD 250–750). Skills: ${RECRUITER.jobs[0]!.name}.`;
   await expect(dialog.getByLabel('Proposal')).toHaveValue(expected);
   await expect(dialog.locator('#p-count')).toHaveText(`${String(expected.length)} characters`);
@@ -181,7 +196,9 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
   await dialog.getByRole('button', { name: 'I placed the bid' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('#status')).toHaveText(`Logged your bid on “${RECRUITER.title}”.`);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 1 / 300');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 1 / 300',
+  );
   await expect(rows(page)).toHaveCount(ALL.length - 1);
   await expect(row(page, RECRUITER.title)).toHaveCount(0);
 
@@ -210,7 +227,9 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
 
   // Still logged after a reload; shown as Bid placed when acted-on projects are not hidden.
   await page.reload();
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 1 / 300');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 1 / 300',
+  );
   await page.locator('#filters-box > summary').click();
   await page.getByLabel('Hide projects already bid on or dismissed').uncheck();
   await expect(row(page, RECRUITER.title).locator('.badge')).toContainText(['Bid placed']);
@@ -221,7 +240,7 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
 });
 
 test('Cancel logs nothing', async ({ page }) => {
-  await seed(page, [TEMPLATE]);
+  await seed(page, [TEMPLATE], { inHouse: IN_HOUSE });
   await open(page);
   const dialog = await detailOf(page, RECRUITER.title);
   const popup = page.waitForEvent('popup');
@@ -232,12 +251,14 @@ test('Cancel logs nothing', async ({ page }) => {
   await expect(dialog.locator('#detail-status')).toHaveText('Nothing was logged.');
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(rows(page)).toHaveCount(ALL.length);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0',
+  );
   expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
 });
 
 test('when the clipboard refuses, the text is selected to copy by hand', async ({ page }) => {
-  await seed(page, [TEMPLATE]);
+  await seed(page, [TEMPLATE], { inHouse: IN_HOUSE });
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: () => Promise.reject(new Error('denied')) },
@@ -260,7 +281,7 @@ test('when the clipboard refuses, the text is selected to copy by hand', async (
 });
 
 test('the price is the owner’s to change, shown in USD too, and checked', async ({ page }) => {
-  await seed(page, [TEMPLATE], { pricePct: 70, defaultDays: 12 });
+  await seed(page, [TEMPLATE], { pricePct: 70, defaultDays: 12, inHouse: IN_HOUSE });
   await open(page);
   // 70 % of AUD 5 000 is 3 500, within 3 000–5 000.
   let dialog = await detailOf(page, BOAT.title);
@@ -278,8 +299,9 @@ test('the price is the owner’s to change, shown in USD too, and checked', asyn
   await dialog.getByLabel('Price (AUD)').fill('');
   await dialog.getByLabel('Delivery days').fill('0');
   await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+  // With the price blank the text still has {price} in it, which the page refuses too.
   await expect(dialog.locator('#p-error')).toHaveText(
-    'Enter your price, a number above 0. Enter the delivery days, a whole number from 1 to 365.',
+    'Enter your price, a number above 0. Enter the delivery days, a whole number from 1 to 365. Fill or remove {price} before bidding. Any text in curly braces is blocked.',
   );
   await expect(dialog.locator('#bid-panel')).toBeHidden();
   await dialog.getByRole('button', { name: 'Close' }).click();
@@ -297,12 +319,16 @@ test('the price is the owner’s to change, shown in USD too, and checked', asyn
 
 test('bidding settings are checked and saved; a blank limit shows no limit', async ({ page }) => {
   await open(page);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0',
+  );
   await page.getByRole('tab', { name: 'Settings' }).click();
   await expect(page.getByLabel('Opening price, % of the project’s maximum')).toHaveValue('60');
   await expect(page.getByLabel('Delivery days, unless you change them')).toHaveValue('7');
   await page.getByLabel('Bids your membership allows a month').fill('50');
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0 / 50');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0 / 50',
+  );
   await page.getByLabel('Opening price, % of the project’s maximum').fill('0');
   await page.getByLabel('Delivery days, unless you change them').fill('3,5');
   await expect(page.locator('#settings-error')).toHaveText(
@@ -316,12 +342,14 @@ test('bidding settings are checked and saved; a blank limit shows no limit', asy
   await expect(page.getByLabel('Opening price, % of the project’s maximum')).toHaveValue('55');
   await expect(page.getByLabel('Bids your membership allows a month')).toHaveValue('50');
   await page.getByLabel('Bids your membership allows a month').fill('');
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0',
+  );
 });
 
 test('the bid panel works at 380 px wide', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
-  await seed(page, [TEMPLATE]);
+  await seed(page, [TEMPLATE], { inHouse: IN_HOUSE });
   await open(page);
   const dialog = await detailOf(page, RECRUITER.title);
   const popup = page.waitForEvent('popup');

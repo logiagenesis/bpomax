@@ -605,13 +605,29 @@
                 Changing the template, price or days writes the text again from the template.
               </p>
             </div>
-            <p class="field__error" id="p-error" hidden></p>
+            <p class="field__error" id="p-error" role="alert" hidden></p>
             <div class="row-actions">
               <button type="button" class="btn btn--primary" id="p-bid">Bid on Freelancer</button>
               <button type="button" class="btn btn--secondary" id="p-place" hidden>
                 Place now
               </button>
+              <p class="field__hint radar-place-note" id="p-place-off" hidden></p>
+              <div class="radar-place-refused" id="p-token-refused" hidden>
+                <p class="field__error" id="p-token-refused-text">Freelancer refused your token.</p>
+                <button
+                  type="button"
+                  class="btn btn--secondary"
+                  id="p-token-recheck"
+                  aria-describedby="p-token-refused-text"
+                >
+                  Check it again in Settings
+                </button>
+              </div>
             </div>
+            <p class="field__hint" id="p-balance-note">
+              Freelancer.com accepts bids only while your account balance is at least USD 20. Radar
+              cannot check your balance.
+            </p>
             <p class="field__hint" id="p-place-hint" hidden>
               Place now sends this bid to Freelancer.com with your token, straight from this page.
             </p>

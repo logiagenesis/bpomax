@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Project } from './freelancer.js';
-import { PLACEHOLDERS, buildProposal, firstLine, openingPrice, type Template } from './proposal.js';
+import {
+  PLACEHOLDERS,
+  buildProposal,
+  findPlaceholders,
+  firstLine,
+  openingPrice,
+  placeholderProblem,
+  type Template,
+} from './proposal.js';
 import { formatPrice } from './text.js';
 import { bidsThisMonth, logEntry, sastMonth, type LogEntry } from './tracker.js';
 
@@ -83,9 +91,136 @@ describe('the first line of the client’s description', () => {
     expect(firstLine('  Logo for a bakery\nColours: blue')).toBe('Logo for a bakery');
   });
 
-  it('is cut at 160 characters', () => {
-    const long = `${'a'.repeat(200)}.`;
-    expect(firstLine(long)).toBe('a'.repeat(160));
+  it('comes back unchanged when it is 160 characters or fewer', () => {
+    // 15 words of 9 letters and a space (150 characters), then a 9-letter word and the stop.
+    const exact = `${'abcdefghi '.repeat(15)}abcdefghi.`;
+    expect(exact).toHaveLength(160);
+    expect(firstLine(exact)).toBe(exact);
+  });
+
+  it('cuts a 200-character sentence at the last space: no broken word, at most 160 with the …', () => {
+    // 19 words of 9 letters and a space (190 characters) and a last word with the stop: 200.
+    // Words fill indices 10k to 10k + 8 and the spaces are at 10k + 9, so the last space
+    // within the first 160 characters is at 159. The text kept is 0 to 158: 15 words and
+    // the 16th, whole, which is 159 characters; the … makes 160.
+    const long = `${'abcdefghi '.repeat(19)}abcdefghi.`;
+    expect(long).toHaveLength(200);
+    const cut = firstLine(long);
+    expect(cut).toBe(`${'abcdefghi '.repeat(15)}abcdefghi…`);
+    expect(cut).toHaveLength(160);
+  });
+
+  it('drops a word the cut would break: the 160th character is inside 0123456789ABCDEF', () => {
+    // 15 words (150 characters), then a 16-character word at 150 to 165. The last space
+    // within the first 160 is at 149, so 14 words and "abcdefghi" are kept: 149 characters.
+    const long = `${'abcdefghi '.repeat(15)}0123456789ABCDEF and then a good deal more words.`;
+    const cut = firstLine(long);
+    expect(cut).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+    expect(cut).toHaveLength(150);
+    expect(cut).not.toContain('0123456789ABCDEF');
+  });
+
+  it('cuts a sentence of 161 characters, the shortest that must be cut, and stays within 160', () => {
+    const long = `${'abcdefghi '.repeat(15)}abcdefghij.`;
+    expect(long).toHaveLength(161);
+    // The last space within the first 160 is at 149: "abcdefghij." goes.
+    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+  });
+
+  it('a word that ends at the 160th character leaves no room for the …, so it goes too', () => {
+    // 15 words (150 characters), a 10-letter word at 150 to 159, and a space at 160. Kept
+    // whole, the word and the … would make 161, so the cut is at the space before it.
+    const long = `${'abcdefghi '.repeat(15)}abcdefghij and then some more words follow here.`;
+    expect(long[160]).toBe(' ');
+    const cut = firstLine(long);
+    expect(cut).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+    expect(cut.length).toBeLessThanOrEqual(160);
+  });
+
+  it('does not leave a space in front of the …, even after two spaces in a row', () => {
+    // The last space in the first 160 characters is the second of two, at 150.
+    const long = `${'abcdefghi '.repeat(14)}abcdefghi  ${'z'.repeat(20)} and the rest.`;
+    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+  });
+
+  it('with no space in the first 159 characters, cuts at 159 and adds the …', () => {
+    const cut = firstLine(`${'a'.repeat(200)}.`);
+    expect(cut).toBe(`${'a'.repeat(159)}…`);
+    expect(cut).toHaveLength(160);
+  });
+
+  it('never ends on half of an emoji', () => {
+    // 158 letters, then 😀 in two UTF-16 units at 158 and 159: cutting at 159 would keep
+    // its first half, which is dropped.
+    const cut = firstLine(`${'a'.repeat(158)}😀${'b'.repeat(40)}.`);
+    expect(cut).toBe(`${'a'.repeat(158)}…`);
+  });
+});
+
+describe('placeholders in a proposal (B-01)', () => {
+  it('finds {skills}, {Client_Name}, { name } and {made-up} in one text, as written', () => {
+    expect(
+      findPlaceholders('Hi { name }, I can do {skills} for {Client_Name}. It is {made-up}.'),
+    ).toEqual(['{ name }', '{skills}', '{Client_Name}', '{made-up}']);
+  });
+
+  it('lists each distinct one once, in the order it first appears', () => {
+    expect(findPlaceholders('{a} {b} {a} {c} {b}')).toEqual(['{a}', '{b}', '{c}']);
+  });
+
+  it('finds nothing in a clean text', () => {
+    expect(findPlaceholders('Hello. I can do this for USD 450 in 7 days.')).toEqual([]);
+    expect(findPlaceholders('')).toEqual([]);
+  });
+
+  it('counts any text in braces: words, a dot, code, a number', () => {
+    expect(findPlaceholders('{first line} {project.title} { color: red; } {1} {"a": 1}')).toEqual([
+      '{first line}',
+      '{project.title}',
+      '{ color: red; }',
+      '{1}',
+      '{"a": 1}',
+    ]);
+  });
+
+  it('leaves alone what holds no text between braces, or does not close: {} and a lone brace', () => {
+    expect(findPlaceholders('{} } { and then {')).toEqual([]);
+  });
+
+  it('takes up to 40 characters between the braces, and no more', () => {
+    const forty = 'a'.repeat(40);
+    expect(findPlaceholders(`{${forty}}`)).toEqual([`{${forty}}`]);
+    expect(findPlaceholders(`{${forty}a}`)).toEqual([]);
+  });
+
+  it('does not reach across a line: the braces must close on the line they open', () => {
+    expect(findPlaceholders('{first\nline}')).toEqual([]);
+  });
+
+  it('finds the inner braces of {{doubled}} ones', () => {
+    expect(findPlaceholders('Hello {{skills}}')).toEqual(['{skills}']);
+  });
+
+  it('finds what buildProposal could not fill: {skills} with no in-house overlap', () => {
+    const job = { ...project(), price: 450, days: 7 };
+    const noOverlap = buildProposal(job, template('Skills: {skills}. {price}'), {
+      inHouse: [{ id: 555 }], // a skill none of the project's three skills matches
+    });
+    expect(noOverlap).toBe('Skills: {skills}. USD 450');
+    expect(findPlaceholders(noOverlap)).toEqual(['{skills}']);
+    // With one that matches, the text is whole.
+    const filled = buildProposal(job, template('Skills: {skills}. {price}'), settings);
+    expect(findPlaceholders(filled)).toEqual([]);
+  });
+
+  it('says what to do, and lists every one found', () => {
+    expect(placeholderProblem([])).toBeNull();
+    expect(placeholderProblem(['{skills}'])).toBe(
+      'Fill or remove {skills} before bidding. Any text in curly braces is blocked.',
+    );
+    expect(placeholderProblem(['{skills}', '{Client_Name}'])).toBe(
+      'Fill or remove {skills}, {Client_Name} before bidding. Any text in curly braces is blocked.',
+    );
   });
 });
 
