@@ -161,6 +161,25 @@ test.describe('U-01: the setup line', () => {
     await expect(item(page, 'limit')).toHaveText('Monthly limit: not set');
   });
 
+  test('saving the token in Settings turns Token to saved at once, and removing it turns it back', async ({
+    page,
+  }) => {
+    await open(page);
+    await expect(item(page, 'token')).toHaveText('Token: not saved');
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByLabel('Paste a token').fill(TOKEN);
+    await page.getByRole('button', { name: 'Save and check' }).click();
+    await expect(page.locator('#status')).toHaveText(/^Freelancer\.com accepted the token/);
+    await expect(item(page, 'token')).toHaveText('Token: saved');
+    await expect(item(page, 'token')).toHaveAttribute('data-state', 'set');
+
+    await page.getByRole('button', { name: 'Remove token' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+    await expect(page.locator('#token-state')).toHaveText('No token saved.');
+    await expect(item(page, 'token')).toHaveText('Token: not saved');
+    await expect(item(page, 'token')).toHaveAttribute('data-state', 'unset');
+  });
+
   test('a token accepted at its last check, with days to run, shows as saved', async ({ page }) => {
     await open(page, { token: { savedAt: NOW - 2 * DAY } });
     await expect(item(page, 'token')).toHaveText('Token: saved');
