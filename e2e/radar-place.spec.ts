@@ -43,6 +43,10 @@ async function open(
     tokenProblem?: string;
     /** The token check is never answered. */
     selfHang?: boolean;
+    /** The token check is answered with this HTTP status, as an error. */
+    self?: number;
+    /** How many days ago the token was pasted; Freelancer's tokens last 30. */
+    tokenDays?: number;
   } = {},
 ) {
   const token =
@@ -50,7 +54,7 @@ async function open(
       ? null
       : {
           token: TOKEN,
-          savedAt: NOW - 60_000,
+          savedAt: NOW - (options.tokenDays ?? 0) * 86_400_000 - 60_000,
           account: { ...ACCOUNT, ...options.account },
           checkedAt: NOW - 60_000,
           problem: options.tokenProblem ?? null,
@@ -75,6 +79,7 @@ async function open(
   const calls = await serveFreelancer(page, {
     bids: options.bids,
     selfHang: options.selfHang,
+    self: options.self,
   });
   await page.goto('/radar.html');
   await expect(page.locator('#status')).toHaveText(/^Read \d+ projects/);
@@ -429,6 +434,23 @@ const LOG = [...SEPTEMBER_TWO, logged(3, '2026-08-10T08:00:00.000Z')];
 const COUNTER = 'Bids logged in this browser this month';
 
 test.describe('B-04: Place now stops at the monthly limit', () => {
+  test('the counter follows the token: saved, it shows Freelancer’s limit; removed, it does not', async ({
+    page,
+  }) => {
+    await open(page, { token: false });
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 0`);
+
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByLabel('Paste a token').fill(TOKEN);
+    await page.getByRole('button', { name: 'Save and check' }).click();
+    await expect(page.locator('#status')).toHaveText(/^Freelancer\.com accepted the token/);
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 0 / 100`);
+
+    await page.getByRole('button', { name: 'Remove token' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 0`);
+  });
+
   test('at the limit in Settings it refuses with the count, sends nothing, and Bid on Freelancer stays', async ({
     page,
   }) => {
@@ -593,7 +615,15 @@ test.describe('B-09: a refused token hides Place now', () => {
     await expect(dialog.locator('#p-place-hint')).toBeHidden();
     await expect(dialog.getByLabel('Proposal')).toHaveValue(proposal);
     await expect(dialog.getByRole('button', { name: 'Bid on Freelancer' })).toBeVisible();
-    expect((await savedToken(page)).problem).toContain('HTTP 401');
+    // Recorded as the token check records a refusal, with its way on; and the keyboard is
+    // taken to the button that leads there, since the button that had it is gone.
+    expect((await savedToken(page)).problem).toBe(
+      'Token rejected (HTTP 401: Refused in the e2e). Generate a new one at accounts.freelancer.com/settings/develop.',
+    );
+    await expect(dialog.getByRole('button', { name: 'Check it again in Settings' })).toBeFocused();
+    await expect(
+      dialog.getByRole('button', { name: 'Check it again in Settings' }),
+    ).toHaveAccessibleDescription('Freelancer refused your token.');
     // Nothing was logged, and the lookup and the one refused POST are all that was sent.
     expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
     expect(calls.bidLookups).toHaveLength(1);
@@ -668,6 +698,34 @@ test.describe('B-09: a refused token hides Place now', () => {
     expect(calls.bidsSent).toHaveLength(0);
   });
 
+  test('a token check that failed for another reason is not called a refusal', async ({ page }) => {
+    await open(page, { self: 500 });
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: 'Check again' }).click();
+    await expect(page.locator('#status')).toHaveText(/HTTP 500/);
+    await page.getByRole('tab', { name: 'Feed' }).click();
+
+    const dialog = await detailOf(page, RECRUITER.title);
+    // Place now is off until the token passes a check, and the panel says what is true.
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeHidden();
+    await expect(dialog.locator('#p-token-refused')).toBeVisible();
+    await expect(dialog.locator('#p-token-refused-text')).toHaveText(
+      'The last check of your token did not succeed.',
+    );
+    await expect(dialog.locator('#p-token-refused')).not.toContainText('refused');
+    await expect(dialog.getByRole('button', { name: 'Check it again in Settings' })).toBeVisible();
+  });
+
+  test('a token that ran out has its own warning, not the refused notice', async ({ page }) => {
+    const calls = await open(page, { tokenDays: 31, tokenProblem: 'Token rejected (HTTP 401).' });
+    await expect(page.locator('#token-warning')).toBeVisible();
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.locator('#p-token-refused')).toBeHidden();
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeHidden();
+    await expect(dialog.getByRole('button', { name: 'Bid on Freelancer' })).toBeVisible();
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
   test('with no token there is no such notice', async ({ page }) => {
     await open(page, { token: false });
     const dialog = await detailOf(page, RECRUITER.title);
@@ -703,6 +761,8 @@ test.describe('B-10: no answer from Freelancer.com', () => {
     // The owner can look and try again; nothing tries again by itself.
     await expect(dialog.getByRole('button', { name: 'Place now' })).toBeEnabled();
     await page.clock.fastForward(60_000);
+    // Real time, not the page's: long enough for a request made by a retry to be recorded.
+    await page.waitForTimeout(300);
     expect(calls.bidLookups).toHaveLength(1);
     expect(calls.bidsSent).toHaveLength(1);
   });

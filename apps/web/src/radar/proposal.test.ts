@@ -127,6 +127,22 @@ describe('the first line of the client’s description', () => {
     expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
   });
 
+  it('a word that ends at the 160th character leaves no room for the …, so it goes too', () => {
+    // 15 words (150 characters), a 10-letter word at 150 to 159, and a space at 160. Kept
+    // whole, the word and the … would make 161, so the cut is at the space before it.
+    const long = `${'abcdefghi '.repeat(15)}abcdefghij and then some more words follow here.`;
+    expect(long[160]).toBe(' ');
+    const cut = firstLine(long);
+    expect(cut).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+    expect(cut.length).toBeLessThanOrEqual(160);
+  });
+
+  it('does not leave a space in front of the …, even after two spaces in a row', () => {
+    // The last space in the first 160 characters is the second of two, at 150.
+    const long = `${'abcdefghi '.repeat(14)}abcdefghi  ${'z'.repeat(20)} and the rest.`;
+    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+  });
+
   it('with no space in the first 159 characters, cuts at 159 and adds the …', () => {
     const cut = firstLine(`${'a'.repeat(200)}.`);
     expect(cut).toBe(`${'a'.repeat(159)}…`);

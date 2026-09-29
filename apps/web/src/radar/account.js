@@ -70,6 +70,8 @@ export async function fetchSelf(token, fetchImpl = fetch) {
     account = normaliseAccount(await getResult(SELF_URL, limited.fetch, token));
   } catch (error) {
     throw limited.blame(error);
+  } finally {
+    limited.done();
   }
   if (!Number.isInteger(account.id) || account.id <= 0 || !account.username) {
     throw new Error('Freelancer.com answered, but without a user id and username.');

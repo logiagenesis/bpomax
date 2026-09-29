@@ -200,6 +200,45 @@ describe('when Freelancer.com does not answer (B-10)', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
+  /** Headers that arrive and a body that never does; it ignores the abort signal, as a fetch may. */
+  const stalled = () => new Response(new ReadableStream({ start() {} }), { status: 200 });
+
+  it('gives up on a lookup whose answer never finishes arriving, and sends no bid', async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(stalled()));
+    let settled = false;
+    const outcome = placeBid(TOKEN, BID, fetchImpl).catch((e: unknown) => e);
+    void outcome.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const error = await outcome;
+
+    expect(error).toBeInstanceOf(RequestTimeout);
+    expect(statusOf(error)).toBeNull();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('gives up on a bid whose answer never finishes arriving, and does not send it again', async () => {
+    vi.useFakeTimers();
+    const replies = [NO_BIDS()];
+    const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(replies.shift() ?? stalled()));
+    const outcome = placeBid(TOKEN, BID, fetchImpl).catch((e: unknown) => e);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(RequestTimeout);
+    // The lookup, then the one POST, whose answer is the one that never finished.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[1]![1]?.method).toBe('POST');
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it('leaves no timer running when Freelancer.com answers in time', async () => {
     vi.useFakeTimers();
     const { fetchImpl } = standIn(

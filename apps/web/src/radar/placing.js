@@ -97,6 +97,8 @@ export async function placeBid(token, bid, fetchImpl = fetch) {
   } catch (error) {
     // The package wraps what fetch throws; a time-out is still a time-out to the page.
     throw limited.blame(error);
+  } finally {
+    limited.done();
   }
 }
 

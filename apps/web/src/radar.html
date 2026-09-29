@@ -613,8 +613,13 @@
               </button>
               <p class="field__hint radar-place-note" id="p-place-off" hidden></p>
               <div class="radar-place-refused" id="p-token-refused" hidden>
-                <p class="field__error">Freelancer refused your token.</p>
-                <button type="button" class="btn btn--secondary" id="p-token-recheck">
+                <p class="field__error" id="p-token-refused-text">Freelancer refused your token.</p>
+                <button
+                  type="button"
+                  class="btn btn--secondary"
+                  id="p-token-recheck"
+                  aria-describedby="p-token-refused-text"
+                >
                   Check it again in Settings
                 </button>
               </div>

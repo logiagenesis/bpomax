@@ -12,13 +12,7 @@ import { TOKEN_KEY, fetchSelf, maskToken, tokenProblem, tokenState } from './rad
 import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
-import {
-  FreelancerError,
-  RequestTimeout,
-  fetchProjects,
-  fetchSkills,
-  nextDelayMs,
-} from './radar/freelancer.js';
+import { RequestTimeout, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
 import {
   PLACEHOLDERS,
@@ -483,6 +477,8 @@ const CHECK_TIMEOUT_TEXT =
 
 /** Said where Place now sits when the project is hourly, and in the handler that refuses it. */
 const HOURLY_TEXT = 'Place now is off for hourly projects. Bid on Freelancer instead.';
+/** How the line about a token Freelancer.com refused (HTTP 401 or 403) begins. */
+const REFUSED = 'Token rejected';
 
 /**
  * Where Place now sits, for a project with no bid of the owner's in the log: the button and
@@ -501,12 +497,17 @@ function drawPlace(project) {
   const off = byId('p-place-off');
   off.hidden = !(offered && !fixed);
   off.textContent = off.hidden ? '' : HOURLY_TEXT;
-  // A token that ran out has its own warning at the top; this is for one that was refused.
-  byId('p-token-refused').hidden = !(
-    free &&
-    stored?.problem &&
-    tokenState(stored, Date.now()).kind !== 'expired'
-  );
+  // A token that ran out has its own warning at the top; this is for one that failed its
+  // last check. Only a refusal (401 or 403) is said to be one: a check that got no answer,
+  // or a 5xx, is not Freelancer.com refusing the token.
+  const failed =
+    free && stored?.problem && tokenState(stored, Date.now()).kind !== 'expired'
+      ? stored.problem
+      : null;
+  byId('p-token-refused').hidden = failed === null;
+  byId('p-token-refused-text').textContent = failed?.startsWith(REFUSED)
+    ? 'Freelancer refused your token.'
+    : 'The last check of your token did not succeed.';
 }
 
 /** @param {Project} project */
@@ -762,6 +763,8 @@ placeButton.addEventListener('click', async () => {
       drawToken();
       drawPlace(project);
       sayInDetail('info', '');
+      // Place now, which had the focus, is gone: the way on is the button in its place.
+      byId('p-token-recheck').focus();
     } else {
       // Any other refusal, a 403 included, is Freelancer.com's own message and nothing more:
       // what a 403 on a bid means is not known, so the token is not blamed for it.
@@ -1843,11 +1846,20 @@ function showTokenError(text) {
   tokenInput.setAttribute('aria-invalid', String(Boolean(text)));
 }
 
-/** Why Freelancer.com would not take the token, in a line Dennis can act on. */
+/**
+ * Why Freelancer.com would not take the token, in a line Dennis can act on. The page's
+ * errors and the bid placer's both carry a `status`; they word their messages differently:
+ * "answered HTTP 401: …." and "refused placing the bid (HTTP 401: …)".
+ */
 function refusal(/** @type {unknown} */ error) {
   const message = error instanceof Error ? error.message : String(error);
-  if (error instanceof FreelancerError && (error.status === 401 || error.status === 403)) {
-    return `Token rejected (${message.replace(/^Freelancer\.com answered /, '').replace(/\.$/, '')}). Generate a new one at ${DEVELOP}.`;
+  const status = statusOf(error);
+  if (status === 401 || status === 403) {
+    const said = message
+      .replace(/^Freelancer\.com answered /, '')
+      .replace(/^Freelancer\.com refused [^(]*\((.*)\)$/, '$1')
+      .replace(/\.$/, '');
+    return `${REFUSED} (${said}). Generate a new one at ${DEVELOP}.`;
   }
   return message;
 }
