@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Project } from './freelancer.js';
-import { PLACEHOLDERS, buildProposal, firstLine, openingPrice, type Template } from './proposal.js';
+import {
+  PLACEHOLDERS,
+  buildProposal,
+  firstLine,
+  openingPrice,
+  unfilledMessage,
+  unfilledPlaceholders,
+  type Template,
+} from './proposal.js';
 import { formatPrice } from './text.js';
 import { bidsThisMonth, logEntry, sastMonth, type LogEntry } from './tracker.js';
 
@@ -83,9 +91,105 @@ describe('the first line of the client’s description', () => {
     expect(firstLine('  Logo for a bakery\nColours: blue')).toBe('Logo for a bakery');
   });
 
-  it('is cut at 160 characters', () => {
-    const long = `${'a'.repeat(200)}.`;
-    expect(firstLine(long)).toBe('a'.repeat(160));
+  it('is left whole at 160 characters or fewer', () => {
+    // 15 words of 9 letters and a space (150 characters), then a 9-letter word and the stop:
+    // 150 + 9 + 1 = 160 characters exactly.
+    const exact = `${'abcdefghi '.repeat(15)}abcdefghi.`;
+    expect(exact).toHaveLength(160);
+    expect(firstLine(exact)).toBe(exact);
+  });
+
+  it('over 160 characters is cut at the last whole word and ends with …', () => {
+    // "abcdefghi " × 15 is 150 characters (indices 0–149). The next word, 0123456789ABCDEF,
+    // fills indices 150–165, so the 160th character is inside it. The last space before it
+    // is index 149, so the cut keeps 14 words + "abcdefghi" (149 characters) and adds "…".
+    const long = `${'abcdefghi '.repeat(15)}0123456789ABCDEF and more.`;
+    const cut = firstLine(long);
+    expect(cut).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+    expect(cut).toHaveLength(150);
+    expect(cut).not.toContain('0123456789ABCDEF');
+  });
+
+  it('is at most 161 characters: 160 of whole words, then …', () => {
+    // 15 words of 9 letters + a space (150), then a 10-letter word (indices 150–159) and a
+    // space at index 160: the cut falls exactly between words and keeps all 160 characters
+    // of the first 16 words, plus …
+    const long = `${'abcdefghi '.repeat(15)}abcdefghij and then some more words after it.`;
+    const cut = firstLine(long);
+    expect(cut).toBe(`${'abcdefghi '.repeat(15)}abcdefghij…`);
+    expect(cut).toHaveLength(161);
+  });
+
+  it('never keeps a comma or dash in front of the …', () => {
+    // "abcdefghi " × 14 (140), "abcdefghi," (140–149), a space at 150, then 18 z's.
+    const long = `${'abcdefghi '.repeat(14)}abcdefghi, ${'z'.repeat(18)} end.`;
+    expect(firstLine(long)).toBe(`${'abcdefghi '.repeat(14)}abcdefghi…`);
+  });
+
+  it('cuts a single word longer than 160 characters at 160, since it has no boundary', () => {
+    const cut = firstLine(`${'a'.repeat(200)}.`);
+    expect(cut).toBe(`${'a'.repeat(160)}…`);
+    expect(cut).toHaveLength(161);
+  });
+
+  it('never ends on half of an emoji', () => {
+    // 159 letters, then 😀 (two UTF-16 units, indices 159–160): the 160-unit cut would end
+    // on its first half, which is dropped.
+    const cut = firstLine(`${'a'.repeat(159)}😀${'b'.repeat(20)}.`);
+    expect(cut).toBe(`${'a'.repeat(159)}…`);
+  });
+});
+
+describe('placeholders left in a text (R-01)', () => {
+  it('lists each one still there, once, in the order they first appear', () => {
+    expect(unfilledPlaceholders('Skills: {skills}. Then {made_up}, and {skills} again.')).toEqual([
+      '{skills}',
+      '{made_up}',
+    ]);
+  });
+
+  it('returns none for a clean text', () => {
+    expect(unfilledPlaceholders('Hello. I can do this for USD 450 in 7 days.')).toEqual([]);
+    expect(unfilledPlaceholders('')).toEqual([]);
+  });
+
+  it('counts a mistyped placeholder too: another case, a hyphen, spaces inside', () => {
+    expect(unfilledPlaceholders('{Title} {first-line} { price } {timeline_days}')).toEqual([
+      '{Title}',
+      '{first-line}',
+      '{price}',
+      '{timeline_days}',
+    ]);
+  });
+
+  it('leaves braces that are not a name alone: empty, code, numbers', () => {
+    expect(unfilledPlaceholders('{} { } a { color: red; } {1} {"a": 1}')).toEqual([]);
+  });
+
+  it('finds what buildProposal could not fill: {skills} with no in-house overlap', () => {
+    const job = { ...project(), price: 450, days: 7 };
+    const withOverlap = buildProposal(job, template('Skills: {skills}. {price}'), settings);
+    expect(unfilledPlaceholders(withOverlap)).toEqual([]);
+
+    const noOverlap = buildProposal(job, template('Skills: {skills}. {made_up} {price}'), {
+      inHouse: [{ id: 555 }], // a skill none of the project's three skills matches
+    });
+    expect(noOverlap).toBe('Skills: {skills}. {made_up} USD 450');
+    expect(unfilledPlaceholders(noOverlap)).toEqual(['{skills}', '{made_up}']);
+
+    const noInHouse = buildProposal(job, template('Skills: {skills}'), { inHouse: [] });
+    expect(unfilledPlaceholders(noInHouse)).toEqual(['{skills}']);
+  });
+
+  it('says what to do: one, two or three placeholders', () => {
+    expect(unfilledMessage([])).toBeNull();
+    expect(unfilledMessage(['{skills}'])).toBe('Fill or remove {skills} before bidding.');
+    expect(unfilledMessage(['{skills}', '{made_up}'])).toBe(
+      'Fill or remove {skills} and {made_up} before bidding.',
+    );
+    expect(unfilledMessage(['{a}', '{b}', '{c}'])).toBe(
+      'Fill or remove {a}, {b} and {c} before bidding.',
+    );
   });
 });
 
@@ -144,6 +248,12 @@ describe('buildProposal', () => {
       '{timeline_days}',
       '{first_line}',
     ]);
+  });
+
+  it('describes {first_line} as the page now cuts it: whole words, then …', () => {
+    const description = PLACEHOLDERS.find(([name]) => name === '{first_line}')?.[1];
+    expect(description).toContain('160');
+    expect(description).toContain('…');
   });
 });
 

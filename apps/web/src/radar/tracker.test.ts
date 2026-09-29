@@ -8,7 +8,13 @@ import {
   readJson,
   restore,
 } from './store.js';
-import { computeTotals, withStatus, type BidStatus, type LogEntry } from './tracker.js';
+import {
+  computeTotals,
+  monthlyLimitProblem,
+  withStatus,
+  type BidStatus,
+  type LogEntry,
+} from './tracker.js';
 
 /**
  * The Bids tab's figures (LI-PROMPT-BPOMAX-RADAR-20260927, 4.5), from a hand-worked log of
@@ -330,5 +336,46 @@ describe('Export and Import', () => {
     expect(backupFilename(NOW)).toBe('radar-backup-27-09-2026.json');
     // 23:30 UTC on 30/09 is already 01/10 in SAST.
     expect(backupFilename(Date.parse('2026-09-30T23:30:00Z'))).toBe('radar-backup-01-10-2026.json');
+  });
+});
+
+describe('the monthly limit on Place now (R-06)', () => {
+  const at = (placedAt: string) => ({ placedAt }) as LogEntry;
+  // Three bids in September 2026 SAST (the last at 23:59 SAST on the 30th) and one at
+  // 00:00 SAST on 1 October, which belongs to October.
+  const log = [
+    at('2026-09-03T08:00:00Z'),
+    at('2026-09-27T06:53:14Z'),
+    at('2026-09-30T21:59:00Z'),
+    at('2026-09-30T22:00:00Z'),
+  ];
+  const IN_SEPTEMBER = Date.parse('2026-09-28T10:00:00Z');
+  const IN_OCTOBER = Date.parse('2026-10-01T08:00:00Z');
+
+  it('has no check when the limit is blank', () => {
+    expect(monthlyLimitProblem(log, null, IN_SEPTEMBER)).toBeNull();
+  });
+
+  it('allows a bid while the month’s count is under the limit: 3 logged, limit 4', () => {
+    expect(monthlyLimitProblem(log, 4, IN_SEPTEMBER)).toBeNull();
+  });
+
+  it('refuses at the limit, with the count: 3 logged, limit 3', () => {
+    expect(monthlyLimitProblem(log, 3, IN_SEPTEMBER)).toBe(
+      'The monthly limit in Settings is reached (3 of 3 bids logged this month), so Place now is off.',
+    );
+  });
+
+  it('refuses over the limit too: 3 logged, limit 2', () => {
+    expect(monthlyLimitProblem(log, 2, IN_SEPTEMBER)).toBe(
+      'The monthly limit in Settings is reached (3 of 2 bids logged this month), so Place now is off.',
+    );
+  });
+
+  it('counts only the SAST month now falls in: October has 1 bid, so a limit of 2 is open', () => {
+    expect(monthlyLimitProblem(log, 2, IN_OCTOBER)).toBeNull();
+    expect(monthlyLimitProblem(log, 1, IN_OCTOBER)).toBe(
+      'The monthly limit in Settings is reached (1 of 1 bids logged this month), so Place now is off.',
+    );
   });
 });

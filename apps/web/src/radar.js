@@ -14,7 +14,13 @@ import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers
 import { applyFilters } from './radar/filter.js';
 import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
-import { PLACEHOLDERS, buildProposal, openingPrice } from './radar/proposal.js';
+import {
+  PLACEHOLDERS,
+  buildProposal,
+  openingPrice,
+  unfilledMessage,
+  unfilledPlaceholders,
+} from './radar/proposal.js';
 import { byRank, scoreProject } from './radar/score.js';
 import {
   backupFilename,
@@ -26,7 +32,13 @@ import {
   saveSettings,
   writeJson,
 } from './radar/store.js';
-import { bidsThisMonth, computeTotals, logEntry, withStatus } from './radar/tracker.js';
+import {
+  bidsThisMonth,
+  computeTotals,
+  logEntry,
+  monthlyLimitProblem,
+  withStatus,
+} from './radar/tracker.js';
 import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from './radar/text.js';
 
 /**
@@ -312,8 +324,14 @@ function drawCounter() {
       : `Bids this month: ${count} / ${String(settings.monthlyLimit)}`;
 }
 
+/** Says so above the feed while the rank has no skills or in-house ticks to work from. */
+function drawRankNote() {
+  byId('rank-note').hidden = settings.skills.length > 0 && settings.inHouse.length > 0;
+}
+
 function render() {
   drawCounter();
+  drawRankNote();
   const now = Date.now();
   const shown = byRank(
     applyFilters(projects, settings.filters, { acted: acted(), now }).map((project) => ({
@@ -543,6 +561,8 @@ byId('p-bid').addEventListener('click', async () => {
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
   if (!pText.value.trim()) problems.push('The proposal is empty.');
+  const unfilled = unfilledMessage(unfilledPlaceholders(pText.value));
+  if (unfilled) problems.push(unfilled);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
@@ -613,6 +633,10 @@ placeButton.addEventListener('click', async () => {
   if (price === null) problems.push('Enter your price, a number above 0.');
   if (days === null) problems.push('Enter the delivery days, a whole number from 1 to 365.');
   if (!text) problems.push('The proposal is empty.');
+  const unfilled = unfilledMessage(unfilledPlaceholders(text));
+  if (unfilled) problems.push(unfilled);
+  const overLimit = monthlyLimitProblem(log, settings.monthlyLimit, Date.now());
+  if (overLimit) problems.push(overLimit);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
@@ -1052,6 +1076,7 @@ function skillPicker(key, prefix, onChange) {
 let reread;
 skillPicker('inHouse', 'inhouse', () => render());
 skillPicker('skills', 'watch', () => {
+  drawRankNote();
   // A new set of skills is a new search: read again once the picking pauses.
   clearTimeout(reread);
   reread = setTimeout(() => void refresh(), 1500);

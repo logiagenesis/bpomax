@@ -9,6 +9,7 @@
  */
 import { createBid, findBid } from '@arbitron/freelancer/bidding';
 import { FREELANCER } from './links.js';
+import { unfilledMessage, unfilledPlaceholders } from './proposal.js';
 
 /**
  * @typedef {Parameters<typeof createBid>[0]} FreelancerConfig
@@ -47,13 +48,17 @@ const MILESTONE_PERCENTAGE = 100;
 
 /**
  * Places the bid unless Freelancer.com already has one of his on the project. Throws the
- * package's FreelancerError (with `status`, 0 when nothing came back) when refused.
+ * package's FreelancerError (with `status`, 0 when nothing came back) when refused. Throws
+ * a plain Error, before any call is made, when the proposal still has a `{placeholder}` in
+ * it: the page checks this first, and this is the last stop behind that check.
  * @param {string} token
  * @param {BidToPlace} bid
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<Placed>}
  */
 export async function placeBid(token, bid, fetchImpl = fetch) {
+  const unfilled = unfilledMessage(unfilledPlaceholders(bid.description));
+  if (unfilled) throw new Error(unfilled);
   /** @type {number | null} */
   let status = null;
   /** @type {typeof fetch} */

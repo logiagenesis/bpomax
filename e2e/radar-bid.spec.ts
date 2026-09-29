@@ -24,6 +24,17 @@ const TEMPLATE = {
   isDefault: true,
 };
 
+/**
+ * Every skill of the three projects these specs bid on, ticked as delivered in-house, so the
+ * template's `{skills}` has something to fill it. Without one, the page refuses to copy or
+ * place the bid (radar-safety.spec.ts).
+ */
+const IN_HOUSE = [
+  ...new Map(
+    [RECRUITER, BOAT, PINS].flatMap((p) => p.jobs.map((j) => [j.id, { id: j.id, name: j.name }])),
+  ).values(),
+];
+
 /** Puts templates and settings in the browser before the page loads, once per tab. */
 async function seed(page: Page, templates: unknown[], settings: Record<string, unknown> = {}) {
   await page.addInitScript(
@@ -148,11 +159,13 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
   await expect(dialog.locator('#p-price-hint')).toHaveText('The client’s budget: USD 250–750.');
   await expect(dialog.getByLabel('Delivery days')).toHaveValue('7');
   await expect(dialog.getByLabel('Template')).toHaveValue('tpl-1');
-  const firstSentence = RECRUITER.description
-    .trim()
-    .split(/(?<=[.!?])\s|\n/)[0]!
-    .slice(0, 160)
-    .trim();
+  // This description's first sentence runs past 160 characters, so `{first_line}` is cut at
+  // the last whole word before the 160th ("…funnel now" – the next word, "needs", would
+  // have been cut through) and ends with …
+  const firstSentence =
+    'Our growing IT services company is expanding headcount across engineering, product, sales, and operations, and the interview stage of the hiring funnel now…';
+  expect(RECRUITER.description).toContain(`${firstSentence.slice(0, -1)} need`);
+  expect(firstSentence.length).toBeLessThanOrEqual(161);
   const expected = `Hello. About ${RECRUITER.title}: ${firstSentence}\nI can do this for USD 450 in 7 days (USD 250–750). Skills: ${RECRUITER.jobs[0]!.name}.`;
   await expect(dialog.getByLabel('Proposal')).toHaveValue(expected);
   await expect(dialog.locator('#p-count')).toHaveText(`${String(expected.length)} characters`);
@@ -221,7 +234,7 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
 });
 
 test('Cancel logs nothing', async ({ page }) => {
-  await seed(page, [TEMPLATE]);
+  await seed(page, [TEMPLATE], { inHouse: IN_HOUSE });
   await open(page);
   const dialog = await detailOf(page, RECRUITER.title);
   const popup = page.waitForEvent('popup');
@@ -237,7 +250,7 @@ test('Cancel logs nothing', async ({ page }) => {
 });
 
 test('when the clipboard refuses, the text is selected to copy by hand', async ({ page }) => {
-  await seed(page, [TEMPLATE]);
+  await seed(page, [TEMPLATE], { inHouse: IN_HOUSE });
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: () => Promise.reject(new Error('denied')) },
@@ -260,7 +273,7 @@ test('when the clipboard refuses, the text is selected to copy by hand', async (
 });
 
 test('the price is the owner’s to change, shown in USD too, and checked', async ({ page }) => {
-  await seed(page, [TEMPLATE], { pricePct: 70, defaultDays: 12 });
+  await seed(page, [TEMPLATE], { pricePct: 70, defaultDays: 12, inHouse: IN_HOUSE });
   await open(page);
   // 70 % of AUD 5 000 is 3 500, within 3 000–5 000.
   let dialog = await detailOf(page, BOAT.title);
@@ -278,8 +291,9 @@ test('the price is the owner’s to change, shown in USD too, and checked', asyn
   await dialog.getByLabel('Price (AUD)').fill('');
   await dialog.getByLabel('Delivery days').fill('0');
   await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+  // With the price blank the text still has {price} in it, which the page refuses too.
   await expect(dialog.locator('#p-error')).toHaveText(
-    'Enter your price, a number above 0. Enter the delivery days, a whole number from 1 to 365.',
+    'Enter your price, a number above 0. Enter the delivery days, a whole number from 1 to 365. Fill or remove {price} before bidding.',
   );
   await expect(dialog.locator('#bid-panel')).toBeHidden();
   await dialog.getByRole('button', { name: 'Close' }).click();
@@ -321,7 +335,7 @@ test('bidding settings are checked and saved; a blank limit shows no limit', asy
 
 test('the bid panel works at 380 px wide', async ({ page }) => {
   await page.setViewportSize({ width: 380, height: 800 });
-  await seed(page, [TEMPLATE]);
+  await seed(page, [TEMPLATE], { inHouse: IN_HOUSE });
   await open(page);
   const dialog = await detailOf(page, RECRUITER.title);
   const popup = page.waitForEvent('popup');
