@@ -151,7 +151,9 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
     monthlyLimit: 300,
   });
   await open(page);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0 / 300');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0 / 300',
+  );
   const dialog = await detailOf(page, RECRUITER.title);
 
   // 60 % of USD 750 is USD 450, within 250–750.
@@ -194,7 +196,9 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
   await dialog.getByRole('button', { name: 'I placed the bid' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('#status')).toHaveText(`Logged your bid on “${RECRUITER.title}”.`);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 1 / 300');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 1 / 300',
+  );
   await expect(rows(page)).toHaveCount(ALL.length - 1);
   await expect(row(page, RECRUITER.title)).toHaveCount(0);
 
@@ -223,7 +227,9 @@ test('Bid on Freelancer copies the proposal, opens the project, and I placed the
 
   // Still logged after a reload; shown as Bid placed when acted-on projects are not hidden.
   await page.reload();
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 1 / 300');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 1 / 300',
+  );
   await page.locator('#filters-box > summary').click();
   await page.getByLabel('Hide projects already bid on or dismissed').uncheck();
   await expect(row(page, RECRUITER.title).locator('.badge')).toContainText(['Bid placed']);
@@ -245,7 +251,9 @@ test('Cancel logs nothing', async ({ page }) => {
   await expect(dialog.locator('#detail-status')).toHaveText('Nothing was logged.');
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(rows(page)).toHaveCount(ALL.length);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0',
+  );
   expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
 });
 
@@ -311,12 +319,16 @@ test('the price is the owner’s to change, shown in USD too, and checked', asyn
 
 test('bidding settings are checked and saved; a blank limit shows no limit', async ({ page }) => {
   await open(page);
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0',
+  );
   await page.getByRole('tab', { name: 'Settings' }).click();
   await expect(page.getByLabel('Opening price, % of the project’s maximum')).toHaveValue('60');
   await expect(page.getByLabel('Delivery days, unless you change them')).toHaveValue('7');
   await page.getByLabel('Bids your membership allows a month').fill('50');
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0 / 50');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0 / 50',
+  );
   await page.getByLabel('Opening price, % of the project’s maximum').fill('0');
   await page.getByLabel('Delivery days, unless you change them').fill('3,5');
   await expect(page.locator('#settings-error')).toHaveText(
@@ -330,7 +342,9 @@ test('bidding settings are checked and saved; a blank limit shows no limit', asy
   await expect(page.getByLabel('Opening price, % of the project’s maximum')).toHaveValue('55');
   await expect(page.getByLabel('Bids your membership allows a month')).toHaveValue('50');
   await page.getByLabel('Bids your membership allows a month').fill('');
-  await expect(page.locator('#bid-counter')).toHaveText('Bids this month: 0');
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 0',
+  );
 });
 
 test('the bid panel works at 380 px wide', async ({ page }) => {

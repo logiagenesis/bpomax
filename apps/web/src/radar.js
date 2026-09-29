@@ -32,7 +32,14 @@ import {
   saveSettings,
   writeJson,
 } from './radar/store.js';
-import { bidsThisMonth, computeTotals, logEntry, withStatus } from './radar/tracker.js';
+import {
+  bidsThisMonth,
+  computeTotals,
+  logEntry,
+  monthlyLimit,
+  monthlyLimitProblem,
+  withStatus,
+} from './radar/tracker.js';
 import { budgetText, formatAge, formatAmount, formatPrice, formatRange } from './radar/text.js';
 
 /**
@@ -310,12 +317,18 @@ function acted() {
   return ids;
 }
 
+/**
+ * Radar's own count: the bids logged in this browser this month, against the lower of the
+ * limit in Settings and Freelancer.com's for the membership. It knows nothing of bids placed
+ * anywhere else.
+ */
 function drawCounter() {
   const count = String(bidsThisMonth(log, Date.now()));
+  const limit = monthlyLimit(settings.monthlyLimit, stored?.account ?? null);
   byId('bid-counter').textContent =
-    settings.monthlyLimit === null
-      ? `Bids this month: ${count}`
-      : `Bids this month: ${count} / ${String(settings.monthlyLimit)}`;
+    limit === null
+      ? `Bids logged in this browser this month: ${count}`
+      : `Bids logged in this browser this month: ${count} / ${String(limit)}`;
 }
 
 function render() {
@@ -647,6 +660,12 @@ placeButton.addEventListener('click', async () => {
   if (!text) problems.push('The proposal is empty.');
   const braces = placeholderProblem(findPlaceholders(text));
   if (braces) problems.push(braces);
+  const atLimit = monthlyLimitProblem(
+    log,
+    monthlyLimit(settings.monthlyLimit, ready.account),
+    Date.now(),
+  );
+  if (atLimit) problems.push(atLimit);
   pError.hidden = problems.length === 0;
   pError.textContent = problems.join(' ');
   if (price === null || days === null || problems.length) return;
@@ -686,6 +705,7 @@ placeButton.addEventListener('click', async () => {
       placedBy: /** @type {const} */ ('manual'),
       freelancerBidId: result.bidId,
       apiStatus: result.status,
+      outcome: result.outcome,
     };
     log = [entry, ...log];
     keep('log', log);
@@ -1793,6 +1813,7 @@ function refusal(/** @type {unknown} */ error) {
 }
 
 function drawToken() {
+  drawCounter();
   const state = tokenState(stored, Date.now());
   tokenCheck.hidden = !stored;
   tokenRemove.hidden = !stored;

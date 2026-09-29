@@ -8,7 +8,15 @@ import {
   readJson,
   restore,
 } from './store.js';
-import { computeTotals, withStatus, type BidStatus, type LogEntry } from './tracker.js';
+import {
+  bidsThisMonth,
+  computeTotals,
+  monthlyLimit,
+  monthlyLimitProblem,
+  withStatus,
+  type BidStatus,
+  type LogEntry,
+} from './tracker.js';
 
 /**
  * The Bids tab's figures (LI-PROMPT-BPOMAX-RADAR-20260927, 4.5), from a hand-worked log of
@@ -330,5 +338,111 @@ describe('Export and Import', () => {
     expect(backupFilename(NOW)).toBe('radar-backup-27-09-2026.json');
     // 23:30 UTC on 30/09 is already 01/10 in SAST.
     expect(backupFilename(Date.parse('2026-09-30T23:30:00Z'))).toBe('radar-backup-01-10-2026.json');
+  });
+});
+
+describe('the monthly limit (B-04)', () => {
+  const month = (bidLimit: number | null, bidPeriod: string | null) => ({ bidLimit, bidPeriod });
+
+  it('is the Settings limit when that is all there is', () => {
+    expect(monthlyLimit(50, null)).toBe(50);
+    expect(monthlyLimit(50, month(null, null))).toBe(50);
+  });
+
+  it('is Freelancer’s own limit when its period is a month and Settings has none', () => {
+    expect(monthlyLimit(null, month(100, 'month'))).toBe(100);
+  });
+
+  it('ignores Freelancer’s limit when its period is a week, a year, or not known', () => {
+    expect(monthlyLimit(null, month(100, 'week'))).toBeNull();
+    expect(monthlyLimit(null, month(100, 'year'))).toBeNull();
+    expect(monthlyLimit(null, month(100, null))).toBeNull();
+    // ... and then the Settings limit stands alone.
+    expect(monthlyLimit(50, month(100, 'week'))).toBe(50);
+    expect(monthlyLimit(50, month(100, null))).toBe(50);
+  });
+
+  it('takes the lower when both apply', () => {
+    expect(monthlyLimit(50, month(100, 'month'))).toBe(50);
+    expect(monthlyLimit(300, month(100, 'month'))).toBe(100);
+    expect(monthlyLimit(100, month(100, 'month'))).toBe(100);
+  });
+
+  it('is null when neither applies', () => {
+    expect(monthlyLimit(null, null)).toBeNull();
+    expect(monthlyLimit(null, month(null, 'month'))).toBeNull();
+    expect(monthlyLimit(null, month(100, 'week'))).toBeNull();
+  });
+
+  it('does not take a Freelancer limit of 0 as a limit: it may mean no limit', () => {
+    expect(monthlyLimit(null, month(0, 'month'))).toBeNull();
+    expect(monthlyLimit(50, month(0, 'month'))).toBe(50);
+  });
+});
+
+describe('what stops Place now at the limit (B-04)', () => {
+  const at = (placedAt: string, extra: Partial<LogEntry> = {}) =>
+    ({ placedAt, ...extra }) as LogEntry;
+  // Three bids in September 2026 SAST (the last at 23:59 SAST on the 30th) and one at
+  // 00:00 SAST on 1 October, which belongs to October.
+  const log = [
+    at('2026-09-03T08:00:00Z'),
+    at('2026-09-27T06:53:14Z'),
+    at('2026-09-30T21:59:00Z'),
+    at('2026-09-30T22:00:00Z'),
+  ];
+  const IN_SEPTEMBER = Date.parse('2026-09-28T10:00:00Z');
+  const IN_OCTOBER = Date.parse('2026-10-01T08:00:00Z');
+
+  it('has nothing to say without a limit, or with room under it: 3 logged, limit 4', () => {
+    expect(monthlyLimitProblem(log, null, IN_SEPTEMBER)).toBeNull();
+    expect(monthlyLimitProblem(log, 4, IN_SEPTEMBER)).toBeNull();
+  });
+
+  it('refuses at the limit and over it, with the count and the limit', () => {
+    expect(monthlyLimitProblem(log, 3, IN_SEPTEMBER)).toBe(
+      'You have logged 3 bids this month and your limit is 3. Place now is off until next month.',
+    );
+    expect(monthlyLimitProblem(log, 2, IN_SEPTEMBER)).toBe(
+      'You have logged 3 bids this month and your limit is 2. Place now is off until next month.',
+    );
+  });
+
+  it('says "1 bid" for one', () => {
+    expect(monthlyLimitProblem(log, 1, IN_OCTOBER)).toBe(
+      'You have logged 1 bid this month and your limit is 1. Place now is off until next month.',
+    );
+  });
+
+  it('counts only the SAST month now falls in: October has 1 bid, so a limit of 2 is open', () => {
+    expect(monthlyLimitProblem(log, 2, IN_OCTOBER)).toBeNull();
+  });
+});
+
+describe('a bid Freelancer already had is still counted (B-05)', () => {
+  const at = (placedAt: string, extra: Partial<LogEntry> = {}) =>
+    ({ placedAt, ...extra }) as LogEntry;
+  const NOW_IN_SEPTEMBER = Date.parse('2026-09-28T10:00:00Z');
+
+  it('counts an entry whose outcome is already: it is the only record of a real bid', () => {
+    expect(
+      bidsThisMonth([at('2026-09-20T08:00:00Z', { outcome: 'already' })], NOW_IN_SEPTEMBER),
+    ).toBe(1);
+  });
+
+  it('counts an entry that was placed, and an older entry with no outcome at all', () => {
+    const log = [
+      at('2026-09-20T08:00:00Z', { outcome: 'placed' }),
+      at('2026-09-21T08:00:00Z'),
+      at('2026-09-22T08:00:00Z', { outcome: 'already' }),
+    ];
+    expect(bidsThisMonth(log, NOW_IN_SEPTEMBER)).toBe(3);
+  });
+
+  it('counts it against the limit too', () => {
+    const log = [at('2026-09-20T08:00:00Z', { outcome: 'already' })];
+    expect(monthlyLimitProblem(log, 1, NOW_IN_SEPTEMBER)).toBe(
+      'You have logged 1 bid this month and your limit is 1. Place now is off until next month.',
+    );
   });
 });

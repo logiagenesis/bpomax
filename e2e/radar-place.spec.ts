@@ -38,6 +38,7 @@ async function open(
     templates?: unknown[];
     settings?: Record<string, unknown>;
     log?: unknown[];
+    account?: Partial<typeof ACCOUNT>;
   } = {},
 ) {
   const token =
@@ -46,7 +47,7 @@ async function open(
       : {
           token: TOKEN,
           savedAt: NOW - 60_000,
-          account: ACCOUNT,
+          account: { ...ACCOUNT, ...options.account },
           checkedAt: NOW - 60_000,
           problem: null,
         };
@@ -148,6 +149,7 @@ test('Place now checks for an earlier bid, sends the bid, and logs it with Freel
     placedBy: 'manual',
     freelancerBidId: '900000001',
     apiStatus: 200,
+    outcome: 'placed',
     status: 'sent',
   });
 
@@ -177,6 +179,14 @@ test('when Freelancer.com already has his bid, nothing new is sent and the bid i
     `Freelancer.com already has your bid 777 on “${RECRUITER.title}”, so nothing new was sent. It is logged.`,
   );
   expect(calls.bidsSent).toHaveLength(0);
+  // The entry is this browser's only record of a bid that is real: it says so, and it counts.
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('radar.log') ?? '[]'));
+  expect(saved).toHaveLength(1);
+  expect(saved[0]).toMatchObject({ freelancerBidId: '777', outcome: 'already' });
+  // With the token's account limit of 100 a month (Freelancer's own) as the limit.
+  await expect(page.locator('#bid-counter')).toHaveText(
+    'Bids logged in this browser this month: 1 / 100',
+  );
 });
 
 test('a refused bid is shown on the page and not logged', async ({ page }) => {
@@ -368,6 +378,150 @@ test.describe('B-03: Place now is for fixed-price projects only', () => {
     await expect(dialog.locator('#p-error')).toHaveText(HOURLY_LINE);
     await expect(confirmDialog(page)).toHaveCount(0);
     expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+});
+
+// ------------------------------------------------------------------ B-04, B-05
+// Place now stops at the monthly limit: the lower of the one in Settings and Freelancer.com's
+// (when its period is a month), counted from the bids logged in this browser.
+
+/** A bid in the log, as the Bids tab keeps it. */
+function logged(n: number, placedAt: string) {
+  return {
+    id: `bid-${String(n)}`,
+    projectId: 900 + n,
+    title: `Logged project ${String(n)}`,
+    url: `https://www.freelancer.com/projects/logged/p${String(n)}`,
+    skills: ['PHP'],
+    budget: { min: 100, max: 1000 },
+    type: 'fixed',
+    currency: 'USD',
+    usdRate: 1,
+    price: 450,
+    days: 7,
+    templateId: null,
+    templateName: null,
+    proposal: 'Hello.',
+    score: 75,
+    scoreParts: { skill: 35, budget: 10, fresh: 20, competition: 10 },
+    bidCount: 3,
+    ageMinutes: 12,
+    placedAt,
+    status: 'sent',
+    replied: false,
+    award: null,
+  };
+}
+// The clock stands at 27/09/2026 08:53 SAST: two of these are in September, one in August.
+const SEPTEMBER_TWO = [
+  logged(1, '2026-09-20T08:00:00.000Z'),
+  logged(2, '2026-09-15T08:00:00.000Z'),
+];
+const LOG = [...SEPTEMBER_TWO, logged(3, '2026-08-10T08:00:00.000Z')];
+const COUNTER = 'Bids logged in this browser this month';
+
+test.describe('B-04: Place now stops at the monthly limit', () => {
+  test('at the limit in Settings it refuses with the count, sends nothing, and Bid on Freelancer stays', async ({
+    page,
+  }) => {
+    const calls = await open(page, { settings: { monthlyLimit: 2 }, log: LOG });
+    // Radar's own count, from bids logged in this browser (August's does not count).
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 2 / 2`);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toBeVisible();
+    await expect(dialog.locator('#p-error')).toHaveText(
+      'You have logged 2 bids this month and your limit is 2. Place now is off until next month.',
+    );
+    await expect(confirmDialog(page)).toHaveCount(0);
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+
+    const popup = page.waitForEvent('popup');
+    await dialog.getByRole('button', { name: 'Bid on Freelancer' }).click();
+    await popup;
+  });
+
+  test('Freelancer’s own monthly limit stops it too, with no limit in Settings', async ({
+    page,
+  }) => {
+    const calls = await open(page, {
+      log: [...SEPTEMBER_TWO, logged(4, '2026-09-10T08:00:00.000Z')],
+      account: { bidLimit: 3, bidPeriod: 'month' },
+    });
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 3 / 3`);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toHaveText(
+      'You have logged 3 bids this month and your limit is 3. Place now is off until next month.',
+    );
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('the lower of the two wins', async ({ page }) => {
+    const calls = await open(page, {
+      settings: { monthlyLimit: 5 },
+      log: [...SEPTEMBER_TWO, logged(4, '2026-09-10T08:00:00.000Z')],
+      account: { bidLimit: 3, bidPeriod: 'month' },
+    });
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 3 / 3`);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(dialog.locator('#p-error')).toContainText('your limit is 3.');
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('a Freelancer limit for a week is not this month’s: Place now goes on to its confirm', async ({
+    page,
+  }) => {
+    const calls = await open(page, {
+      log: [...SEPTEMBER_TWO, logged(4, '2026-09-10T08:00:00.000Z')],
+      account: { bidLimit: 3, bidPeriod: 'week' },
+    });
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 3`);
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(confirmDialog(page)).toBeVisible();
+    await expect(dialog.locator('#p-error')).toBeHidden();
+    await confirmDialog(page).getByRole('button', { name: 'Cancel' }).click();
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('with room under the limit it goes on to its confirm', async ({ page }) => {
+    await open(page, { settings: { monthlyLimit: 3 }, log: LOG });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await expect(confirmDialog(page)).toBeVisible();
+    await confirmDialog(page).getByRole('button', { name: 'Cancel' }).click();
+  });
+});
+
+test.describe('B-05: a bid Freelancer already had still counts', () => {
+  test('logging it uses up the limit, so the next Place now is refused', async ({ page }) => {
+    const calls = await open(page, {
+      settings: { monthlyLimit: 2 },
+      log: [logged(1, '2026-09-20T08:00:00.000Z')],
+      bids: { existing: { id: 777, bidder_id: 1234567, project_id: RECRUITER.id, amount: 400 } },
+    });
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 1 / 2`);
+
+    // Freelancer.com already holds a bid of his on this project; nothing new is sent.
+    const first = await detailOf(page, RECRUITER.title);
+    await first.getByRole('button', { name: 'Place now' }).click();
+    await confirmDialog(page).getByRole('button', { name: 'Place the bid' }).click();
+    await expect(page.locator('#status')).toContainText('already has your bid 777');
+    expect(calls.bidsSent).toHaveLength(0);
+    await expect(page.locator('#bid-counter')).toHaveText(`${COUNTER}: 2 / 2`);
+
+    // It counted: the limit of 2 is now reached, on another project.
+    const other = ALL.find((p) => p.type === 'fixed' && p.id !== RECRUITER.id)!;
+    const second = await detailOf(page, other.title);
+    await second.getByRole('button', { name: 'Place now' }).click();
+    await expect(second.locator('#p-error')).toHaveText(
+      'You have logged 2 bids this month and your limit is 2. Place now is off until next month.',
+    );
+    expect(calls.bidLookups).toHaveLength(1);
     expect(calls.bidsSent).toHaveLength(0);
   });
 });
