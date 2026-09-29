@@ -471,18 +471,28 @@ function writeProposal() {
 const HOURLY_TEXT = 'Place now is off for hourly projects. Bid on Freelancer instead.';
 
 /**
- * Where Place now sits: the button and its hint for a fixed-price project the token can bid
- * on, and a line saying why not for an hourly one. Bid on Freelancer is always there.
+ * Where Place now sits, for a project with no bid of the owner's in the log: the button and
+ * its hint for a fixed-price project the token can bid on; a line saying why not for an
+ * hourly one; and, when Freelancer.com refused the token, that and the way to check it
+ * again. Bid on Freelancer is always there. Only this is redrawn, so the proposal the owner
+ * is editing stays as it is.
  * @param {Project} project
  */
 function drawPlace(project) {
-  const offered = tokenReady() !== null && !log.some((entry) => entry.projectId === project.id);
+  const free = !log.some((entry) => entry.projectId === project.id);
+  const offered = tokenReady() !== null && free;
   const fixed = project.type === 'fixed';
   byId('p-place').hidden = !(offered && fixed);
   byId('p-place-hint').hidden = !(offered && fixed);
   const off = byId('p-place-off');
   off.hidden = !(offered && !fixed);
   off.textContent = off.hidden ? '' : HOURLY_TEXT;
+  // A token that ran out has its own warning at the top; this is for one that was refused.
+  byId('p-token-refused').hidden = !(
+    free &&
+    stored?.problem &&
+    tokenState(stored, Date.now()).kind !== 'expired'
+  );
 }
 
 /** @param {Project} project */
@@ -536,6 +546,12 @@ pDays.addEventListener('input', () => {
   writeProposal();
 });
 pText.addEventListener('input', countText);
+
+byId('p-token-recheck').addEventListener('click', () => {
+  detail.close();
+  selectTab(/** @type {HTMLButtonElement} */ (byId('tab-settings')));
+  byId('token-check').focus();
+});
 
 byId('p-go-templates').addEventListener('click', () => {
   detail.close();
@@ -719,14 +735,20 @@ placeButton.addEventListener('click', async () => {
         : `Placed your bid on “${project.title}” on Freelancer.com (bid ${result.bidId}). It is logged.`,
     );
   } catch (error) {
-    const status = statusOf(error);
     const message = error instanceof Error ? error.message : String(error);
-    sayInDetail(
-      'error',
-      status === 401 || status === 403
-        ? `${message}. Check the token in Settings.`
-        : `${message}.`.replace(/\.\.$/, '.'),
-    );
+    if (statusOf(error) === 401 && stored) {
+      // Freelancer.com does not accept the token. Record it as the token check does, so
+      // Place now stays off until the token passes a check again.
+      stored = { ...stored, problem: refusal(error) };
+      keep(TOKEN_KEY, stored);
+      drawToken();
+      drawPlace(project);
+      sayInDetail('info', '');
+    } else {
+      // Any other refusal, a 403 included, is Freelancer.com's own message and nothing more:
+      // what a 403 on a bid means is not known, so the token is not blamed for it.
+      sayInDetail('error', `${message}.`.replace(/\.\.$/, '.'));
+    }
   } finally {
     placeButton.disabled = false;
     placeButton.removeAttribute('aria-busy');

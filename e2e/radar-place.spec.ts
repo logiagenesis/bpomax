@@ -39,6 +39,8 @@ async function open(
     settings?: Record<string, unknown>;
     log?: unknown[];
     account?: Partial<typeof ACCOUNT>;
+    /** A refusal recorded on the saved token, as a failed check leaves it. */
+    tokenProblem?: string;
   } = {},
 ) {
   const token =
@@ -49,7 +51,7 @@ async function open(
           savedAt: NOW - 60_000,
           account: { ...ACCOUNT, ...options.account },
           checkedAt: NOW - 60_000,
-          problem: null,
+          problem: options.tokenProblem ?? null,
         };
   await page.addInitScript(
     ([templates, stored, settings, log]) => {
@@ -556,5 +558,114 @@ test.describe('B-06: the USD 20 balance line', () => {
     const hourly = await detailOf(page, PINS.title);
     await expect(hourly.locator('#p-balance-note')).toBeVisible();
     await expect(hourly.locator('#p-balance-note')).toHaveText(LINE);
+  });
+});
+
+// ------------------------------------------------------------------ B-09
+// A 401 from Freelancer.com is a token it does not accept: the page records that on the token,
+// hides Place now and says so in its place. Any other refusal, a 403 included, is
+// Freelancer.com's own message and the token is left alone.
+
+const savedToken = (page: Page) =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('radar.token') ?? 'null'));
+
+test.describe('B-09: a refused token hides Place now', () => {
+  test('a 401 marks the token refused, hides Place now, sends nothing more, and leads to Settings', async ({
+    page,
+  }) => {
+    const calls = await open(page, { bids: { refuse: 401 } });
+    const dialog = await detailOf(page, RECRUITER.title);
+    const proposal = await dialog.getByLabel('Proposal').inputValue();
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await confirmDialog(page).getByRole('button', { name: 'Place the bid' }).click();
+
+    // Place now is gone and the refusal is said in its place; the owner's text is untouched.
+    await expect(dialog.locator('#p-token-refused')).toBeVisible();
+    await expect(dialog.locator('#p-token-refused')).toContainText(
+      'Freelancer refused your token.',
+    );
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeHidden();
+    await expect(dialog.locator('#p-place-hint')).toBeHidden();
+    await expect(dialog.getByLabel('Proposal')).toHaveValue(proposal);
+    await expect(dialog.getByRole('button', { name: 'Bid on Freelancer' })).toBeVisible();
+    expect((await savedToken(page)).problem).toContain('HTTP 401');
+    // Nothing was logged, and the lookup and the one refused POST are all that was sent.
+    expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
+    expect(calls.bidLookups).toHaveLength(1);
+    expect(calls.bidsSent).toHaveLength(1);
+
+    // The button closes the project and opens Settings.
+    await dialog.getByRole('button', { name: 'Check it again in Settings' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('tab', { name: 'Settings' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.locator('#panel-settings')).toBeVisible();
+    expect(calls.bidLookups).toHaveLength(1);
+    expect(calls.bidsSent).toHaveLength(1);
+
+    // A check Freelancer.com accepts clears it, and Place now is back.
+    await page.getByRole('button', { name: 'Check again' }).click();
+    await expect(page.locator('#status')).toHaveText(/^Freelancer\.com accepted the token/);
+    expect((await savedToken(page)).problem).toBeNull();
+    await page.getByRole('tab', { name: 'Feed' }).click();
+    const again = await detailOf(page, RECRUITER.title);
+    await expect(again.getByRole('button', { name: 'Place now' })).toBeVisible();
+    await expect(again.locator('#p-token-refused')).toBeHidden();
+  });
+
+  test('a 403 shows Freelancer’s own message, keeps Place now, and does not mark the token', async ({
+    page,
+  }) => {
+    const calls = await open(page, { bids: { refuse: 403 } });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await confirmDialog(page).getByRole('button', { name: 'Place the bid' }).click();
+
+    await expect(dialog.locator('#detail-status')).toHaveText(
+      'Freelancer.com refused placing the bid (HTTP 403: Refused in the e2e).',
+    );
+    // No "check the token" advice: what a 403 on a bid means is not known.
+    await expect(dialog.locator('#detail-status')).not.toContainText('token');
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeEnabled();
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeVisible();
+    await expect(dialog.locator('#p-token-refused')).toBeHidden();
+    expect((await savedToken(page)).problem).toBeNull();
+    expect(calls.bidsSent).toHaveLength(1);
+  });
+
+  test('another refusal, a 400, is left as it was: the message, and the token is not marked', async ({
+    page,
+  }) => {
+    await open(page, { bids: { refuse: 400 } });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await confirmDialog(page).getByRole('button', { name: 'Place the bid' }).click();
+    await expect(dialog.locator('#detail-status')).toHaveText(
+      'Freelancer.com refused placing the bid (HTTP 400: Refused in the e2e).',
+    );
+    expect((await savedToken(page)).problem).toBeNull();
+  });
+
+  test('a token already marked refused says so when a project is opened, and Place now is off', async ({
+    page,
+  }) => {
+    const calls = await open(page, { tokenProblem: 'Token rejected (HTTP 401).' });
+    for (const title of [RECRUITER.title, PINS.title]) {
+      const dialog = await detailOf(page, title);
+      await expect(dialog.locator('#p-token-refused')).toBeVisible();
+      await expect(dialog.getByRole('button', { name: 'Place now' })).toBeHidden();
+      await expect(dialog.getByRole('button', { name: 'Bid on Freelancer' })).toBeVisible();
+      await dialog.getByRole('button', { name: 'Close' }).click();
+    }
+    expect(calls.bidLookups).toHaveLength(0);
+    expect(calls.bidsSent).toHaveLength(0);
+  });
+
+  test('with no token there is no such notice', async ({ page }) => {
+    await open(page, { token: false });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.locator('#p-token-refused')).toBeHidden();
   });
 });
