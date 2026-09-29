@@ -63,6 +63,8 @@ interface BidOptions {
   existing?: { id: number; bidder_id: number; project_id: number; amount: number };
   /** Refuse the POST with this status. */
   refuse?: number;
+  /** Never answer the POST: it is received, recorded, and left hanging. */
+  hang?: boolean;
 }
 
 /**
@@ -90,6 +92,8 @@ export async function serveFreelancer(
     projects?: RawProject[] | number;
     directory?: number;
     self?: number;
+    /** Never answer GET /users/0.1/self/: it is received, recorded, and left hanging. */
+    selfHang?: boolean;
     bids?: BidOptions;
   } = {},
 ): Promise<FreelancerCalls> {
@@ -152,6 +156,7 @@ export async function serveFreelancer(
     }
     if (url.pathname === '/api/users/0.1/self/') {
       calls.self.push(route.request().headers()['freelancer-oauth-v1']);
+      if (options.selfHang) return;
       if (options.self) {
         // How Freelancer.com refuses a token it does not accept (checked 28/09/2026).
         await route.fulfill({
@@ -183,6 +188,7 @@ export async function serveFreelancer(
       }
       const body = request.postDataJSON() as Record<string, unknown>;
       calls.bidsSent.push({ body, token });
+      if (options.bids?.hang) return;
       if (options.bids?.refuse) {
         await route.fulfill({
           status: options.bids.refuse,

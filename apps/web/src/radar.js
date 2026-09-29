@@ -12,7 +12,13 @@ import { TOKEN_KEY, fetchSelf, maskToken, tokenProblem, tokenState } from './rad
 import { NOTIFIED_KEPT, pickAlerts } from './radar/alerts.js';
 import { fetchDevelopers, pickDevelopers, toShortlist } from './radar/developers.js';
 import { applyFilters } from './radar/filter.js';
-import { FreelancerError, fetchProjects, fetchSkills, nextDelayMs } from './radar/freelancer.js';
+import {
+  FreelancerError,
+  RequestTimeout,
+  fetchProjects,
+  fetchSkills,
+  nextDelayMs,
+} from './radar/freelancer.js';
 import { placeBid, statusOf } from './radar/placing.js';
 import {
   PLACEHOLDERS,
@@ -467,6 +473,14 @@ function writeProposal() {
   countText();
 }
 
+/** Said when Freelancer.com does not answer a bid in 15 seconds. Nothing is logged or retried. */
+const BID_TIMEOUT_TEXT =
+  'No answer from Freelancer after 15 seconds. The bid may or may not have gone through. Check the project on Freelancer before trying again.';
+
+/** Said when it does not answer the token check in 15 seconds. The token is left as it was. */
+const CHECK_TIMEOUT_TEXT =
+  'No answer from Freelancer after 15 seconds. The token was not checked. Try again.';
+
 /** Said where Place now sits when the project is hourly, and in the handler that refuses it. */
 const HOURLY_TEXT = 'Place now is off for hourly projects. Bid on Freelancer instead.';
 
@@ -736,7 +750,11 @@ placeButton.addEventListener('click', async () => {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (statusOf(error) === 401 && stored) {
+    if (error instanceof RequestTimeout) {
+      // The bid may or may not have gone through: log nothing, and do not try again by
+      // ourselves. Pressing Place now again looks for the bid first, so it is never sent twice.
+      sayInDetail('error', BID_TIMEOUT_TEXT);
+    } else if (statusOf(error) === 401 && stored) {
       // Freelancer.com does not accept the token. Record it as the token check does, so
       // Place now stays off until the token passes a check again.
       stored = { ...stored, problem: refusal(error) };
@@ -1897,10 +1915,12 @@ async function checkToken(token, fresh) {
       `Freelancer.com accepted the token: you are ${account.username} (user ${String(account.id)}).`,
     );
   } catch (error) {
-    const line = refusal(error);
+    // No answer is not a refusal: the token is neither kept nor marked, as it was.
+    const timedOut = error instanceof RequestTimeout;
+    const line = timedOut ? CHECK_TIMEOUT_TEXT : refusal(error);
     if (fresh) {
       showTokenError(line);
-    } else if (stored) {
+    } else if (stored && !timedOut) {
       stored = { ...stored, checkedAt: Date.now(), problem: line };
       keep(TOKEN_KEY, stored);
     }

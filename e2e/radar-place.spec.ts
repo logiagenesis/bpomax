@@ -41,6 +41,8 @@ async function open(
     account?: Partial<typeof ACCOUNT>;
     /** A refusal recorded on the saved token, as a failed check leaves it. */
     tokenProblem?: string;
+    /** The token check is never answered. */
+    selfHang?: boolean;
   } = {},
 ) {
   const token =
@@ -70,7 +72,10 @@ async function open(
     ] as const,
   );
   await page.clock.install({ time: NOW });
-  const calls = await serveFreelancer(page, { bids: options.bids });
+  const calls = await serveFreelancer(page, {
+    bids: options.bids,
+    selfHang: options.selfHang,
+  });
   await page.goto('/radar.html');
   await expect(page.locator('#status')).toHaveText(/^Read \d+ projects/);
   return calls;
@@ -667,5 +672,72 @@ test.describe('B-09: a refused token hides Place now', () => {
     await open(page, { token: false });
     const dialog = await detailOf(page, RECRUITER.title);
     await expect(dialog.locator('#p-token-refused')).toBeHidden();
+  });
+});
+
+// ------------------------------------------------------------------ B-10
+// Freelancer.com gets 15 seconds to answer a bid or a token check. No answer is not a refusal:
+// nothing is logged, nothing is retried, and the token is left as it was.
+
+test.describe('B-10: no answer from Freelancer.com', () => {
+  test('a bid with no answer says so after 15 seconds, logs nothing and is not sent again', async ({
+    page,
+  }) => {
+    const calls = await open(page, { bids: { hang: true } });
+    const dialog = await detailOf(page, RECRUITER.title);
+    await dialog.getByRole('button', { name: 'Place now' }).click();
+    await confirmDialog(page).getByRole('button', { name: 'Place the bid' }).click();
+    // The lookup was answered and the bid is on its way, unanswered.
+    await expect.poll(() => calls.bidsSent.length).toBe(1);
+    await expect(dialog.locator('#detail-status')).not.toContainText('No answer');
+
+    await page.clock.fastForward(15_000);
+    await expect(dialog.locator('#detail-status')).toHaveText(
+      'No answer from Freelancer after 15 seconds. The bid may or may not have gone through. Check the project on Freelancer before trying again.',
+    );
+    expect(await page.evaluate(() => localStorage.getItem('radar.log'))).toBeNull();
+    expect((await savedToken(page)).problem).toBeNull();
+    await expect(page.locator('#bid-counter')).toHaveText(
+      'Bids logged in this browser this month: 0 / 100',
+    );
+    // The owner can look and try again; nothing tries again by itself.
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeEnabled();
+    await page.clock.fastForward(60_000);
+    expect(calls.bidLookups).toHaveLength(1);
+    expect(calls.bidsSent).toHaveLength(1);
+  });
+
+  test('a token check with no answer says so, and the token is not marked refused', async ({
+    page,
+  }) => {
+    const calls = await open(page, { selfHang: true });
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: 'Check again' }).click();
+    await expect.poll(() => calls.self.length).toBe(1);
+
+    await page.clock.fastForward(15_000);
+    await expect(page.locator('#status')).toHaveText(
+      'No answer from Freelancer after 15 seconds. The token was not checked. Try again.',
+    );
+    expect((await savedToken(page)).problem).toBeNull();
+    // Still usable: the button that was pressed is back, and Place now is on offer.
+    await expect(page.getByRole('button', { name: 'Check again' })).toBeEnabled();
+    await page.getByRole('tab', { name: 'Feed' }).click();
+    const dialog = await detailOf(page, RECRUITER.title);
+    await expect(dialog.getByRole('button', { name: 'Place now' })).toBeVisible();
+    await expect(dialog.locator('#p-token-refused')).toBeHidden();
+  });
+
+  test('a token pasted afresh with no answer is not kept', async ({ page }) => {
+    const calls = await open(page, { token: false, selfHang: true });
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await page.getByLabel('Paste a token').fill('e2e-token-abcdefghijklmnopqrstuvwxyz-7Q9Z');
+    await page.getByRole('button', { name: 'Save and check' }).click();
+    await expect.poll(() => calls.self.length).toBe(1);
+    await page.clock.fastForward(15_000);
+    await expect(page.locator('#token-error')).toHaveText(
+      'No answer from Freelancer after 15 seconds. The token was not checked. Try again.',
+    );
+    expect(await page.evaluate(() => localStorage.getItem('radar.token'))).toBeNull();
   });
 });

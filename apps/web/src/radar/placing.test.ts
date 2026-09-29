@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RequestTimeout } from './freelancer.js';
 import { placeBid, statusOf } from './placing.js';
 
 /**
@@ -141,5 +142,83 @@ describe('statusOf', () => {
     expect(statusOf(new Error('no status'))).toBeNull();
     expect(statusOf(undefined)).toBeNull();
     expect(statusOf('401')).toBeNull();
+  });
+});
+
+describe('when Freelancer.com does not answer (B-10)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A fetch whose first answers are given and which then never answers at all. */
+  function silentAfter(...answers: Response[]) {
+    const replies = [...answers];
+    return vi.fn<typeof fetch>(() => {
+      const next = replies.shift();
+      return next ? Promise.resolve(next) : new Promise<Response>(() => undefined);
+    });
+  }
+
+  it('gives up on the lookup after 15 seconds: a time-out, not a refusal, and no bid sent', async () => {
+    vi.useFakeTimers();
+    const fetchImpl = silentAfter();
+    let settled = false;
+    const outcome = placeBid(TOKEN, BID, fetchImpl).catch((e: unknown) => e);
+    void outcome.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const error = await outcome;
+
+    expect(error).toBeInstanceOf(RequestTimeout);
+    expect((error as Error).message).toBe('No answer from Freelancer after 15 seconds.');
+    expect(statusOf(error)).toBeNull();
+    // Only the lookup was made, and it was aborted.
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0]![1]?.method ?? 'GET').toBe('GET');
+    expect(fetchImpl.mock.calls[0]![1]?.signal?.aborted).toBe(true);
+  });
+
+  it('gives up on the bid itself after 15 seconds, and does not try again', async () => {
+    vi.useFakeTimers();
+    const fetchImpl = silentAfter(NO_BIDS());
+    const outcome = placeBid(TOKEN, BID, fetchImpl).catch((e: unknown) => e);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(RequestTimeout);
+    // The lookup, then the one POST. The bid may or may not have gone through.
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[1]![1]?.method).toBe('POST');
+    expect(fetchImpl.mock.calls[1]![1]?.signal?.aborted).toBe(true);
+
+    // And nothing tries again by itself, however long it waits.
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves no timer running when Freelancer.com answers in time', async () => {
+    vi.useFakeTimers();
+    const { fetchImpl } = standIn(
+      NO_BIDS(),
+      answer(200, { status: 'success', result: { id: 900000001 } }),
+    );
+    await expect(placeBid(TOKEN, BID, fetchImpl)).resolves.toMatchObject({ outcome: 'placed' });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('a refusal that arrives in time is still a refusal, not a time-out', async () => {
+    vi.useFakeTimers();
+    const { fetchImpl } = standIn(
+      NO_BIDS(),
+      answer(403, { status: 'error', message: 'Refused in the test' }),
+    );
+    const error = await placeBid(TOKEN, BID, fetchImpl).catch((e: unknown) => e);
+    expect(error).not.toBeInstanceOf(RequestTimeout);
+    expect(statusOf(error)).toBe(403);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

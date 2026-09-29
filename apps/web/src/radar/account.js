@@ -6,7 +6,7 @@
  * Freelancer.com, in the `freelancer-oauth-v1` header. A token lasts 30 days from when it
  * was generated (F3); the page counts from when it was pasted and warns 5 days before.
  */
-import { API, getResult } from './freelancer.js';
+import { API, getResult, timeLimited } from './freelancer.js';
 
 /** The storage key, without the `radar.` prefix. Not in store.js's backed-up keys. */
 export const TOKEN_KEY = 'token';
@@ -59,12 +59,18 @@ export function normaliseAccount(raw) {
 
 /**
  * Asks Freelancer.com whose token this is. Throws a FreelancerError, with the HTTP status,
- * when it is refused.
+ * when it is refused, and a RequestTimeout when it does not answer within 15 seconds.
  * @param {string} token
  * @param {typeof fetch} [fetchImpl]
  */
 export async function fetchSelf(token, fetchImpl = fetch) {
-  const account = normaliseAccount(await getResult(SELF_URL, fetchImpl, token));
+  const limited = timeLimited(fetchImpl);
+  let account;
+  try {
+    account = normaliseAccount(await getResult(SELF_URL, limited.fetch, token));
+  } catch (error) {
+    throw limited.blame(error);
+  }
   if (!Number.isInteger(account.id) || account.id <= 0 || !account.username) {
     throw new Error('Freelancer.com answered, but without a user id and username.');
   }

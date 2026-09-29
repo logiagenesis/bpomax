@@ -44,6 +44,47 @@ export class FreelancerError extends Error {
   }
 }
 
+/** How long a call that acts as the owner waits for Freelancer.com before it gives up. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+/** Freelancer.com did not answer in time. What was asked may or may not have been done. */
+export class RequestTimeout extends Error {
+  constructor() {
+    super('No answer from Freelancer after 15 seconds.');
+    this.name = 'RequestTimeout';
+  }
+}
+
+/**
+ * `fetchImpl`, but each request has 15 seconds to be answered, then it is aborted (its
+ * `signal`) and given up on, even by a `fetch` that ignores the signal. Calls made through a
+ * package wrap what `fetch` throws, so `blame(error)` says what to throw instead: the
+ * `RequestTimeout`, when one of these requests timed out, else `error` as it is.
+ * @param {typeof fetch} fetchImpl
+ * @returns {{ fetch: typeof fetch, blame: (error: unknown) => unknown }}
+ */
+export function timeLimited(fetchImpl) {
+  let timedOut = false;
+  /** @type {typeof fetch} */
+  const limited = (input, init) => {
+    const controller = new AbortController();
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+        reject(new RequestTimeout());
+      }, REQUEST_TIMEOUT_MS);
+    });
+    return Promise.race([
+      fetchImpl(input, { ...init, signal: controller.signal }),
+      timeout,
+    ]).finally(() => clearTimeout(timer));
+  };
+  return { fetch: limited, blame: (error) => (timedOut ? new RequestTimeout() : error) };
+}
+
 /**
  * The active-project search, newest first, one page of it (F1, F3).
  * @param {number[]} skillIds one `jobs[]` each; none reads every project
